@@ -1,7 +1,7 @@
 import feedparser
 from icalendar import Calendar
 
-from aggregator.emit import write_ics, write_rss
+from aggregator.emit import filter_upcoming, write_ics, write_rss
 from aggregator.models import Event
 
 
@@ -51,6 +51,16 @@ def test_fixed_offset_start_emitted_as_utc(tmp_path):
     cal = Calendar.from_ical(p.read_bytes())
     dt = list(cal.walk("VEVENT"))[0].get("dtstart").dt
     assert dt.tzinfo is not None
+
+
+def test_filter_upcoming_boundary_and_mixed_formats():
+    evs = [
+        Event(id="past", title="p", start="2025-01-01", source="x"),
+        Event(id="today", title="t", start="2026-05-29T18:00:00+00:00", source="x"),
+        Event(id="future", title="f", start="2026-12-01", source="x"),
+    ]
+    up = {e.id for e in filter_upcoming(evs, "2026-05-29")}
+    assert up == {"today", "future"}   # today is inclusive, past excluded
 
 
 def test_empty_inputs_produce_valid_empty_feeds(tmp_path):

@@ -5,16 +5,19 @@ concrete counts at each stage. Returns a summary dict (also used by tests).
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 
 from .config import SOURCES
 from .dedupe import dedupe
-from .emit import write_ics, write_rss
+from .emit import filter_upcoming, write_ics, write_rss
 from .fetchers import gather_all
 from .filter import apply_filters
 from .storage import open_store
 
 
-def run(out_dir: str = "out", db_path: str = "data/events.db") -> dict:
+def run(out_dir: str = "out", db_path: str = "data/events.db",
+        today: str | None = None) -> dict:
+    today = today or datetime.now(timezone.utc).date().isoformat()
     results = asyncio.run(gather_all(SOURCES))
 
     per_source: dict[str, int] = {}
@@ -48,10 +51,13 @@ def run(out_dir: str = "out", db_path: str = "data/events.db") -> dict:
 
     emitted = sorted(kept, key=lambda e: e.start or "")
     big = [e for e in emitted if e.is_big_name]
+    upcoming = filter_upcoming(emitted, today)
     ics_n = write_ics(emitted, f"{out_dir}/events.ics")
     rss_n = write_rss(emitted, f"{out_dir}/feed.xml")
     write_ics(big, f"{out_dir}/events-big-names.ics")
     write_rss(big, f"{out_dir}/feed-big-names.xml", "DC AI & Semiconductor -- Big Names")
+    up_n = write_ics(upcoming, f"{out_dir}/events-upcoming.ics")
+    write_rss(upcoming, f"{out_dir}/feed-upcoming.xml", "DC AI & Semiconductor -- Upcoming")
 
     summary = {
         "sources_total": len(SOURCES),
@@ -66,6 +72,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db") -> dict:
         "dropped_location": fstats["dropped_location"],
         "dropped_topic": fstats["dropped_topic"],
         "big_name": len(big),
+        "upcoming": up_n,
+        "today": today,
         "stored_total": store_total,
         "ics_events": ics_n,
         "rss_items": rss_n,
@@ -87,5 +95,6 @@ def _print_summary(s: dict) -> None:
     print(f"kept after filter: {s['kept_after_filter']}  "
           f"(dropped {s['dropped_location']} loc, {s['dropped_topic']} topic)")
     print(f"big-name events:   {s['big_name']}")
+    print(f"upcoming (>= {s['today']}): {s['upcoming']}")
     print(f"stored total:      {s['stored_total']}")
     print(f"emitted:           events.ics={s['ics_events']}  feed.xml={s['rss_items']}")

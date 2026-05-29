@@ -1,5 +1,26 @@
 # PROGRESS — dc-frontier-events
 
+## Status: Layers 1 + 2 live; emits full + upcoming + big-names feeds. All project gates MET.
+
+## Iteration 4 (2026-05-29) — Upcoming-window feeds
+Added forward-looking feeds so a subscriber sees what's actually coming up, not the
+archive of 2023–2025 events.
+
+### What was built
+- `emit.filter_upcoming(events, today_iso)` — pure, testable; ISO-date string compare.
+- Pipeline emits `events-upcoming.ics` + `feed-upcoming.xml` (start ≥ today, sorted), alongside
+  the existing full + big-names feeds. `today` is injectable (defaults to UTC now) for tests.
+- 1 new test (boundary inclusive + date/datetime mix).
+
+### Verification numbers (live run, today=2026-05-29)
+- **Unit tests: 30 passed.**
+- **upcoming = 5 events**, all dates ≥ 2026-05-29 (range 05-29 .. 06-15), spanning **both layers**:
+  Luma "AI Evals", AI Collective "Humans in AI Week" (×2), DVDC "Data Visualization with AI",
+  and **CSIS "Data Centers, AI, and the Future of U.S. Strategic Competitiveness"**.
+- `events-upcoming.ics` parses (icalendar); `feed-upcoming.xml` feedparser bozo=False. Full feeds unchanged (65). Idempotent.
+
+---
+
 ## Status: Layers 1 + 2 live (4 live sources, 2 Layer-2 think tanks). All project verification gates MET.
 
 ## Iteration 3 (2026-05-29) — Second Layer-2 source: CSIS + UTC emit fix

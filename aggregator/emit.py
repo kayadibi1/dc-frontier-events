@@ -31,6 +31,12 @@ def _parse_dt(iso: str | None):
             return None
 
 
+def filter_upcoming(events: list[Event], today_iso: str) -> list[Event]:
+    """Events whose start date is today or later. ISO date strings compare
+    chronologically as plain strings, so this works on both date and datetime starts."""
+    return [e for e in events if (e.start or "")[:10] >= today_iso]
+
+
 def _to_utc(dt):
     """Normalize an aware datetime to UTC so iCal emits an unambiguous '...Z'.
     icalendar serializes a fixed-offset tz as an invalid TZID (e.g. "UTC-04:00")
