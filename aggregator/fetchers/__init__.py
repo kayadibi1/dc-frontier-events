@@ -14,10 +14,12 @@ from ..config import Source
 from .base import SourceResult
 from .csis import fetch_csis
 from .cset import fetch_cset
+from .ics import fetch_ics
 from .luma import fetch_luma
 
 ADAPTERS = {
     "luma": fetch_luma,
+    "ics": fetch_ics,
     "cset": fetch_cset,
     "csis": fetch_csis,
 }

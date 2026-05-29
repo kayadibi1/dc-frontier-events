@@ -50,7 +50,15 @@ CSET_SOURCES = [
     Source("csis", "CSIS", "csis", 2, True, url="https://www.csis.org/events"),
 ]
 
-SOURCES = LUMA_SOURCES + CSET_SOURCES
+# Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic
+# filter extracts the AI/chip events from the full calendar. GWU is in DC
+# (Foggy Bottom) -> dc_curated. Uses the generic iCal adapter.
+UNIVERSITY_SOURCES = [
+    Source("gwu", "George Washington University", "ics", 3, True,
+           url="https://calendar.gwu.edu/calendar.ics"),
+]
+
+SOURCES = LUMA_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
 
 
 # Topic relevance. Canonical topic -> regex (case-insensitive, word-boundaried

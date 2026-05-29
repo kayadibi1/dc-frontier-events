@@ -81,7 +81,15 @@ def parse_ics(source: Source, ics_text: str) -> list[Event]:
         lat, lng = _geo(comp)
 
         m = _URL_IN_DESC.search(desc)
-        source_url = m.group(1).rstrip(".") if m else (loc if loc.startswith("http") else "")
+        url_prop = str(comp.get("url", "")).strip()
+        if m:
+            source_url = m.group(1).rstrip(".")              # Luma "information at: <url>"
+        elif url_prop.startswith("http"):
+            source_url = url_prop                            # iCal URL property (Localist, etc.)
+        elif loc.startswith("http"):
+            source_url = loc
+        else:
+            source_url = ""
 
         # LOCATION is sometimes a URL, sometimes a real address.
         address = "" if loc.startswith("http") else loc

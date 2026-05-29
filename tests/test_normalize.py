@@ -57,3 +57,19 @@ def test_topics_detected():
 def test_event_without_title_skipped():
     ics = SAMPLE_ICS.replace("SUMMARY:Hands-on Machine Learning and AI Workshop", "SUMMARY:")
     assert parse_ics(SRC, ics) == []
+
+
+def test_url_property_used_as_source_url():
+    # An iCal URL property (Localist-style) is used when there's no Luma
+    # "information at:" line in the description.
+    ics = "\n".join([
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Localist//EN", "BEGIN:VEVENT",
+        "DTSTART:20260701T180000Z", "UID:evt-LOCALIST1@gwu",
+        "SUMMARY:GWU AI Policy Seminar",
+        "DESCRIPTION:A seminar on AI governance.",
+        "URL:https://calendar.gwu.edu/ai_policy_seminar",
+        "LOCATION:Marvin Center, Washington, DC",
+        "END:VEVENT", "END:VCALENDAR",
+    ])
+    ev = parse_ics(SRC, ics)[0]
+    assert ev.source_url == "https://calendar.gwu.edu/ai_policy_seminar"

@@ -1,6 +1,27 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Layers 1+2 live; ranked; emits ICS + RSS (full/upcoming/top/big-names) + JSON + map.html + digest.md. All gates MET.
+## Status: ALL 3 LAYERS live (6 sources); 4 big-names; ranked; ICS+RSS+JSON+map+digest. All gates MET + exceeded.
+
+## Iteration 8 (2026-05-29) — Generic iCal adapter + GWU (Layer 3) → 3 layers + first big-names
+A single generic iCal adapter unlocked a Layer-3 university feed, which lifted coverage sharply
+and surfaced the first real big-name events.
+
+### What was built
+- `aggregator/fetchers/ics.py` — generic `fetch_ics_url(source, url, ua)` (+ `fetch_ics` for
+  `kind="ics"`). Luma adapter refactored to a thin wrapper over it.
+- `parse_ics` now reads the iCal `URL:` property for `source_url` (Localist/standard iCal).
+- Registered **GWU** (`calendar.gwu.edu/calendar.ics`, Localist) as a Layer-3, dc_curated source.
+- 1 new test (URL-property → source_url).
+
+### Verification numbers (live run, 2026-05-29)
+- **Unit tests: 43 passed.**
+- **Sources: 6/8 live across layers [1, 2, 3]** — +gwu=561 events. 1133 raw → 1027 deduped (106 removed) → **109 kept** (366 loc, 552 topic dropped).
+- **big-name events: 4** (first non-zero!) — all validated real (not false positives):
+  "AI+EXPO 2026" → Microsoft ("exhibitors including Microsoft, Google, Meta…"); "Vibe Coding to
+  Drive Revenue" → Anthropic ("using Claude…").
+- **upcoming: 28** (was 5); map pins 69; events.ics=109 (icalendar, 0 malformed); feed.xml=109 (feedparser bozo=False). Idempotent.
+
+---
 
 ## Iteration 7 (2026-05-29) — Weekly digest generator
 Added a ranked, human-readable digest (foundation for the GOAL's weekly emailer).
@@ -166,11 +187,10 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Generic iCal adapter + new iCal sources** — generalize the Luma adapter to a `kind="ics"`
-that fetches any iCal URL, then add real Meetup per-group and/or university (Localist/Trumba)
-`.ics` feeds. High leverage: one adapter unlocks many Layer-1/Layer-3 sources with ~no per-source
-code, directly addressing the coverage bottleneck (few upcoming events). Probe feeds for
-accessibility first. See BACKLOG #1.
+**Add more university Localist iCal feeds** via the generic adapter (Georgetown, GMU, UMD,
+JHU/SAIS — probe for working `.ics` URLs). GWU alone added 44 kept events + the first big-names,
+so more campuses = more Layer-3 coverage + big-name hits, at ~zero per-source code. (Then:
+README/operability for production-readiness; stale-event pruning.) See BACKLOG #1.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).

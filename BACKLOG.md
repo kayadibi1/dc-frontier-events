@@ -8,11 +8,15 @@
 - ~~/map web view + events.json~~ ✅ iteration 5 (Leaflet map, 51 pins; JSON export).
 - ~~Relevance ranking~~ ✅ iteration 6 (`rank.py`; `feed-top.xml`; score in JSON/map).
 - ~~Weekly digest generator~~ ✅ iteration 7 (`digest.py` → `digest.md`, ranked).
+- ~~Generic iCal adapter + GWU (Layer 3)~~ ✅ iteration 8 (3 layers live; 4 big-names surfaced).
 
 ## Ranked
-1. **Generic iCal adapter + new iCal sources** — generalize Luma adapter to `kind="ics"`
-   (fetch any iCal URL); add Meetup per-group `.ics` + university Localist/Trumba `.ics` feeds.
-   One adapter unlocks many Layer-1/Layer-3 sources; addresses the coverage bottleneck.
+1. **More university Localist/Trumba iCal feeds** — Georgetown, GMU, UMD, JHU/SAIS via the
+   generic `kind="ics"` adapter (probe for working `.ics` URLs). GWU added 44 events + big-names;
+   more campuses = more Layer-3 coverage at ~zero per-source code.
+2. **README + operability** — document the feeds (events.ics/feed.xml/top/upcoming/big-names/
+   map.html/events.json/digest.md), how to run, and the source layers. The GOAL targets a
+   "production-grade" service; a README + run notes round it out.
 3. **Detail-page speaker enrichment (CSET + CSIS) → big-names.** DEFERRED: iter-5 probe found
    current detail pages carry ~no watchlist names (only ambiguous "intel"); would yield 0 now and
    risk false positives. Build when data warrants; pair with tightening the big-name watchlist
