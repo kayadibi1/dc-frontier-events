@@ -45,3 +45,36 @@ def test_same_title_different_day_not_merged():
     kept, removed = dedupe(evs)
     assert len(kept) == 2
     assert removed == 0
+
+
+def Eu(id, title, start, url, source="gwu"):
+    return Event(id=id, title=title, start=start, source=source, source_url=url)
+
+
+def test_multiday_series_collapses_to_range():
+    url = "https://calendar.gwu.edu/event/aiexpo-2026"
+    evs = [Eu("d1", "AI+EXPO 2026", "2026-05-07", url),
+           Eu("d2", "AI+EXPO 2026", "2026-05-08", url),
+           Eu("d3", "AI+EXPO 2026", "2026-05-09", url)]
+    kept, removed = dedupe(evs)
+    assert len(kept) == 1 and removed == 2
+    assert kept[0].start[:10] == "2026-05-07"
+    assert (kept[0].end or "")[:10] == "2026-05-09"
+    assert kept[0].raw.get("days") == ["2026-05-07", "2026-05-08", "2026-05-09"]
+
+
+def test_weekly_same_url_not_collapsed():
+    # 7-day gaps (> SERIES_MAX_GAP_DAYS) -> distinct occurrences, kept separate.
+    url = "https://lu.ma/weekly-ai-office-hours"
+    evs = [Eu("w1", "AI Office Hours", "2026-06-01", url),
+           Eu("w2", "AI Office Hours", "2026-06-08", url),
+           Eu("w3", "AI Office Hours", "2026-06-15", url)]
+    kept, removed = dedupe(evs)
+    assert len(kept) == 3 and removed == 0
+
+
+def test_same_title_different_url_not_collapsed():
+    evs = [Eu("a", "Tech Summit", "2026-07-01", "https://x/a"),
+           Eu("b", "Tech Summit", "2026-07-02", "https://y/b")]
+    kept, removed = dedupe(evs)
+    assert len(kept) == 2 and removed == 0

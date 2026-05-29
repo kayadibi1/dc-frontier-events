@@ -13,6 +13,11 @@
 - ~~Expand + precision-test big-name watchlist~~ ✅ iteration 10 (frontier labs/chip makers/leaders; Intel lookahead).
 - ~~Alerting~~ ✅ iteration 11 (`alerts.py`/`alerts.md`; new-since-last-run via store; idempotent).
 
+### Enhancement portfolio (autonomous; spec: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md)
+- ~~F1 multi-day series dedupe~~ ✅ (pass 3; AI+EXPO 3→1; 264 dupes removed).
+- F2 interactive map UX · F3 HTML digest · F4 pluggable emailer (dry-run) · F5 Postgres+fallback ·
+  F6 archive feed + last_seen · F7 more Luma sources — in progress.
+
 ## Ranked (remaining — several blocked on externals)
 1. **Weekly digest *emailer*** — SMTP-send `digest.md`/`alerts.md`. BLOCKED: needs SMTP creds to
    verify sending; the rendered digest/alerts already exist. Wire when creds are provided.

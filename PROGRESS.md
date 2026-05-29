@@ -1,6 +1,15 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Full GOAL ladder realized + final verification PASSED. See FINAL_REPORT.md.
+## Status: Enhancement portfolio (autonomous) in progress — F1 done. GOAL ladder + final verification already PASSED.
+Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
+
+## Enhancement F1 (2026-05-29) — Multi-day series dedupe
+Dedupe pass 3 collapses a single event listed once-per-consecutive-day (same source + source_url +
+title, gap ≤ 2 days) into one event spanning the range; weekly/recurring (>2-day gaps) stay separate.
+- **52 unit tests pass** (+3). Live: dedupe removed 106 → **264** (GWU multi-day events collapse);
+  kept 109 → 103; big-name 4 → **2** (AI+EXPO 2026 triplicate → one event, 05-07..05-09, `raw.days`).
+
+---
 
 ## Iteration 12 (2026-05-29) — Final end-to-end verification + FINAL_REPORT.md
 Comprehensive fresh run asserting every gate and all 11 output artifacts.
