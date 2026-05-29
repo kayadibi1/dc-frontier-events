@@ -1,7 +1,16 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Enhancement portfolio (autonomous) — F1–F6 done. GOAL ladder + final verification already PASSED.
+## Status: Enhancement portfolio (autonomous) COMPLETE — F1–F7 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
+
+## Enhancement F7 (2026-05-29) — More Luma sources
+Probed candidate DC AI/tech Luma slugs; added the two that resolved to live feeds:
+**AI Tinkerers DC** (`cal-QhC1Y2193RQ7sZ6`, 15) and **DC Tech Meetup** (`cal-GzmqNpNKPBSmYdl`, 16),
+both dc_curated single-city chapters.
+- **59 unit tests pass.** Now **8/10 sources live**. raw 1164 → 886 deduped → **106 kept**.
+  AI Tinkerers added **+3 net** DC AI events incl. a **Databricks** big-name (2→3 big-name, all legit).
+  DC Tech Meetup: 10 dropped on topic, its AI events are cross-listed dupes → 0 net (dedup working;
+  kept for future unique events). All 8 feeds parse (0 malformed / bozo=False).
 
 ## Enhancement F6 (2026-05-29) — Archive feed + last_seen tracking
 Added `first_seen`/`last_seen` columns (safe migration for existing DBs); upsert is now

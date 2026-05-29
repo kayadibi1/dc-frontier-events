@@ -32,6 +32,9 @@ LUMA_SOURCES = [
     Source("DC2", "DC Data & AI Events", "luma", 1, True, cal_id="cal-eCuIBRbS1atJOa6"),
     Source("DCtechevents", "Washington DC Tech Events", "luma", 1, True, cal_id="cal-0TDb3WUDzBp2DYy"),
     Source("dctech", "DC Tech & Venture Coalition", "luma", 1, True, cal_id="cal-Q37RKijUFFdzt97"),
+    # Single-city DC chapters (added iter F7); geo-authority still drops stray non-DC events.
+    Source("ai-tinkerers-dc", "AI Tinkerers DC", "luma", 1, True, cal_id="cal-QhC1Y2193RQ7sZ6"),
+    Source("dctechmeetup", "DC Tech Meetup", "luma", 1, True, cal_id="cal-GzmqNpNKPBSmYdl"),
     # AI Collective's calendar is global (SF/NYC/Chicago/... events), not DC-only:
     # ~11 of ~455 events are in DC. NOT dc_curated, so it is held to the strict
     # DC geo/text filter and only its genuinely-DC events are kept.

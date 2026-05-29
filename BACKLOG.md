@@ -20,7 +20,9 @@
 - ~~F4 pluggable emailer~~ ✅ (`notify.py`; dry-run `.eml`, SMTP when env set).
 - ~~F5 Postgres backend + fallback~~ ✅ (`PostgresStore`/psycopg2; selection+fallback tested; live needs a server).
 - ~~F6 archive feed + last_seen~~ ✅ (`events-archive.ics`; ON CONFLICT upsert; gone-from-sources report).
-- F7 more Luma sources — in progress.
+- ~~F7 more Luma sources~~ ✅ (added AI Tinkerers DC +3 incl. Databricks big-name; DC Tech Meetup).
+
+**Enhancement portfolio COMPLETE (F1–F7).** Remaining ideas below are blocked on externals or are future polish.
 
 ## Ranked (remaining — several blocked on externals)
 1. **Weekly digest *emailer*** — SMTP-send `digest.md`/`alerts.md`. BLOCKED: needs SMTP creds to
