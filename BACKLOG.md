@@ -9,14 +9,14 @@
 - ~~Relevance ranking~~ ✅ iteration 6 (`rank.py`; `feed-top.xml`; score in JSON/map).
 - ~~Weekly digest generator~~ ✅ iteration 7 (`digest.py` → `digest.md`, ranked).
 - ~~Generic iCal adapter + GWU (Layer 3)~~ ✅ iteration 8 (3 layers live; 4 big-names surfaced).
+- ~~README + CLI~~ ✅ iteration 9 (argparse `--out/--db/--today`; full README).
 
 ## Ranked
-1. **More university Localist/Trumba iCal feeds** — Georgetown, GMU, UMD, JHU/SAIS via the
-   generic `kind="ics"` adapter (probe for working `.ics` URLs). GWU added 44 events + big-names;
-   more campuses = more Layer-3 coverage at ~zero per-source code.
-2. **README + operability** — document the feeds (events.ics/feed.xml/top/upcoming/big-names/
-   map.html/events.json/digest.md), how to run, and the source layers. The GOAL targets a
-   "production-grade" service; a README + run notes round it out.
+1. **Expand + precision-test the big-name watchlist** — add high-value low-false-positive orgs/
+   people (Google, Amazon/AWS, Palantir, Scale AI, Mistral, Cohere, Hugging Face; policy figures);
+   add tests asserting non-matches ("meta"→metadata, "apple"→fruit). Verify new live hits are real.
+2. **More university Localist feeds** — Georgetown/GMU/UMD/Howard bare iCal export 0 events
+   (need per-department feed or auth); revisit with the right per-calendar URL or a JHU/SAIS feed.
 3. **Detail-page speaker enrichment (CSET + CSIS) → big-names.** DEFERRED: iter-5 probe found
    current detail pages carry ~no watchlist names (only ambiguous "intel"); would yield 0 now and
    risk false positives. Build when data warrants; pair with tightening the big-name watchlist

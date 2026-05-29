@@ -1,6 +1,25 @@
-"""Entry point: python -m aggregator"""
+"""Entry point: python -m aggregator [--out DIR] [--db PATH] [--today YYYY-MM-DD]"""
+
+from __future__ import annotations
+
+import argparse
 
 from .pipeline import run
 
+
+def main() -> None:
+    p = argparse.ArgumentParser(
+        prog="aggregator",
+        description="DC AI & semiconductor event aggregator: fetch -> normalize -> "
+                    "dedupe -> filter -> rank -> emit (ICS/RSS/JSON/map/digest).",
+    )
+    p.add_argument("--out", default="out", help="output directory for feeds (default: out)")
+    p.add_argument("--db", default="data/events.db", help="SQLite path (default: data/events.db)")
+    p.add_argument("--today", default=None,
+                   help="override 'today' (YYYY-MM-DD) for the upcoming/ranking window")
+    args = p.parse_args()
+    run(out_dir=args.out, db_path=args.db, today=args.today)
+
+
 if __name__ == "__main__":
-    run()
+    main()

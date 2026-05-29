@@ -1,6 +1,22 @@
 # PROGRESS — dc-frontier-events
 
-## Status: ALL 3 LAYERS live (6 sources); 4 big-names; ranked; ICS+RSS+JSON+map+digest. All gates MET + exceeded.
+## Status: ALL 3 LAYERS live (6 sources); 4 big-names; ranked; ICS+RSS+JSON+map+digest; CLI + README. All gates MET + exceeded.
+
+## Iteration 9 (2026-05-29) — Operability: CLI + README
+Rounded out production-readiness. (Probed Georgetown/GMU/UMD/Howard/American Localist feeds for
+more Layer-3 coverage — none export a usable bare iCal; GWU remains the working university feed.)
+
+### What was built
+- `python -m aggregator` now has an argparse CLI: `--out DIR`, `--db PATH`, `--today YYYY-MM-DD`
+  (overrides the upcoming/ranking window). `pipeline.run` already accepted these.
+- `README.md` — documents the 3 layers + sources, the pipeline, all 10 output artifacts, install/run,
+  tests, configuration, and project layout.
+
+### Verification (2026-05-29)
+- **Unit tests: 43 passed.** `--help` renders; `--out _site` writes all 10 feeds to `_site/`;
+  `--today 2030-01-01` → upcoming=0 (override works); layers [1,2,3].
+
+---
 
 ## Iteration 8 (2026-05-29) — Generic iCal adapter + GWU (Layer 3) → 3 layers + first big-names
 A single generic iCal adapter unlocked a Layer-3 university feed, which lifted coverage sharply
@@ -187,10 +203,11 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Add more university Localist iCal feeds** via the generic adapter (Georgetown, GMU, UMD,
-JHU/SAIS — probe for working `.ics` URLs). GWU alone added 44 kept events + the first big-names,
-so more campuses = more Layer-3 coverage + big-name hits, at ~zero per-source code. (Then:
-README/operability for production-readiness; stale-event pruning.) See BACKLOG #1.
+**Expand + precision-test the big-name watchlist** — the headline feature now fires (4 hits via
+GWU). Add high-value, low-false-positive orgs/people (Google, Amazon/AWS, Palantir, Scale AI,
+Mistral, Cohere, Hugging Face; key policy figures) and add tests asserting no false positives
+(e.g. "meta"→metadata, "apple"→fruit stay unmatched). Verify on live data that new hits are real.
+See BACKLOG #1.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).
