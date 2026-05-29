@@ -142,6 +142,7 @@ def _event_dicts(events: list[Event]) -> list[dict]:
     for ev in events:
         d = asdict(ev)
         d["layer"] = _LAYER.get(ev.source, 0)
+        d["score"] = ev.raw.get("score")
         out.append(d)
     return out
 
@@ -184,8 +185,8 @@ EVENTS.forEach(function(e){{
   var p = L.circleMarker([e.lat, e.lng], {{radius:7, color:color, fillColor:color,
     fillOpacity:0.8, weight:1}}).addTo(map);
   var link = e.source_url ? '<br><a href="'+e.source_url+'" target="_blank">details</a>' : '';
-  p.bindPopup('<b>'+e.title+'</b><br>'+(e.start||'').slice(0,10)+'<br>'+
-    (e.address||'')+link);
+  p.bindPopup('<b>'+e.title+'</b><br>'+(e.start||'').slice(0,10)+
+    ' &middot; score '+(e.score!=null?e.score:'-')+'<br>'+(e.address||'')+link);
 }});
 </script></body></html>
 """
@@ -197,7 +198,8 @@ def write_map(events: list[Event], path: str) -> int:
     payload = json.dumps(
         [{"title": e.title, "start": e.start, "lat": e.lat, "lng": e.lng,
           "address": e.address, "source_url": e.source_url,
-          "is_big_name": e.is_big_name, "layer": _LAYER.get(e.source, 0)} for e in geo],
+          "is_big_name": e.is_big_name, "layer": _LAYER.get(e.source, 0),
+          "score": e.raw.get("score")} for e in geo],
         ensure_ascii=False,
     ).replace("</", "<\\/")  # safe to embed inside <script>
     html = _MAP_TEMPLATE.format(data=payload, mapped=len(geo), total=len(events))

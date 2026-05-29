@@ -12,6 +12,7 @@ from .dedupe import dedupe
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .fetchers import gather_all
 from .filter import apply_filters
+from .rank import score_event, top_upcoming
 from .storage import open_store
 
 
@@ -50,14 +51,18 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     assert len(roundtrip) >= len(kept), "storage round-trip lost rows"
 
     emitted = sorted(kept, key=lambda e: e.start or "")
+    for e in emitted:
+        e.raw["score"] = score_event(e, today)
     big = [e for e in emitted if e.is_big_name]
     upcoming = filter_upcoming(emitted, today)
+    top = top_upcoming(emitted, today, 25)
     ics_n = write_ics(emitted, f"{out_dir}/events.ics")
     rss_n = write_rss(emitted, f"{out_dir}/feed.xml")
     write_ics(big, f"{out_dir}/events-big-names.ics")
     write_rss(big, f"{out_dir}/feed-big-names.xml", "DC AI & Semiconductor -- Big Names")
     up_n = write_ics(upcoming, f"{out_dir}/events-upcoming.ics")
     write_rss(upcoming, f"{out_dir}/feed-upcoming.xml", "DC AI & Semiconductor -- Upcoming")
+    write_rss(top, f"{out_dir}/feed-top.xml", "DC AI & Semiconductor -- Top Picks")
     write_json(emitted, f"{out_dir}/events.json")
     mapped = write_map(emitted, f"{out_dir}/map.html")
 

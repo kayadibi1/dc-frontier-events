@@ -6,12 +6,11 @@
 - ~~Emit UTC timezone fix~~ ✅ iteration 3 (aware datetimes normalized to `...Z`).
 - ~~Upcoming-window feeds~~ ✅ iteration 4 (`events-upcoming.ics`/`feed-upcoming.xml`; 5 live).
 - ~~/map web view + events.json~~ ✅ iteration 5 (Leaflet map, 51 pins; JSON export).
+- ~~Relevance ranking~~ ✅ iteration 6 (`rank.py`; `feed-top.xml`; score in JSON/map).
 
 ## Ranked
-1. **Relevance ranking** — score = topic-match strength + DC proximity (haversine from GEO) +
-   `is_big_name` weight + upcoming bonus; order feeds / emit a "top picks" view. GOAL-named.
-2. **Weekly digest generator** — render upcoming + new big-name events to a markdown/HTML digest
-   (`digest.md`); foundation for the GOAL's weekly emailer. Verifiable artifact.
+1. **Weekly digest generator** — render top-ranked upcoming + new big-name events to a
+   markdown/HTML digest (`digest.md`); foundation for the GOAL's weekly emailer. Verifiable artifact.
 3. **Detail-page speaker enrichment (CSET + CSIS) → big-names.** DEFERRED: iter-5 probe found
    current detail pages carry ~no watchlist names (only ambiguous "intel"); would yield 0 now and
    risk false positives. Build when data warrants; pair with tightening the big-name watchlist

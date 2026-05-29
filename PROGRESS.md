@@ -1,5 +1,27 @@
 # PROGRESS — dc-frontier-events
 
+## Status: Layers 1+2 live; relevance-ranked; emits ICS + RSS (full/upcoming/top/big-names) + JSON + map. All gates MET.
+
+## Iteration 6 (2026-05-29) — Relevance ranking
+Added scoring so the feed surfaces the most relevant events first (GOAL: "ranks by
+relevance + proximity + big name").
+
+### What was built
+- `aggregator/rank.py` — pure `score_event(ev, today)` = topic strength (8/topic) + big-name (50)
+  + upcoming (20) + DC proximity (haversine from downtown, up to 5, decaying to 0 by ~40km).
+  `top_upcoming(events, today, n)` returns the ranked forward list.
+- Pipeline stamps `raw["score"]` on every emitted event, emits `feed-top.xml` (top 25 upcoming).
+- `score` surfaced in `events.json` and map popups.
+- 6 new ranking tests (big-name/upcoming/topic-count/proximity ordering; big: tags excluded; top sort).
+
+### Verification numbers (live run, 2026-05-29)
+- **Unit tests: 39 passed.**
+- `events.json`: 65/65 events scored. `feed-top.xml`: 5 upcoming entries, **strictly descending by score** (verified).
+- Top pick = CSIS Layer-2 "Data Centers, AI, and the Future of U.S. Strategic Competitiveness" (36.0),
+  then geo-bonused DC community events (32.3, 32.1, 28, 28). Idempotent; other feeds unchanged.
+
+---
+
 ## Status: Layers 1+2 live; emits ICS + RSS (full/upcoming/big-names) + events.json + map.html. All gates MET.
 
 ## Iteration 5 (2026-05-29) — /map web view + JSON export
@@ -128,12 +150,10 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Relevance ranking** — score kept events by topic strength + DC proximity (haversine from GEO)
-+ is_big_name + upcoming, and order the feeds / a "top picks" view by it (GOAL: "ranks by
-relevance + proximity + big name"). Deterministic and fully verifiable. NOTE from iter-5 probe:
-detail-page big-name enrichment was deferred — current CSET/CSIS detail pages contain ~no
-watchlist names (only an ambiguous "intel"), so that infra would yield 0 now + risk false
-positives. Revisit when data warrants (BACKLOG #3). See BACKLOG #1.
+**Weekly digest generator** — render the top-ranked upcoming events (+ any new big-name events)
+to a `digest.md` (and HTML), using the iter-6 ranking for ordering. GOAL-named ("sends a weekly
+DC AI/chip digest") and a tangible, fully-verifiable artifact (assert it lists the upcoming
+events in ranked order). Foundation for the eventual emailer. See BACKLOG #1.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).
