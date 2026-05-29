@@ -1,4 +1,6 @@
-from aggregator.digest import build_digest
+from selectolax.parser import HTMLParser
+
+from aggregator.digest import build_digest, render_html
 from aggregator.models import Event
 
 TODAY = "2026-05-29"
@@ -39,3 +41,20 @@ def test_digest_handles_empty():
     md = build_digest([], TODAY)
     assert "0 upcoming event(s)" in md
     assert "No upcoming events in range" in md
+
+
+def test_render_html_ranked_and_parses():
+    evs = [
+        mk(id="past", title="Old AI Talk", start="2024-01-01", topics=["ai"]),
+        mk(id="low", title="Plain AI Meetup", start="2026-06-02", topics=["ai"]),
+        mk(id="big", title="Fireside with Nvidia", start="2026-06-02",
+           topics=["ai"], is_big_name=True, source="csis"),
+    ]
+    html = render_html(evs, TODAY)
+    tree = HTMLParser(html)
+    assert tree.css_first("h1") is not None
+    assert "Old AI Talk" not in html                     # past excluded
+    assert "Fireside with Nvidia" in html and "Plain AI Meetup" in html
+    # big-name event appears in the Big names section (before Top upcoming)
+    assert html.index("Fireside with Nvidia") < html.index("Top upcoming")
+    assert "<style>" in html                             # self-contained

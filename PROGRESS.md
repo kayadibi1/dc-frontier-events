@@ -1,7 +1,14 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Enhancement portfolio (autonomous) — F1–F2 done. GOAL ladder + final verification already PASSED.
+## Status: Enhancement portfolio (autonomous) — F1–F3 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
+
+## Enhancement F3 (2026-05-29) — HTML digest
+`digest.render_html(events, today)` → self-contained inline-CSS `digest.html` (header + counts,
+⭐ Big-names section, ranked Top-upcoming list with date/title/source/topics/score/link). Pipeline
+writes it alongside `digest.md`; reused as the email body in F4.
+- **53 unit tests pass.** Live `digest.html` (~4.8 KB) parses, self-contained `<style>`,
+  headings "Big names" + "Top upcoming (15)". (Big names shows upcoming only → 0 right now.)
 
 ## Enhancement F2 (2026-05-29) — Interactive map UX
 Rebuilt `map.html` into a filterable, searchable explorer: a server-rendered sidebar list (one `<li>`

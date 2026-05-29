@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from .alerts import build_alerts
 from .config import SOURCES
 from .dedupe import dedupe
-from .digest import build_digest
+from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .fetchers import gather_all
 from .filter import apply_filters
@@ -70,6 +70,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     mapped = write_map(emitted, f"{out_dir}/map.html", today)
     with open(f"{out_dir}/digest.md", "w", encoding="utf-8") as f:
         f.write(build_digest(emitted, today))  # out_dir already created by write_* above
+    with open(f"{out_dir}/digest.html", "w", encoding="utf-8") as f:
+        f.write(render_html(emitted, today))
 
     new_events = [e for e in emitted if e.id not in prior_ids]
     new_big = [e for e in new_events if e.is_big_name]
