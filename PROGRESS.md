@@ -1,5 +1,30 @@
 # PROGRESS — dc-frontier-events
 
+## Status: Layers 1 + 2 live (4 live sources, 2 Layer-2 think tanks). All project verification gates MET.
+
+## Iteration 3 (2026-05-29) — Second Layer-2 source: CSIS + UTC emit fix
+Added the CSIS adapter (a second think-tank / Layer-2 source) and fixed a timezone
+serialization bug surfaced by CSIS's timed events.
+
+### What was built
+- `aggregator/fetchers/csis.py` — async httpx + selectolax. Parses `article.ts-card-event-*`
+  cards: `<h3>` title, **date + time + tz** ("June 4, 2026 • 10:30 – 11:30 am EDT"),
+  `/programs/` host. Richer than CSET (precise start time, not date-only). Registered as Layer 2, dc_curated.
+- **Emit timezone fix**: a fixed-offset start (EDT −04:00) made icalendar emit an invalid
+  `TZID="UTC-04:00"` with no VTIMEZONE. `emit._to_utc` now normalizes aware datetimes to UTC
+  → clean `...Z`. (Luma events were already UTC; unaffected.)
+- 4 new CSIS parser tests + 1 emit-UTC regression test.
+
+### Verification numbers (live run, 2026-05-29)
+- **Unit tests: 29 passed.**
+- **Sources: 5/7 live across layers [1, 2]** — DC2=72, dctech=24, aic-washington=453, cset=10, **csis=13** (16 cards, dups collapsed). Quarantined: DCtechevents (empty), ai (404).
+- **572 raw → 478 deduped (94 removed) → 65 kept** (349 loc, 64 topic dropped).
+- **1 CSIS AI event** flows to the feed: "Data Centers, AI, and the Future of U.S. Strategic Competitiveness" (the other ~12 CSIS events are energy/security/space → correctly dropped on topic). CSET still contributes 9.
+- CSIS DTSTART now `20260604T143000Z` (valid UTC, tz-aware). events.ics=65 (icalendar, 0 malformed); feed.xml=65 (feedparser bozo=False). Idempotent; 0 non-DC-geo leaks.
+- big-name still 0 (think-tank speaker names live on detail pages, not listing cards — see NEXT STEP).
+
+---
+
 ## Status: Layers 1 + 2 live and verified end-to-end. The "≥3 sources across ≥2 layers" project gate is MET.
 
 ## Iteration 2 (2026-05-29) — Layer-2 source: CSET (Georgetown)
@@ -61,10 +86,11 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Add CSIS as a second Layer-2 source** (`curl_cffi`/`httpx` + `selectolax`) — CSIS is
-httpx-accessible (200, ~54 event links) and is where Nvidia's Jensen Huang did a fireside
-chat, so it is a prime *big-name* source. Pairing it with CSET hardens the Layer-2 tier and
-should finally produce big-name hits. See BACKLOG.md #1.
+**Make the headline feature real: surface big-names.** `is_big_name` is 0 everywhere because
+watchlist names live on event *detail pages* (speakers/hosts), not listing cards. Enrich CSET
+(clean detail pages, curl_cffi) and CSIS events with `speakers[]` from their detail pages, then
+match the watchlist against speakers too. This is the core differentiator per GOAL. (Close
+second: an `events-upcoming.ics` forward view — feeds are currently archive-heavy.) See BACKLOG #1–2.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).

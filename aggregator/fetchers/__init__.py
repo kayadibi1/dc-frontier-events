@@ -12,12 +12,14 @@ import asyncio
 
 from ..config import Source
 from .base import SourceResult
+from .csis import fetch_csis
 from .cset import fetch_cset
 from .luma import fetch_luma
 
 ADAPTERS = {
     "luma": fetch_luma,
     "cset": fetch_cset,
+    "csis": fetch_csis,
 }
 
 

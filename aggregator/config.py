@@ -46,6 +46,8 @@ LUMA_SOURCES = [
 # institution (125/500 ... NW, Washington DC) -> dc_curated.
 CSET_SOURCES = [
     Source("cset", "CSET (Georgetown)", "cset", 2, True, url="https://cset.georgetown.edu/events/"),
+    # CSIS HQ is in DC (1616 Rhode Island Ave NW); httpx-accessible.
+    Source("csis", "CSIS", "csis", 2, True, url="https://www.csis.org/events"),
 ]
 
 SOURCES = LUMA_SOURCES + CSET_SOURCES

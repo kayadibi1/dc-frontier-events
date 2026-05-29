@@ -31,6 +31,16 @@ def _parse_dt(iso: str | None):
             return None
 
 
+def _to_utc(dt):
+    """Normalize an aware datetime to UTC so iCal emits an unambiguous '...Z'.
+    icalendar serializes a fixed-offset tz as an invalid TZID (e.g. "UTC-04:00")
+    with no VTIMEZONE; converting to UTC avoids that. Naive/date values pass through.
+    """
+    if isinstance(dt, datetime) and dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc)
+    return dt
+
+
 def _star(ev: Event) -> str:
     return "★ " if ev.is_big_name else ""
 
@@ -50,10 +60,10 @@ def write_ics(events: list[Event], path: str) -> int:
         ie.add("uid", ev.id)
         ie.add("dtstamp", now)
         ie.add("summary", _star(ev) + ev.title)
-        ie.add("dtstart", dt)
+        ie.add("dtstart", _to_utc(dt))
         end = _parse_dt(ev.end)
         if end is not None:
-            ie.add("dtend", end)
+            ie.add("dtend", _to_utc(end))
         if ev.address:
             ie.add("location", ev.address)
         if ev.lat is not None and ev.lng is not None:

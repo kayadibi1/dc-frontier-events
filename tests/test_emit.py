@@ -38,6 +38,21 @@ def test_rss_parses_with_feedparser(tmp_path):
     assert any("Anthropic" in e.title for e in d.entries)
 
 
+def test_fixed_offset_start_emitted_as_utc(tmp_path):
+    # A CSIS-style EDT (-04:00) start must serialize as unambiguous UTC 'Z',
+    # not an invalid TZID like "UTC-04:00".
+    ev = [Event(id="csis-x", title="AI Talk", start="2026-06-04T10:30:00-04:00",
+                source="csis", topics=["ai"])]
+    p = tmp_path / "e.ics"
+    write_ics(ev, str(p))
+    raw = p.read_text(encoding="utf-8")
+    assert "TZID" not in raw
+    assert "20260604T143000Z" in raw      # 10:30 EDT == 14:30 UTC
+    cal = Calendar.from_ical(p.read_bytes())
+    dt = list(cal.walk("VEVENT"))[0].get("dtstart").dt
+    assert dt.tzinfo is not None
+
+
 def test_empty_inputs_produce_valid_empty_feeds(tmp_path):
     ics = tmp_path / "e.ics"
     rss = tmp_path / "e.xml"
