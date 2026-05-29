@@ -14,6 +14,7 @@ from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .fetchers import gather_all
 from .filter import apply_filters
+from .notify import build_message, deliver
 from .rank import score_event, top_upcoming
 from .storage import open_store
 
@@ -68,15 +69,22 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     write_rss(top, f"{out_dir}/feed-top.xml", "DC AI & Semiconductor -- Top Picks")
     write_json(emitted, f"{out_dir}/events.json")
     mapped = write_map(emitted, f"{out_dir}/map.html", today)
+    digest_md = build_digest(emitted, today)
+    digest_html = render_html(emitted, today)
     with open(f"{out_dir}/digest.md", "w", encoding="utf-8") as f:
-        f.write(build_digest(emitted, today))  # out_dir already created by write_* above
+        f.write(digest_md)  # out_dir already created by write_* above
     with open(f"{out_dir}/digest.html", "w", encoding="utf-8") as f:
-        f.write(render_html(emitted, today))
+        f.write(digest_html)
 
     new_events = [e for e in emitted if e.id not in prior_ids]
     new_big = [e for e in new_events if e.is_big_name]
     with open(f"{out_dir}/alerts.md", "w", encoding="utf-8") as f:
         f.write(build_alerts(new_events, new_big, today, first_run=not prior_ids))
+
+    # Notify (digest + alerts). Dry-run unless SMTP_* env is set; never blocks.
+    msg = build_message(digest_html, digest_md, today, up_n, len(new_big))
+    notify_mode, notify_target = deliver(msg, out_dir, today)
+    print(f"[notify] {notify_mode}: {notify_target}")
 
     summary = {
         "sources_total": len(SOURCES),
@@ -93,6 +101,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "big_name": len(big),
         "new_events": len(new_events),
         "new_big_name": len(new_big),
+        "notify": notify_mode,
         "upcoming": up_n,
         "today": today,
         "mapped": mapped,

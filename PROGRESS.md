@@ -1,7 +1,14 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Enhancement portfolio (autonomous) — F1–F3 done. GOAL ladder + final verification already PASSED.
+## Status: Enhancement portfolio (autonomous) — F1–F4 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
+
+## Enhancement F4 (2026-05-29) — Pluggable notifier / emailer
+`aggregator/notify.py`: `build_message` (HTML digest body + plain-text alt; Subject with counts) +
+`deliver` — sends via SMTP+STARTTLS when `SMTP_HOST/USER/PASS/TO` env are set, else **dry-run** writing
+`out/email/digest-<today>.eml`. Never blocks (falls back to dry-run on send failure). Stdlib only.
+- **55 unit tests pass** (+2). Live: dry-run wrote a valid `.eml` (re-parsed: Subject + 4.7 KB HTML
+  digest body). The GOAL's "weekly emailer" is code-complete; real sending just needs SMTP env.
 
 ## Enhancement F3 (2026-05-29) — HTML digest
 `digest.render_html(events, today)` → self-contained inline-CSS `digest.html` (header + counts,

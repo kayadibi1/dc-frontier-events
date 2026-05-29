@@ -17,8 +17,8 @@
 - ~~F1 multi-day series dedupe~~ ✅ (pass 3; AI+EXPO 3→1; 264 dupes removed).
 - ~~F2 interactive map UX~~ ✅ (filter/search/cluster; sidebar list synced to map).
 - ~~F3 HTML digest~~ ✅ (`render_html` → `digest.html`, self-contained).
-- F4 pluggable emailer (dry-run) · F5 Postgres+fallback ·
-  F6 archive feed + last_seen · F7 more Luma sources — in progress.
+- ~~F4 pluggable emailer~~ ✅ (`notify.py`; dry-run `.eml`, SMTP when env set).
+- F5 Postgres+fallback · F6 archive feed + last_seen · F7 more Luma sources — in progress.
 
 ## Ranked (remaining — several blocked on externals)
 1. **Weekly digest *emailer*** — SMTP-send `digest.md`/`alerts.md`. BLOCKED: needs SMTP creds to
