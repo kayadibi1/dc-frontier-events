@@ -7,10 +7,12 @@
 - ~~Upcoming-window feeds~~ ✅ iteration 4 (`events-upcoming.ics`/`feed-upcoming.xml`; 5 live).
 - ~~/map web view + events.json~~ ✅ iteration 5 (Leaflet map, 51 pins; JSON export).
 - ~~Relevance ranking~~ ✅ iteration 6 (`rank.py`; `feed-top.xml`; score in JSON/map).
+- ~~Weekly digest generator~~ ✅ iteration 7 (`digest.py` → `digest.md`, ranked).
 
 ## Ranked
-1. **Weekly digest generator** — render top-ranked upcoming + new big-name events to a
-   markdown/HTML digest (`digest.md`); foundation for the GOAL's weekly emailer. Verifiable artifact.
+1. **Generic iCal adapter + new iCal sources** — generalize Luma adapter to `kind="ics"`
+   (fetch any iCal URL); add Meetup per-group `.ics` + university Localist/Trumba `.ics` feeds.
+   One adapter unlocks many Layer-1/Layer-3 sources; addresses the coverage bottleneck.
 3. **Detail-page speaker enrichment (CSET + CSIS) → big-names.** DEFERRED: iter-5 probe found
    current detail pages carry ~no watchlist names (only ambiguous "intel"); would yield 0 now and
    risk false positives. Build when data warrants; pair with tightening the big-name watchlist

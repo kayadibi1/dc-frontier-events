@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from .config import SOURCES
 from .dedupe import dedupe
+from .digest import build_digest
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .fetchers import gather_all
 from .filter import apply_filters
@@ -65,6 +66,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     write_rss(top, f"{out_dir}/feed-top.xml", "DC AI & Semiconductor -- Top Picks")
     write_json(emitted, f"{out_dir}/events.json")
     mapped = write_map(emitted, f"{out_dir}/map.html")
+    with open(f"{out_dir}/digest.md", "w", encoding="utf-8") as f:
+        f.write(build_digest(emitted, today))  # out_dir already created by write_* above
 
     summary = {
         "sources_total": len(SOURCES),

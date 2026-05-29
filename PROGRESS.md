@@ -1,6 +1,22 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Layers 1+2 live; relevance-ranked; emits ICS + RSS (full/upcoming/top/big-names) + JSON + map. All gates MET.
+## Status: Layers 1+2 live; ranked; emits ICS + RSS (full/upcoming/top/big-names) + JSON + map.html + digest.md. All gates MET.
+
+## Iteration 7 (2026-05-29) — Weekly digest generator
+Added a ranked, human-readable digest (foundation for the GOAL's weekly emailer).
+
+### What was built
+- `aggregator/digest.py` — pure `build_digest(events, today, top_n)` → markdown: header with
+  upcoming/source counts, a ⭐ Big-names section, and a ranked Top-upcoming list (date, title,
+  source name, location, topics, score, details link).
+- Pipeline writes `out/digest.md`. 3 new tests (ranked order + past-excluded; big-names present/absent; empty).
+
+### Verification numbers (live run, 2026-05-29)
+- **Unit tests: 42 passed.**
+- `digest.md` lists 5 upcoming events across 3 sources, ranked; CSIS "Data Centers, AI…" first
+  (score 36.0). Big-names section shows the explanatory placeholder. Idempotent.
+
+---
 
 ## Iteration 6 (2026-05-29) — Relevance ranking
 Added scoring so the feed surfaces the most relevant events first (GOAL: "ranks by
@@ -150,10 +166,11 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Weekly digest generator** — render the top-ranked upcoming events (+ any new big-name events)
-to a `digest.md` (and HTML), using the iter-6 ranking for ordering. GOAL-named ("sends a weekly
-DC AI/chip digest") and a tangible, fully-verifiable artifact (assert it lists the upcoming
-events in ranked order). Foundation for the eventual emailer. See BACKLOG #1.
+**Generic iCal adapter + new iCal sources** — generalize the Luma adapter to a `kind="ics"`
+that fetches any iCal URL, then add real Meetup per-group and/or university (Localist/Trumba)
+`.ics` feeds. High leverage: one adapter unlocks many Layer-1/Layer-3 sources with ~no per-source
+code, directly addressing the coverage bottleneck (few upcoming events). Probe feeds for
+accessibility first. See BACKLOG #1.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).
