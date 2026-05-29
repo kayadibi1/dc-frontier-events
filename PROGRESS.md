@@ -1,6 +1,24 @@
 # PROGRESS — dc-frontier-events
 
-## Status: ALL 3 LAYERS live (6 sources); 4 big-names; ranked; ICS+RSS+JSON+map+digest; CLI + README. All gates MET + exceeded.
+## Status: ALL 3 LAYERS live (6 sources); big-names (precision-tested); ranked; ICS+RSS+JSON+map+digest; CLI+README. Gates MET+exceeded.
+
+## Iteration 10 (2026-05-29) — Expand + precision-harden the big-name watchlist
+Broadened the watchlist (frontier labs, chip makers, leaders + DC policy figures) while
+hardening precision so common phrases don't false-trigger.
+
+### What was built
+- Added orgs (Amazon/AWS, Mistral, Cohere, Hugging Face, Scale AI, Databricks, Palantir, TSMC,
+  ASML, Qualcomm, Broadcom, IBM) and people (Pichai, Nadella, Hassabis, Lisa Su, Raimondo).
+- **Precision**: "Intel" no longer matches "intel community/officer/agency/…" (negative lookahead)
+  or "intelligence"; deliberately did NOT add bare "google"/"meta"/"apple" (would match
+  "Google Form"/"metadata"/"Big Apple").
+- 2 new tests: 5 must-not-match phrases; 4 must-match new names.
+
+### Verification (live, 2026-05-29)
+- **Unit tests: 45 passed.** big-name events stable at **4 legit** (no false-positive inflation);
+  "AI+EXPO 2026" now also tags **Amazon/AWS** ("Microsoft, Google, Meta, AWS"). layers [1,2,3]; idempotent.
+
+---
 
 ## Iteration 9 (2026-05-29) — Operability: CLI + README
 Rounded out production-readiness. (Probed Georgetown/GMU/UMD/Howard/American Localist feeds for
@@ -203,11 +221,10 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Expand + precision-test the big-name watchlist** — the headline feature now fires (4 hits via
-GWU). Add high-value, low-false-positive orgs/people (Google, Amazon/AWS, Palantir, Scale AI,
-Mistral, Cohere, Hugging Face; key policy figures) and add tests asserting no false positives
-(e.g. "meta"→metadata, "apple"→fruit stay unmatched). Verify on live data that new hits are real.
-See BACKLOG #1.
+**Alerting (GOAL-named)** — use the persistent SQLite store to detect events *new since the last
+run* and emit `alerts.md` highlighting newly-announced big-name / watchlisted events. Makes the
+store productive (diff prior vs current ids) and delivers the GOAL's "alerts when a watchlisted
+org/person is announced." Verifiable: run twice → second run reports ~0 new (idempotent). See BACKLOG #1.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).

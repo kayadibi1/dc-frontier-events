@@ -77,21 +77,43 @@ TOPIC_PATTERNS = {
 
 # Big-name watchlist — orgs and people. A match sets is_big_name.
 BIG_NAME_PATTERNS = {
-    # orgs
+    # --- frontier AI labs / big tech ---
+    # NB: deliberately NOT bare "google"/"meta"/"apple" — they match "Google Form",
+    # "metadata", "Big Apple" etc. Use product/specific tokens instead.
     "Anthropic": r"\banthropic\b|\bclaude\b",
     "OpenAI": r"\bopenai\b|\bchatgpt\b",
-    "Nvidia": r"\bnvidia\b",
+    "Google DeepMind": r"\bdeepmind\b|google deepmind|google ai|\bgemini\b",
     "Microsoft": r"\bmicrosoft\b",
-    "Google DeepMind": r"\bdeepmind\b|google ai|\bgemini\b",
     "Meta AI": r"\bmeta ai\b|\bllama\b",
+    "Amazon": r"\bamazon\b|\baws\b",
+    "Mistral": r"\bmistral\b",
+    "Cohere": r"\bcohere\b",
+    "Hugging Face": r"\bhugging face\b",
+    "Scale AI": r"\bscale ai\b",
+    "Databricks": r"\bdatabricks\b",
+    "Palantir": r"\bpalantir\b",
+    # --- semiconductor / compute ---
+    "Nvidia": r"\bnvidia\b",
     "AMD": r"\bamd\b",
-    "Intel": r"\bintel\b",
-    # people
+    # "Intel" (company) but not DC's ubiquitous "intel community"/"intelligence".
+    "Intel": r"\bintel\b(?! (?:community|officer|officers|agency|agencies|analyst|analysts|"
+             r"sharing|assessment|assessments|brief|briefing|gathering))",
+    "TSMC": r"\btsmc\b",
+    "ASML": r"\basml\b",
+    "Qualcomm": r"\bqualcomm\b",
+    "Broadcom": r"\bbroadcom\b",
+    "IBM": r"\bibm\b",
+    # --- people: company leaders + key DC AI/chip policy figures ---
     "Dario Amodei": r"\bdario amodei\b|\bamodei\b",
     "Sam Altman": r"\bsam altman\b|\baltman\b",
     "Jensen Huang": r"\bjensen huang\b|\bjensen\b",
     "Brad Smith": r"\bbrad smith\b",
     "Jack Clark": r"\bjack clark\b",
+    "Sundar Pichai": r"\bsundar pichai\b|\bpichai\b",
+    "Satya Nadella": r"\bsatya nadella\b|\bnadella\b",
+    "Demis Hassabis": r"\bhassabis\b",
+    "Lisa Su": r"\blisa su\b",
+    "Gina Raimondo": r"\braimondo\b",
 }
 
 # DC-metro proximity. Bounding box covers DC + close NoVA + close MD suburbs.

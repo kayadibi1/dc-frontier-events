@@ -10,11 +10,11 @@
 - ~~Weekly digest generator~~ ✅ iteration 7 (`digest.py` → `digest.md`, ranked).
 - ~~Generic iCal adapter + GWU (Layer 3)~~ ✅ iteration 8 (3 layers live; 4 big-names surfaced).
 - ~~README + CLI~~ ✅ iteration 9 (argparse `--out/--db/--today`; full README).
+- ~~Expand + precision-test big-name watchlist~~ ✅ iteration 10 (frontier labs/chip makers/leaders; Intel lookahead).
 
 ## Ranked
-1. **Expand + precision-test the big-name watchlist** — add high-value low-false-positive orgs/
-   people (Google, Amazon/AWS, Palantir, Scale AI, Mistral, Cohere, Hugging Face; policy figures);
-   add tests asserting non-matches ("meta"→metadata, "apple"→fruit). Verify new live hits are real.
+1. **Alerting** — use the persistent store to detect events new-since-last-run; emit `alerts.md`
+   for newly-announced big-name/watchlisted events. GOAL-named; makes the store productive.
 2. **More university Localist feeds** — Georgetown/GMU/UMD/Howard bare iCal export 0 events
    (need per-department feed or auth); revisit with the right per-calendar URL or a JHU/SAIS feed.
 3. **Detail-page speaker enrichment (CSET + CSIS) → big-names.** DEFERRED: iter-5 probe found
