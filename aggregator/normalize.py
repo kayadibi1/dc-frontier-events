@@ -45,7 +45,8 @@ def _geo(comp) -> tuple[float | None, float | None]:
         return None, None
 
 
-def _topics(text: str) -> list[str]:
+def detect_topics(text: str) -> list[str]:
+    """Canonical topic tags matched in free text. Shared by all adapters."""
     low = text.lower()
     return [t for t, rx in _TOPIC_RES.items() if rx.search(low)]
 
@@ -111,7 +112,7 @@ def parse_ics(source: Source, ics_text: str) -> list[Event]:
                 lat=lat,
                 lng=lng,
                 organizer=org,
-                topics=_topics(f"{title} {desc}"),
+                topics=detect_topics(f"{title} {desc}"),
                 raw={"location": loc, "calendar": source.name},
             )
         )

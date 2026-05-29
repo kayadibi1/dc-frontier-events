@@ -9,29 +9,28 @@ import asyncio
 from .config import SOURCES
 from .dedupe import dedupe
 from .emit import write_ics, write_rss
-from .fetchers import fetch_all
+from .fetchers import gather_all
 from .filter import apply_filters
-from .normalize import parse_ics
 from .storage import open_store
 
 
 def run(out_dir: str = "out", db_path: str = "data/events.db") -> dict:
-    results = asyncio.run(fetch_all(SOURCES))
+    results = asyncio.run(gather_all(SOURCES))
 
     per_source: dict[str, int] = {}
+    layers_live: set[int] = set()
     raw_events = []
     quarantined = []
     for res in results:
         if not res.ok:
             per_source[res.source.slug] = 0
-            reason = res.error or ("empty (HTTP 200, 0 events)" if res.status == 200 else "no data")
-            quarantined.append((res.source.slug, reason))
-            print(f"[fetch] QUARANTINE {res.source.slug}: {reason}")
+            quarantined.append((res.source.slug, res.reason))
+            print(f"[fetch] QUARANTINE {res.source.slug}: {res.reason}")
             continue
-        evs = parse_ics(res.source, res.ics_text)
-        per_source[res.source.slug] = len(evs)
-        raw_events.extend(evs)
-        print(f"[fetch] {res.source.slug} (layer {res.source.layer}): {len(evs)} events")
+        per_source[res.source.slug] = len(res.events)
+        layers_live.add(res.source.layer)
+        raw_events.extend(res.events)
+        print(f"[fetch] {res.source.slug} (layer {res.source.layer}): {len(res.events)} events")
 
     total_raw = len(raw_events)
     deduped, removed = dedupe(raw_events)
@@ -57,6 +56,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db") -> dict:
     summary = {
         "sources_total": len(SOURCES),
         "sources_live": sum(1 for v in per_source.values() if v > 0),
+        "layers_live": sorted(layers_live),
         "per_source": per_source,
         "quarantined": quarantined,
         "raw_events": total_raw,
@@ -78,6 +78,7 @@ def _print_summary(s: dict) -> None:
     live = ", ".join(f"{k}={v}" for k, v in s["per_source"].items())
     print("\n=== RUN SUMMARY ===")
     print(f"sources:           {s['sources_live']}/{s['sources_total']} live  ({live})")
+    print(f"layers live:       {s['layers_live']}")
     if s["quarantined"]:
         q = ", ".join(f"{slug} [{why}]" for slug, why in s["quarantined"])
         print(f"quarantined:       {q}")

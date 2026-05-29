@@ -1,5 +1,32 @@
 # PROGRESS — dc-frontier-events
 
+## Status: Layers 1 + 2 live and verified end-to-end. The "≥3 sources across ≥2 layers" project gate is MET.
+
+## Iteration 2 (2026-05-29) — Layer-2 source: CSET (Georgetown)
+Refactored `fetchers.py` into a `fetchers/` **adapter package** (each adapter returns
+normalized `Event`s; pipeline is now format-agnostic) and added the CSET scraper —
+the first Layer-2 / policy source.
+
+### What was built
+- `aggregator/fetchers/{base,luma,cset}.py` + dispatcher — `gather_all(sources)` returns `SourceResult`s.
+- **CSET adapter** (`cset.py`): CSET's listing is behind a WAF that 403s httpx (TLS fingerprint),
+  so it fetches with **`curl_cffi` (Chrome impersonation)** + parses the `div.teaser__top` cards
+  with **`selectolax`** (title/date/location/excerpt). No per-event detail fetch needed.
+- `Source` gained `kind` ("luma"|"cset") + `url`; CSET registered as Layer 2, dc_curated.
+- `detect_topics` exposed for reuse across adapters.
+- 5 new offline CSET parser tests (date parse, virtual/Online, topics, excerpt, grid-guard).
+
+### Verification numbers (live run, 2026-05-29)
+- **Unit tests: 24 passed.**
+- **Sources: 4/6 live across layers [1, 2]** — DC2=72, dctech=24, aic-washington=454, **cset=10** (Layer 2). Quarantined: DCtechevents (empty), ai (404).
+- **560 raw → 466 deduped (94 removed) → 64 kept** (350 loc, 52 topic dropped).
+- **9 CSET Layer-2 events** flow into the feed (AI Governance, AI Red-Teaming, Rewiring the Chip Landscape, China's AI Leap, US-China AI Power Race, Tech Workforce, …). The 10th ("The New Bio Frontier") correctly dropped on topic (bio, not AI/chip).
+- **events.ics = 64 VEVENTs** (icalendar, 0 malformed); **feed.xml = 64** (feedparser bozo=False).
+- Precision: 0 in-person non-DC-geo kept. Idempotent (re-run stable at 64).
+- big-name still 0 (CSET titles don't name watchlist orgs; speakers live on detail pages — see BACKLOG #2).
+
+---
+
 ## Status: Phase 1 spine COMPLETE and verified end-to-end on live data.
 
 ## Iteration 1 (2026-05-29) — Prove the spine
@@ -34,11 +61,12 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Add the Layer-2 CSET (Georgetown) events scraper** (`async httpx` + `selectolax`).
-Rationale: it satisfies the still-unmet project gate "≥3 sources across **≥2 layers**" AND
-surfaces the first *real DC big-name* events (the core differentiator). See BACKLOG.md #1.
+**Add CSIS as a second Layer-2 source** (`curl_cffi`/`httpx` + `selectolax`) — CSIS is
+httpx-accessible (200, ~54 event links) and is where Nvidia's Jensen Huang did a fireside
+chat, so it is a prime *big-name* source. Pairing it with CSET hardens the Layer-2 tier and
+should finally produce big-name hits. See BACKLOG.md #1.
 
 ## Known simplifications (tracked in BACKLOG.md)
-- Postgres backend not bundled yet (SQLite only) — BACKLOG #8.
+- CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).
+- Postgres backend not bundled yet (SQLite only) — BACKLOG #9.
 - Feeds include past events (archive) with no upcoming-only view yet — BACKLOG #3.
-- `selectolax` not in requirements.txt until the first HTML scraper lands.

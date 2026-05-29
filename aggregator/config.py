@@ -13,11 +13,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Source:
-    slug: str          # luma slug, e.g. "DC2"
+    slug: str          # short id, e.g. "DC2" / "cset"
     name: str          # human label
-    cal_id: str        # luma calendar id, e.g. "cal-eCuIBRbS1atJOa6"
+    kind: str          # adapter kind: "luma" | "cset"
     layer: int         # 1=builder/community, 2=policy, 3=university
-    dc_curated: bool   # True if the calendar is itself DC-scoped (trusted location)
+    dc_curated: bool   # True if the source is itself DC-scoped (trusted location)
+    cal_id: str = ""   # luma calendar id, e.g. "cal-eCuIBRbS1atJOa6"
+    url: str = ""      # listing page for HTML scrapers
 
     @property
     def ics_url(self) -> str:
@@ -27,19 +29,26 @@ class Source:
 # Layer 1 — Luma builder/community calendars (native iCal subscription).
 # cal_ids resolved live from each lu.ma/<slug> page.
 LUMA_SOURCES = [
-    Source("DC2", "DC Data & AI Events", "cal-eCuIBRbS1atJOa6", 1, True),
-    Source("DCtechevents", "Washington DC Tech Events", "cal-0TDb3WUDzBp2DYy", 1, True),
-    Source("dctech", "DC Tech & Venture Coalition", "cal-Q37RKijUFFdzt97", 1, True),
+    Source("DC2", "DC Data & AI Events", "luma", 1, True, cal_id="cal-eCuIBRbS1atJOa6"),
+    Source("DCtechevents", "Washington DC Tech Events", "luma", 1, True, cal_id="cal-0TDb3WUDzBp2DYy"),
+    Source("dctech", "DC Tech & Venture Coalition", "luma", 1, True, cal_id="cal-Q37RKijUFFdzt97"),
     # AI Collective's calendar is global (SF/NYC/Chicago/... events), not DC-only:
     # ~11 of ~455 events are in DC. NOT dc_curated, so it is held to the strict
     # DC geo/text filter and only its genuinely-DC events are kept.
-    Source("aic-washington", "AI Collective DC", "cal-E74MDlDKBaeAwXK", 1, False),
+    Source("aic-washington", "AI Collective DC", "luma", 1, False, cal_id="cal-E74MDlDKBaeAwXK"),
     # Global AI calendar (Claude Community, Latent.Space, ...): NOT dc_curated,
     # so it is held to the strict DC location filter.
-    Source("ai", "Global AI (Luma)", "cal-nyk2WcWIv2CFmq8", 1, False),
+    Source("ai", "Global AI (Luma)", "luma", 1, False, cal_id="cal-nyk2WcWIv2CFmq8"),
 ]
 
-SOURCES = LUMA_SOURCES
+# Layer 2 — policy / big-name (the high-signal tier). HTML scrape behind a WAF,
+# so the adapter uses curl_cffi (browser TLS impersonation). CSET is a DC
+# institution (125/500 ... NW, Washington DC) -> dc_curated.
+CSET_SOURCES = [
+    Source("cset", "CSET (Georgetown)", "cset", 2, True, url="https://cset.georgetown.edu/events/"),
+]
+
+SOURCES = LUMA_SOURCES + CSET_SOURCES
 
 
 # Topic relevance. Canonical topic -> regex (case-insensitive, word-boundaried

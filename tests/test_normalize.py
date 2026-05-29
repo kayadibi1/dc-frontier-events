@@ -1,7 +1,7 @@
 from aggregator.config import Source
 from aggregator.normalize import parse_ics
 
-SRC = Source("DC2", "DC Data & AI Events", "cal-x", 1, True)
+SRC = Source("DC2", "DC Data & AI Events", "luma", 1, True, cal_id="cal-x")
 
 # `\\n` here -> a literal backslash-n in the runtime string == the iCal in-value
 # newline escape, which icalendar decodes to a real newline on parse.
