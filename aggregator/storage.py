@@ -18,8 +18,10 @@ from .models import Event
 COLUMNS = [
     "id", "title", "description", "start", "end", "tz", "venue_name", "address",
     "lat", "lng", "organizer", "speakers", "source", "source_url", "topics",
-    "is_big_name", "raw", "dedupe_key", "updated_at",
+    "is_big_name", "raw", "dedupe_key", "updated_at", "first_seen", "last_seen",
 ]
+# Columns NOT overwritten on a conflicting upsert (preserve original insert).
+_PRESERVE = {"id", "first_seen"}
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS events (
@@ -27,9 +29,22 @@ CREATE TABLE IF NOT EXISTS events (
   start TEXT, "end" TEXT, tz TEXT,
   venue_name TEXT, address TEXT, lat REAL, lng REAL,
   organizer TEXT, speakers TEXT, source TEXT, source_url TEXT,
-  topics TEXT, is_big_name INTEGER, raw TEXT, dedupe_key TEXT, updated_at TEXT
+  topics TEXT, is_big_name INTEGER, raw TEXT, dedupe_key TEXT, updated_at TEXT,
+  first_seen TEXT, last_seen TEXT
 );
 """
+
+
+def _rows(events: list[Event], now: str) -> list[tuple]:
+    out = []
+    for ev in events:
+        r = ev.to_row()
+        r["dedupe_key"] = ev.id
+        r["updated_at"] = now
+        r["first_seen"] = now   # kept only on INSERT (excluded from UPDATE set)
+        r["last_seen"] = now
+        out.append(tuple(r[c] for c in COLUMNS))
+    return out
 
 
 class Store:
@@ -41,20 +56,25 @@ class Store:
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(_DDL)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        # Add first_seen/last_seen to pre-existing databases.
+        have = {r[1] for r in self.conn.execute("PRAGMA table_info(events)")}
+        for col in ("first_seen", "last_seen"):
+            if col not in have:
+                self.conn.execute(f'ALTER TABLE events ADD COLUMN {col} TEXT')
 
     def upsert_many(self, events: list[Event]) -> int:
         now = datetime.now(timezone.utc).isoformat()
-        rows = []
-        for ev in events:
-            r = ev.to_row()
-            r["dedupe_key"] = ev.id
-            r["updated_at"] = now
-            rows.append(tuple(r[c] for c in COLUMNS))
-        placeholders = ",".join(["?"] * len(COLUMNS))
+        rows = _rows(events, now)
         cols = ",".join(f'"{c}"' for c in COLUMNS)
+        placeholders = ",".join(["?"] * len(COLUMNS))
+        updates = ",".join(f'"{c}"=excluded."{c}"' for c in COLUMNS if c not in _PRESERVE)
         self.conn.executemany(
-            f"INSERT OR REPLACE INTO events ({cols}) VALUES ({placeholders})", rows
+            f"INSERT INTO events ({cols}) VALUES ({placeholders}) "
+            f"ON CONFLICT(id) DO UPDATE SET {updates}", rows
         )
         self.conn.commit()
         return len(rows)
@@ -79,8 +99,11 @@ CREATE TABLE IF NOT EXISTS events (
   start TEXT, "end" TEXT, tz TEXT,
   venue_name TEXT, address TEXT, lat DOUBLE PRECISION, lng DOUBLE PRECISION,
   organizer TEXT, speakers TEXT, source TEXT, source_url TEXT,
-  topics TEXT, is_big_name INTEGER, raw TEXT, dedupe_key TEXT, updated_at TEXT
+  topics TEXT, is_big_name INTEGER, raw TEXT, dedupe_key TEXT, updated_at TEXT,
+  first_seen TEXT, last_seen TEXT
 );
+ALTER TABLE events ADD COLUMN IF NOT EXISTS first_seen TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS last_seen TEXT;
 """
 
 
@@ -102,15 +125,10 @@ class PostgresStore:
 
     def upsert_many(self, events: list[Event]) -> int:
         now = datetime.now(timezone.utc).isoformat()
-        rows = []
-        for ev in events:
-            r = ev.to_row()
-            r["dedupe_key"] = ev.id
-            r["updated_at"] = now
-            rows.append(tuple(r[c] for c in COLUMNS))
+        rows = _rows(events, now)
         cols = ",".join(f'"{c}"' for c in COLUMNS)
         placeholders = ",".join(["%s"] * len(COLUMNS))
-        updates = ",".join(f'"{c}"=EXCLUDED."{c}"' for c in COLUMNS if c != "id")
+        updates = ",".join(f'"{c}"=EXCLUDED."{c}"' for c in COLUMNS if c not in _PRESERVE)
         sql = (f"INSERT INTO events ({cols}) VALUES ({placeholders}) "
                f"ON CONFLICT (id) DO UPDATE SET {updates}")
         with self.conn.cursor() as cur:

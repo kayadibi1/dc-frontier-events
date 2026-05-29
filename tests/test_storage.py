@@ -31,3 +31,17 @@ def test_sqlite_roundtrip_and_idempotent_upsert(tmp_path):
     assert back[0].is_big_name is True
     assert s.existing_ids() == {"a"}
     s.close()
+
+
+def test_first_seen_preserved_last_seen_refreshed(tmp_path):
+    s = Store(str(tmp_path / "e.db"))
+    ev = [Event(id="a", title="X", start="2026-06-01", source="cset")]
+    s.upsert_many(ev)
+    f1, l1 = s.conn.execute("SELECT first_seen,last_seen FROM events WHERE id='a'").fetchone()
+    s.upsert_many(ev)  # re-upsert (idempotent in count, but last_seen refreshes)
+    f2, l2 = s.conn.execute("SELECT first_seen,last_seen FROM events WHERE id='a'").fetchone()
+    assert f1 and l1
+    assert f2 == f1          # first_seen preserved across upserts
+    assert l2 >= l1          # last_seen refreshed
+    assert s.count() == 1
+    s.close()

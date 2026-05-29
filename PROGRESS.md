@@ -1,7 +1,15 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Enhancement portfolio (autonomous) — F1–F5 done. GOAL ladder + final verification already PASSED.
+## Status: Enhancement portfolio (autonomous) — F1–F6 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
+
+## Enhancement F6 (2026-05-29) — Archive feed + last_seen tracking
+Added `first_seen`/`last_seen` columns (safe migration for existing DBs); upsert is now
+`INSERT … ON CONFLICT(id) DO UPDATE` preserving `first_seen` and refreshing `last_seen` (both
+SQLite + Postgres). Pipeline emits `events-archive.ics` from the durable store and reports
+`gone-from-sources` (stored ids not in this run's kept).
+- **59 unit tests pass** (+1: first_seen preserved / last_seen refreshed). Live: `events-archive.ics`
+  103 VEVENTs (parses); gone=0; run 2 idempotent (0 new). 13 output artifacts.
 
 ## Enhancement F5 (2026-05-29) — Postgres backend + fallback
 `storage.PostgresStore` (psycopg2): same COLUMNS/Event round-trip as SQLite, `INSERT … ON CONFLICT

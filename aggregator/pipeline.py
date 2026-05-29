@@ -53,6 +53,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     store_total = store.count()
     store.close()
     assert len(roundtrip) >= len(kept), "storage round-trip lost rows"
+    gone = sorted(set(prior_ids) - {e.id for e in kept})  # in store, not in this run
 
     emitted = sorted(kept, key=lambda e: e.start or "")
     for e in emitted:
@@ -69,6 +70,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     write_rss(top, f"{out_dir}/feed-top.xml", "DC AI & Semiconductor -- Top Picks")
     write_json(emitted, f"{out_dir}/events.json")
     mapped = write_map(emitted, f"{out_dir}/map.html", today)
+    archive_n = write_ics(sorted(roundtrip, key=lambda e: e.start or ""),
+                          f"{out_dir}/events-archive.ics")
     digest_md = build_digest(emitted, today)
     digest_html = render_html(emitted, today)
     with open(f"{out_dir}/digest.md", "w", encoding="utf-8") as f:
@@ -105,6 +108,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "upcoming": up_n,
         "today": today,
         "mapped": mapped,
+        "archive_events": archive_n,
+        "gone": len(gone),
         "stored_total": store_total,
         "ics_events": ics_n,
         "rss_items": rss_n,
@@ -128,6 +133,7 @@ def _print_summary(s: dict) -> None:
     print(f"big-name events:   {s['big_name']}")
     print(f"new since last run:{s['new_events']}  (new big-name: {s['new_big_name']})")
     print(f"upcoming (>= {s['today']}): {s['upcoming']}")
-    print(f"stored total:      {s['stored_total']}")
+    print(f"stored total:      {s['stored_total']}  (archive.ics={s['archive_events']}, "
+          f"gone-from-sources={s['gone']})")
     print(f"emitted:           events.ics={s['ics_events']}  feed.xml={s['rss_items']}  "
           f"map.html={s['mapped']} pins  events.json")
