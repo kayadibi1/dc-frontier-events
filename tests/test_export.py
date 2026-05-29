@@ -30,21 +30,26 @@ def test_write_json_roundtrips(tmp_path):
     assert next(d for d in data if d["id"] == "dc2-1")["layer"] == 1
 
 
-def test_write_map_only_geo_events(tmp_path):
+def test_write_map_interactive(tmp_path):
     p = tmp_path / "map.html"
-    n = write_map(sample(), str(p))
-    assert n == 2                       # virtual (no geo) excluded
+    n = write_map(sample(), str(p), "2026-05-01")
+    assert n == 2                       # geo events get map pins
     html = p.read_text(encoding="utf-8")
-    assert "leaflet" in html.lower()
-    assert "2 mapped / 3 total" in html
-    # embedded payload holds exactly the 2 geo events
     tree = HTMLParser(html)
+    assert "leaflet" in html.lower()
     assert tree.css_first("#map") is not None
-    assert "Data Centers" in html and "AI Workshop" in html
-    assert "Virtual Talk" not in html
+    assert tree.css_first("#search") is not None
+    assert len(tree.css(".flt-layer")) == 3           # layer filter checkboxes
+    lis = tree.css("#list li.ev")
+    assert len(lis) == 3                                # ALL events listed (incl. virtual)
+    geo_lis = [li for li in lis if li.attributes.get("data-lat")]
+    assert len(geo_lis) == 2                            # only geo ones carry coords
+    assert "Data Centers" in html and "AI Workshop" in html and "Virtual Talk" in html
 
 
 def test_map_handles_empty(tmp_path):
     p = tmp_path / "m.html"
-    assert write_map([], str(p)) == 0
-    assert "0 mapped / 0 total" in p.read_text(encoding="utf-8")
+    assert write_map([], str(p), "2026-05-01") == 0
+    tree = HTMLParser(p.read_text(encoding="utf-8"))
+    assert tree.css_first("#map") is not None
+    assert len(tree.css("#list li.ev")) == 0

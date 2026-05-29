@@ -21,6 +21,12 @@ from .models import Event
 
 PRODID = "-//dc-frontier-events//EN"
 _LAYER = {s.slug: s.layer for s in SOURCES}
+_NAME = {s.slug: s.name for s in SOURCES}
+
+
+def _h(s: str) -> str:
+    """Escape for HTML text and double-quoted attribute values."""
+    return escape(s or "", {'"': "&quot;"})
 
 
 def _parse_dt(iso: str | None):
@@ -155,55 +161,115 @@ def write_json(events: list[Event], path: str) -> int:
     return len(events)
 
 
-_MAP_TEMPLATE = """<!DOCTYPE html>
+# Interactive map: server-rendered sidebar list (one <li> per event, with data-
+# attributes) + a Leaflet/MarkerCluster map. JS builds markers from the list and
+# filters both list and markers by layer / big-name / upcoming / search. No
+# str.format here, so JS braces stay literal; only the <li> block is injected.
+_MAP_HEAD = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DC AI & Semiconductor Events — Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
- body{{margin:0;font-family:system-ui,sans-serif}}
- #map{{height:100vh}}
- #hdr{{position:absolute;z-index:1000;top:10px;left:50px;background:#fff;padding:8px 12px;
-   border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3);font-size:13px}}
- .dot{{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Arial,sans-serif;font-size:14px}
+#app{display:flex;height:100vh}
+#sidebar{width:340px;min-width:300px;display:flex;flex-direction:column;border-right:1px solid #ddd}
+#controls{padding:10px;border-bottom:1px solid #eee}
+#controls input[type=text]{width:100%;padding:6px;margin-bottom:6px}
+#controls label{display:inline-block;margin-right:10px;font-size:12px;white-space:nowrap}
+#count{margin-top:6px;color:#666;font-size:12px}
+#list{flex:1;overflow:auto;margin:0;padding:0;list-style:none}
+#list li{padding:8px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+#list li:hover{background:#f6f6ff}
+#list li small{color:#666}
+#map{flex:1}
+.star{color:#d62728}
+.lg{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle}
 </style></head>
-<body>
-<div id="hdr"><b>DC AI &amp; Semiconductor Events</b><br>
- {mapped} mapped / {total} total &middot;
- <span class="dot" style="background:#d62728"></span>big name
- <span class="dot" style="background:#9467bd"></span>policy (L2)
- <span class="dot" style="background:#1f77b4"></span>community (L1)</div>
-<div id="map"></div>
+<body><div id="app"><div id="sidebar"><div id="controls">
+<input type="text" id="search" placeholder="Search events…">
+<div>
+<label><input type="checkbox" class="flt-layer" value="1" checked><span class="lg" style="background:#1f77b4"></span>L1</label>
+<label><input type="checkbox" class="flt-layer" value="2" checked><span class="lg" style="background:#9467bd"></span>L2</label>
+<label><input type="checkbox" class="flt-layer" value="3" checked><span class="lg" style="background:#2ca02c"></span>L3</label>
+</div><div>
+<label><input type="checkbox" id="flt-big"><span class="lg" style="background:#d62728"></span>Big names</label>
+<label><input type="checkbox" id="flt-up">Upcoming</label>
+</div><div id="count"></div></div>
+<ul id="list">
+"""
+
+_MAP_TAIL = """</ul></div><div id="map"></div></div>
 <script>
-var EVENTS = {data};
-var map = L.map('map').setView([38.9, -77.03], 11);
-L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png',
-  {{maxZoom:19, attribution:'&copy; OpenStreetMap'}}).addTo(map);
-EVENTS.forEach(function(e){{
-  var color = e.is_big_name ? '#d62728' : (e.layer===2 ? '#9467bd' : '#1f77b4');
-  var p = L.circleMarker([e.lat, e.lng], {{radius:7, color:color, fillColor:color,
-    fillOpacity:0.8, weight:1}}).addTo(map);
-  var link = e.source_url ? '<br><a href="'+e.source_url+'" target="_blank">details</a>' : '';
-  p.bindPopup('<b>'+e.title+'</b><br>'+(e.start||'').slice(0,10)+
-    ' &middot; score '+(e.score!=null?e.score:'-')+'<br>'+(e.address||'')+link);
-}});
+var map=L.map('map').setView([38.9,-77.03],11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+var cluster=L.markerClusterGroup();map.addLayer(cluster);
+var lis=[].slice.call(document.querySelectorAll('#list li.ev'));
+lis.forEach(function(li){
+  var lat=parseFloat(li.getAttribute('data-lat')),lng=parseFloat(li.getAttribute('data-lng'));
+  if(!isNaN(lat)&&!isNaN(lng)){
+    var ly=li.getAttribute('data-layer');
+    var color=li.getAttribute('data-big')==='1'?'#d62728':(ly==='2'?'#9467bd':(ly==='3'?'#2ca02c':'#1f77b4'));
+    var m=L.circleMarker([lat,lng],{radius:7,color:color,fillColor:color,fillOpacity:.85,weight:1});
+    var url=li.getAttribute('data-url');
+    m.bindPopup('<b>'+li.querySelector('b').textContent+'</b><br>'+(li.getAttribute('data-date')||'')+(url?'<br><a href="'+url+'" target="_blank">details</a>':''));
+    li._m=m;
+  }
+  li.addEventListener('click',function(){if(li._m){map.setView(li._m.getLatLng(),14);cluster.zoomToShowLayer(li._m,function(){li._m.openPopup();});}});
+});
+function render(){
+  var q=document.getElementById('search').value.toLowerCase().trim();
+  var layers=[].slice.call(document.querySelectorAll('.flt-layer:checked')).map(function(c){return c.value;});
+  var big=document.getElementById('flt-big').checked,up=document.getElementById('flt-up').checked;
+  cluster.clearLayers();var shown=0;
+  lis.forEach(function(li){
+    var ok=layers.indexOf(li.getAttribute('data-layer'))>=0
+      &&(!big||li.getAttribute('data-big')==='1')
+      &&(!up||li.getAttribute('data-up')==='1')
+      &&(!q||li.getAttribute('data-text').indexOf(q)>=0);
+    li.style.display=ok?'':'none';
+    if(ok){shown++;if(li._m)cluster.addLayer(li._m);}
+  });
+  document.getElementById('count').textContent=shown+' of '+lis.length+' events';
+}
+document.getElementById('search').addEventListener('input',render);
+[].slice.call(document.querySelectorAll('.flt-layer,#flt-big,#flt-up')).forEach(function(c){c.addEventListener('change',render);});
+render();
 </script></body></html>
 """
 
 
-def write_map(events: list[Event], path: str) -> int:
-    """Static Leaflet map of every event that carries GEO coordinates."""
+def _li(ev: Event, today_iso: str) -> str:
+    layer = _LAYER.get(ev.source, 0)
+    topics = ", ".join(t for t in ev.topics if not t.startswith("big:"))
+    src = _NAME.get(ev.source, ev.source)
+    date = (ev.start or "")[:10]
+    score = ev.raw.get("score")
+    text = " ".join([ev.title, src, topics, ev.address or ""]).lower()
+    coords = (f' data-lat="{ev.lat}" data-lng="{ev.lng}"'
+              if ev.lat is not None and ev.lng is not None else "")
+    star = '<span class="star">★</span> ' if ev.is_big_name else ""
+    meta = f"{date} · {_h(src)} · {_h(topics) or '—'}"
+    if score is not None:
+        meta += f" · ●{score}"
+    return (f'<li class="ev" data-layer="{layer}" data-big="{1 if ev.is_big_name else 0}"'
+            f' data-up="{1 if date >= today_iso else 0}" data-date="{date}"'
+            f' data-url="{_h(ev.source_url)}" data-text="{_h(text)}"{coords}>'
+            f'{star}<b>{_h(ev.title)}</b><br><small>{meta}</small></li>')
+
+
+def write_map(events: list[Event], path: str, today_iso: str) -> int:
+    """Self-contained interactive map: filterable, searchable sidebar list synced
+    to a clustered Leaflet map. Returns the number of events with GEO (map pins)."""
     geo = [e for e in events if e.lat is not None and e.lng is not None]
-    payload = json.dumps(
-        [{"title": e.title, "start": e.start, "lat": e.lat, "lng": e.lng,
-          "address": e.address, "source_url": e.source_url,
-          "is_big_name": e.is_big_name, "layer": _LAYER.get(e.source, 0),
-          "score": e.raw.get("score")} for e in geo],
-        ensure_ascii=False,
-    ).replace("</", "<\\/")  # safe to embed inside <script>
-    html = _MAP_TEMPLATE.format(data=payload, mapped=len(geo), total=len(events))
+    items = sorted(events, key=lambda e: (-(e.raw.get("score") or 0), e.start or ""))
+    lis = "\n".join(_li(e, today_iso) for e in items)
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(html)
+        f.write(_MAP_HEAD + lis + _MAP_TAIL)
     return len(geo)

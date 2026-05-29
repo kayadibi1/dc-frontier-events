@@ -1,7 +1,15 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Enhancement portfolio (autonomous) in progress — F1 done. GOAL ladder + final verification already PASSED.
+## Status: Enhancement portfolio (autonomous) — F1–F2 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
+
+## Enhancement F2 (2026-05-29) — Interactive map UX
+Rebuilt `map.html` into a filterable, searchable explorer: a server-rendered sidebar list (one `<li>`
+per event with data-attributes) synced to a clustered Leaflet map. Controls: layer (L1/L2/L3),
+big-names-only, upcoming-only, search; JS filters list + markers together; click a list row to fly to
+its pin. MarkerCluster via CDN; fully self-contained.
+- **52 unit tests pass.** Live `map.html` (~49 KB): 103 list items, 65 geo pins, all controls present,
+  clustering active; non-geo events appear in the list (not as pins).
 
 ## Enhancement F1 (2026-05-29) — Multi-day series dedupe
 Dedupe pass 3 collapses a single event listed once-per-consecutive-day (same source + source_url +
