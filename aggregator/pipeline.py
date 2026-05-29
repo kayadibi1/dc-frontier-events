@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 
+from .alerts import build_alerts
 from .config import SOURCES
 from .dedupe import dedupe
 from .digest import build_digest
@@ -45,6 +46,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     # (we full-refresh every source each run, so `kept` is the current truth;
     # the store accumulates history). all_events() round-trips through storage.
     store = open_store(db_path)
+    prior_ids = store.existing_ids()          # ids known before this run -> new-event diff
     store.upsert_many(kept)
     roundtrip = store.all_events()
     store_total = store.count()
@@ -69,6 +71,11 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     with open(f"{out_dir}/digest.md", "w", encoding="utf-8") as f:
         f.write(build_digest(emitted, today))  # out_dir already created by write_* above
 
+    new_events = [e for e in emitted if e.id not in prior_ids]
+    new_big = [e for e in new_events if e.is_big_name]
+    with open(f"{out_dir}/alerts.md", "w", encoding="utf-8") as f:
+        f.write(build_alerts(new_events, new_big, today, first_run=not prior_ids))
+
     summary = {
         "sources_total": len(SOURCES),
         "sources_live": sum(1 for v in per_source.values() if v > 0),
@@ -82,6 +89,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "dropped_location": fstats["dropped_location"],
         "dropped_topic": fstats["dropped_topic"],
         "big_name": len(big),
+        "new_events": len(new_events),
+        "new_big_name": len(new_big),
         "upcoming": up_n,
         "today": today,
         "mapped": mapped,
@@ -106,6 +115,7 @@ def _print_summary(s: dict) -> None:
     print(f"kept after filter: {s['kept_after_filter']}  "
           f"(dropped {s['dropped_location']} loc, {s['dropped_topic']} topic)")
     print(f"big-name events:   {s['big_name']}")
+    print(f"new since last run:{s['new_events']}  (new big-name: {s['new_big_name']})")
     print(f"upcoming (>= {s['today']}): {s['upcoming']}")
     print(f"stored total:      {s['stored_total']}")
     print(f"emitted:           events.ics={s['ics_events']}  feed.xml={s['rss_items']}  "

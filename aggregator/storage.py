@@ -63,6 +63,9 @@ class Store:
         cur = self.conn.execute("SELECT * FROM events ORDER BY start")
         return [Event.from_row(r) for r in cur.fetchall()]
 
+    def existing_ids(self) -> set[str]:
+        return {r[0] for r in self.conn.execute("SELECT id FROM events")}
+
     def count(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
 

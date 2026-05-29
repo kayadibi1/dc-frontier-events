@@ -11,12 +11,20 @@
 - ~~Generic iCal adapter + GWU (Layer 3)~~ ✅ iteration 8 (3 layers live; 4 big-names surfaced).
 - ~~README + CLI~~ ✅ iteration 9 (argparse `--out/--db/--today`; full README).
 - ~~Expand + precision-test big-name watchlist~~ ✅ iteration 10 (frontier labs/chip makers/leaders; Intel lookahead).
+- ~~Alerting~~ ✅ iteration 11 (`alerts.py`/`alerts.md`; new-since-last-run via store; idempotent).
 
-## Ranked
-1. **Alerting** — use the persistent store to detect events new-since-last-run; emit `alerts.md`
-   for newly-announced big-name/watchlisted events. GOAL-named; makes the store productive.
-2. **More university Localist feeds** — Georgetown/GMU/UMD/Howard bare iCal export 0 events
-   (need per-department feed or auth); revisit with the right per-calendar URL or a JHU/SAIS feed.
+## Ranked (remaining — several blocked on externals)
+1. **Weekly digest *emailer*** — SMTP-send `digest.md`/`alerts.md`. BLOCKED: needs SMTP creds to
+   verify sending; the rendered digest/alerts already exist. Wire when creds are provided.
+2. **Real Postgres backend** — implement `PostgresStore` behind `open_store()`. BLOCKED: can't
+   verify without a reachable `DATABASE_URL`; SQLite fallback works today.
+3. **More sources** — additional think tanks (Brookings/ITIF/CNAS/Atlantic Council) + university
+   feeds are each bespoke/fragile (probed: most block httpx or export 0 via bare iCal). Add as
+   each yields a reliable feed/endpoint.
+4. **CSET/CSIS detail-page speaker enrichment** — deferred (iter-5): current detail pages carry
+   ~no watchlist names; build when data warrants.
+5. **Multi-day series dedupe** — collapse per-day entries of one event (e.g. "AI+EXPO 2026" ×3) into a date range.
+6. **Cross-language dedupe; archiving partition; /map clustering & filters; ICS topic-coloring.**
 3. **Detail-page speaker enrichment (CSET + CSIS) → big-names.** DEFERRED: iter-5 probe found
    current detail pages carry ~no watchlist names (only ambiguous "intel"); would yield 0 now and
    risk false positives. Build when data warrants; pair with tightening the big-name watchlist

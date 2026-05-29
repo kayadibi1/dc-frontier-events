@@ -1,6 +1,24 @@
 # PROGRESS — dc-frontier-events
 
-## Status: ALL 3 LAYERS live (6 sources); big-names (precision-tested); ranked; ICS+RSS+JSON+map+digest; CLI+README. Gates MET+exceeded.
+## Status: Full GOAL ladder realized — 3 layers, dedupe, filter, rank, big-names, ICS/RSS/JSON/map/digest/**alerts**, CLI+README. All gates MET.
+
+## Iteration 11 (2026-05-29) — Alerting (new-since-last-run)
+Made the persistent store productive: detect events new since the last run and alert on
+newly-announced big-name events (GOAL: "alerts when a watchlisted org/person is announced").
+
+### What was built
+- `Store.existing_ids()` — ids known before this run.
+- `aggregator/alerts.py` — pure `build_alerts(new, new_big, today, first_run)` → `alerts.md`.
+- Pipeline captures `prior_ids` before upsert, diffs `emitted` against it, writes `out/alerts.md`,
+  logs "new since last run / new big-name".
+- 4 new tests (alert render: new/empty/first-run; store `existing_ids` persistence across reopen).
+
+### Verification (live, 2026-05-29)
+- **Unit tests: 49 passed.**
+- RUN 1 (fresh db): 109 new, **4 new big-name** → `alerts.md` baseline note + lists the 4 big-name events.
+- RUN 2 (same db): **0 new, 0 new big-name** — idempotent diff confirmed.
+
+---
 
 ## Iteration 10 (2026-05-29) — Expand + precision-harden the big-name watchlist
 Broadened the watchlist (frontier labs, chip makers, leaders + DC policy figures) while
@@ -221,10 +239,11 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Alerting (GOAL-named)** — use the persistent SQLite store to detect events *new since the last
-run* and emit `alerts.md` highlighting newly-announced big-name / watchlisted events. Makes the
-store productive (diff prior vs current ids) and delivers the GOAL's "alerts when a watchlisted
-org/person is announced." Verifiable: run twice → second run reports ~0 new (idempotent). See BACKLOG #1.
+**Final end-to-end verification pass + FINAL_REPORT.md.** The full GOAL "ambitious finished state"
+ladder is now realized (3 layers; rank; ICS/RSS/JSON/map/digest/alerts; archive via store). Do a
+comprehensive fresh run asserting every gate + every output artifact, and write FINAL_REPORT.md.
+Remaining backlog items are blocked on externals (Postgres needs a DB; emailer needs SMTP creds)
+or are fragile (more scraped think-tank/university sources) — pursue when those constraints lift.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).
