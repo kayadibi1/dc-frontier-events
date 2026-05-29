@@ -1,10 +1,10 @@
 """Persistence with idempotent upsert.
 
 GOAL.md: Postgres if reachable via DATABASE_URL, otherwise local SQLite so the
-loop is NEVER blocked on infra. Phase 1 ships the SQLite backend (verified);
-if DATABASE_URL is set we log that the Postgres backend is not yet bundled and
-fall back to SQLite rather than crash. Same schema + INSERT-OR-REPLACE upsert
-either way, so a real Postgres backend drops in behind this interface later.
+loop is NEVER blocked on infra. `open_store` selects PostgresStore when
+DATABASE_URL is set and a connection succeeds, else falls back to SQLite (logged,
+never raises). Both backends share COLUMNS + Event.to_row/from_row, so an event
+round-trips identically through either.
 """
 
 from __future__ import annotations
@@ -73,11 +73,79 @@ class Store:
         self.conn.close()
 
 
-def open_store(path: str = "data/events.db") -> Store:
+_PG_DDL = """
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY, title TEXT, description TEXT,
+  start TEXT, "end" TEXT, tz TEXT,
+  venue_name TEXT, address TEXT, lat DOUBLE PRECISION, lng DOUBLE PRECISION,
+  organizer TEXT, speakers TEXT, source TEXT, source_url TEXT,
+  topics TEXT, is_big_name INTEGER, raw TEXT, dedupe_key TEXT, updated_at TEXT
+);
+"""
+
+
+class PostgresStore:
+    """Postgres backend (psycopg2). Same schema/semantics as Store; uses
+    INSERT ... ON CONFLICT (id) DO UPDATE for the idempotent upsert."""
+
+    backend = "postgres"
+
+    def __init__(self, dsn: str, connect_timeout: int = 3):
+        import psycopg2
+        import psycopg2.extras
+
+        self._extras = psycopg2.extras
+        self.conn = psycopg2.connect(dsn, connect_timeout=connect_timeout)
+        self.conn.autocommit = True
+        with self.conn.cursor() as cur:
+            cur.execute(_PG_DDL)
+
+    def upsert_many(self, events: list[Event]) -> int:
+        now = datetime.now(timezone.utc).isoformat()
+        rows = []
+        for ev in events:
+            r = ev.to_row()
+            r["dedupe_key"] = ev.id
+            r["updated_at"] = now
+            rows.append(tuple(r[c] for c in COLUMNS))
+        cols = ",".join(f'"{c}"' for c in COLUMNS)
+        placeholders = ",".join(["%s"] * len(COLUMNS))
+        updates = ",".join(f'"{c}"=EXCLUDED."{c}"' for c in COLUMNS if c != "id")
+        sql = (f"INSERT INTO events ({cols}) VALUES ({placeholders}) "
+               f"ON CONFLICT (id) DO UPDATE SET {updates}")
+        with self.conn.cursor() as cur:
+            self._extras.execute_batch(cur, sql, rows)
+        return len(rows)
+
+    def all_events(self) -> list[Event]:
+        with self.conn.cursor(cursor_factory=self._extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM events ORDER BY start')
+            return [Event.from_row(dict(r)) for r in cur.fetchall()]
+
+    def existing_ids(self) -> set[str]:
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT id FROM events")
+            return {r[0] for r in cur.fetchall()}
+
+    def count(self) -> int:
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM events")
+            return cur.fetchone()[0]
+
+    def close(self) -> None:
+        self.conn.close()
+
+
+def open_store(path: str = "data/events.db"):
+    """PostgresStore if DATABASE_URL is set and connectable; else SQLite (logged)."""
     url = os.environ.get("DATABASE_URL")
     if url:
-        print("[storage] DATABASE_URL set but Postgres backend not bundled in "
-              "phase 1 -- using SQLite (never blocked on infra).")
+        try:
+            store = PostgresStore(url)
+            print("[storage] backend=postgres")
+            return store
+        except Exception as e:  # driver missing, connect refused, etc. -> never block
+            print(f"[storage] Postgres unavailable ({e!r}); falling back to SQLite.")
     store = Store(path)
     print(f"[storage] backend=sqlite path={store.path}")
     return store

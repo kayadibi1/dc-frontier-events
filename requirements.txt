@@ -3,4 +3,5 @@ icalendar>=5.0
 feedparser>=6.0
 selectolax>=0.3
 curl_cffi>=0.7
+# psycopg2-binary>=2.9  # optional: enables the Postgres backend (set DATABASE_URL)
 # pytest — dev/test only.

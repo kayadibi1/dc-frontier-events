@@ -1,7 +1,16 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Enhancement portfolio (autonomous) — F1–F4 done. GOAL ladder + final verification already PASSED.
+## Status: Enhancement portfolio (autonomous) — F1–F5 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
+
+## Enhancement F5 (2026-05-29) — Postgres backend + fallback
+`storage.PostgresStore` (psycopg2): same COLUMNS/Event round-trip as SQLite, `INSERT … ON CONFLICT
+(id) DO UPDATE` upsert, `RealDictCursor` reads. `open_store` selects Postgres when `DATABASE_URL` is
+set AND connectable, else logs + falls back to SQLite (never raises).
+- **58 unit tests pass** (+3): default→sqlite; `DATABASE_URL` unreachable→sqlite fallback (no raise);
+  SQLite round-trip + idempotent upsert. Live still selects SQLite (no `DATABASE_URL`).
+- HONEST: live Postgres path needs a reachable server (psycopg v3 absent; built on psycopg2). The
+  verified parts are selection/fallback + schema/SQL parity with the SQLite store.
 
 ## Enhancement F4 (2026-05-29) — Pluggable notifier / emailer
 `aggregator/notify.py`: `build_message` (HTML digest body + plain-text alt; Subject with counts) +
