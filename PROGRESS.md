@@ -1,6 +1,16 @@
 # PROGRESS — dc-frontier-events
 
-## Status: Full GOAL ladder realized — 3 layers, dedupe, filter, rank, big-names, ICS/RSS/JSON/map/digest/**alerts**, CLI+README. All gates MET.
+## Status: Full GOAL ladder realized + final verification PASSED. See FINAL_REPORT.md.
+
+## Iteration 12 (2026-05-29) — Final end-to-end verification + FINAL_REPORT.md
+Comprehensive fresh run asserting every gate and all 11 output artifacts.
+- **49 unit tests pass.** 6/8 sources across layers [1,2,3]; 1133 raw → 1027 deduped → 109 kept;
+  4 big-name; 28 upcoming; 69 map pins; idempotent.
+- **All 11 artifacts validated PASS**: ICS (0 malformed), 4× RSS (bozo=0), upcoming all ≥ today,
+  big-names ★-marked, JSON scored+layered (layers 1,2,3), map+Leaflet, digest + alerts non-empty.
+- Wrote `FINAL_REPORT.md` (GOAL-ladder coverage, metrics, honest remaining-work notes).
+
+---
 
 ## Iteration 11 (2026-05-29) — Alerting (new-since-last-run)
 Made the persistent store productive: detect events new since the last run and alert on
