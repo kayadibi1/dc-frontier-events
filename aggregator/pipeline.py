@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from .config import SOURCES
 from .dedupe import dedupe
-from .emit import filter_upcoming, write_ics, write_rss
+from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .fetchers import gather_all
 from .filter import apply_filters
 from .storage import open_store
@@ -58,6 +58,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     write_rss(big, f"{out_dir}/feed-big-names.xml", "DC AI & Semiconductor -- Big Names")
     up_n = write_ics(upcoming, f"{out_dir}/events-upcoming.ics")
     write_rss(upcoming, f"{out_dir}/feed-upcoming.xml", "DC AI & Semiconductor -- Upcoming")
+    write_json(emitted, f"{out_dir}/events.json")
+    mapped = write_map(emitted, f"{out_dir}/map.html")
 
     summary = {
         "sources_total": len(SOURCES),
@@ -74,6 +76,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "big_name": len(big),
         "upcoming": up_n,
         "today": today,
+        "mapped": mapped,
         "stored_total": store_total,
         "ics_events": ics_n,
         "rss_items": rss_n,
@@ -97,4 +100,5 @@ def _print_summary(s: dict) -> None:
     print(f"big-name events:   {s['big_name']}")
     print(f"upcoming (>= {s['today']}): {s['upcoming']}")
     print(f"stored total:      {s['stored_total']}")
-    print(f"emitted:           events.ics={s['ics_events']}  feed.xml={s['rss_items']}")
+    print(f"emitted:           events.ics={s['ics_events']}  feed.xml={s['rss_items']}  "
+          f"map.html={s['mapped']} pins  events.json")

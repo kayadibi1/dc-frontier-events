@@ -5,12 +5,17 @@
 - ~~Layer-2 CSIS scraper~~ ✅ iteration 3 (httpx + selectolax, date+time+tz; 13 events, 1 on-topic).
 - ~~Emit UTC timezone fix~~ ✅ iteration 3 (aware datetimes normalized to `...Z`).
 - ~~Upcoming-window feeds~~ ✅ iteration 4 (`events-upcoming.ics`/`feed-upcoming.xml`; 5 live).
+- ~~/map web view + events.json~~ ✅ iteration 5 (Leaflet map, 51 pins; JSON export).
 
 ## Ranked
-1. **Detail-page speaker enrichment (CSET + CSIS) → surface big-names.** `is_big_name` is 0
-   everywhere because watchlist names live on event detail pages, not listing cards. Fetch each
-   CSET `/event/<slug>/` and CSIS `/events/<slug>` page for `speakers[]` + host orgs (and precise
-   CSET times), then match the watchlist against speakers. The core GOAL differentiator.
+1. **Relevance ranking** — score = topic-match strength + DC proximity (haversine from GEO) +
+   `is_big_name` weight + upcoming bonus; order feeds / emit a "top picks" view. GOAL-named.
+2. **Weekly digest generator** — render upcoming + new big-name events to a markdown/HTML digest
+   (`digest.md`); foundation for the GOAL's weekly emailer. Verifiable artifact.
+3. **Detail-page speaker enrichment (CSET + CSIS) → big-names.** DEFERRED: iter-5 probe found
+   current detail pages carry ~no watchlist names (only ambiguous "intel"); would yield 0 now and
+   risk false positives. Build when data warrants; pair with tightening the big-name watchlist
+   ("intel"→Intel-the-company only, etc.).
 4. **Speaker/org NER** — extract `speakers[]` from descriptions ("with X", "fireside with Y")
    across all sources so big-name detection isn't limited to title/desc string matches.
 5. **Eventbrite + Meetup adapters** — CSET cross-posts to Eventbrite; Meetup groups expose

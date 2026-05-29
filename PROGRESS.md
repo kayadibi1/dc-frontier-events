@@ -1,5 +1,26 @@
 # PROGRESS — dc-frontier-events
 
+## Status: Layers 1+2 live; emits ICS + RSS (full/upcoming/big-names) + events.json + map.html. All gates MET.
+
+## Iteration 5 (2026-05-29) — /map web view + JSON export
+Added a static Leaflet map and a machine-readable JSON feed (both GOAL-named deliverables).
+
+### What was built
+- `emit.write_json` — full normalized event set as JSON (adds `layer` per event).
+- `emit.write_map` — self-contained `map.html` (Leaflet via CDN, OSM tiles) plotting every
+  event with GEO; color-coded red=big-name / purple=Layer-2 / blue=Layer-1; popups link to source.
+  JSON payload safely embedded (`</` escaped).
+- Pipeline emits `events.json` (all kept) + `map.html`.
+- 3 new tests (JSON round-trip + layer; map geo-only + header + empty).
+
+### Verification numbers (live run, 2026-05-29)
+- **Unit tests: 33 passed.**
+- `events.json`: 65 events, layers [1, 2], 51 with GEO.
+- `map.html`: 15.3 KB, header "51 mapped / 65 total", `#map` present, Leaflet loaded, embedded
+  `EVENTS` array parses to 51 markers. Past feeds unchanged; idempotent.
+
+---
+
 ## Status: Layers 1 + 2 live; emits full + upcoming + big-names feeds. All project gates MET.
 
 ## Iteration 4 (2026-05-29) — Upcoming-window feeds
@@ -107,11 +128,12 @@ SQLite storage, dedupe, a DC + topic + big-name filter, and valid `.ics` + RSS o
 2. **GEO made authoritative for in-person events** — 3 Hampton Roads, VA events (~200mi away, "AI Collective HR") leaked via ", VA" text; now dropped. A virtual DC2 event with a junk Pacific-Ocean geo is still correctly kept.
 
 ## SINGLE BEST NEXT STEP
-**Make the headline feature real: surface big-names.** `is_big_name` is 0 everywhere because
-watchlist names live on event *detail pages* (speakers/hosts), not listing cards. Enrich CSET
-(clean detail pages, curl_cffi) and CSIS events with `speakers[]` from their detail pages, then
-match the watchlist against speakers too. This is the core differentiator per GOAL. (Close
-second: an `events-upcoming.ics` forward view — feeds are currently archive-heavy.) See BACKLOG #1–2.
+**Relevance ranking** — score kept events by topic strength + DC proximity (haversine from GEO)
++ is_big_name + upcoming, and order the feeds / a "top picks" view by it (GOAL: "ranks by
+relevance + proximity + big name"). Deterministic and fully verifiable. NOTE from iter-5 probe:
+detail-page big-name enrichment was deferred — current CSET/CSIS detail pages contain ~no
+watchlist names (only an ambiguous "intel"), so that infra would yield 0 now + risk false
+positives. Revisit when data warrants (BACKLOG #3). See BACKLOG #1.
 
 ## Known simplifications (tracked in BACKLOG.md)
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).
