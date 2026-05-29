@@ -1,0 +1,5 @@
+httpx>=0.27
+icalendar>=5.0
+feedparser>=6.0
+# selectolax — added when Layer-2 HTML scrapers (CSET/CSIS) land.
+# pytest — dev/test only.
