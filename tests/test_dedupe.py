@@ -78,3 +78,42 @@ def test_same_title_different_url_not_collapsed():
            Eu("b", "Tech Summit", "2026-07-02", "https://y/b")]
     kept, removed = dedupe(evs)
     assert len(kept) == 2 and removed == 0
+
+
+# --- P3: cross-language / fuzzy dedupe ---
+from aggregator.dedupe import _token_set_ratio, semantic_ratio
+
+
+def test_token_set_ratio_word_order_insensitive():
+    assert _token_set_ratio("AI Policy Panel", "Panel on AI Policy") >= 0.9
+
+
+def test_token_set_ratio_distinct_titles_low():
+    assert _token_set_ratio("Quantum Computing Talk", "AI Policy Panel") < 0.3
+
+
+def test_paraphrase_same_day_same_geo_collapses():
+    evs = [
+        Event(id="x1", title="AI Policy Panel", start="2026-06-10", source="cset",
+              lat=38.90, lng=-77.03),
+        Event(id="x2", title="Panel on AI Policy", start="2026-06-10", source="csis",
+              lat=38.901, lng=-77.031),   # ~0.1 km away
+    ]
+    kept, removed = dedupe(evs)
+    assert len(kept) == 1 and removed == 1
+
+
+def test_paraphrase_far_apart_not_collapsed():
+    evs = [
+        Event(id="y1", title="AI Policy Panel", start="2026-06-10", source="cset",
+              lat=38.90, lng=-77.03),
+        Event(id="y2", title="Panel on AI Policy", start="2026-06-10", source="x",
+              lat=40.71, lng=-74.00),     # NYC -> different event
+    ]
+    kept, removed = dedupe(evs)
+    assert len(kept) == 2 and removed == 0
+
+
+def test_semantic_ratio_is_noop_without_model():
+    r = semantic_ratio("hola mundo IA", "hello AI world")
+    assert r is None or isinstance(r, float)

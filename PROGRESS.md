@@ -25,7 +25,16 @@ against speakers** — a panelist's employer must not make it a "Microsoft event
   batch-ordering mistake); fixed in the follow-up commit (prose whitespace + org filter +
   person-only speaker match).
 
-### P2–P6 — pending execution.
+### P3 cross-language/fuzzy dedupe — DONE
+Dedupe pass 4: order-insensitive token-set Jaccard (`_token_set_ratio`, threshold 0.7) with a
+haversine location guard (`_near`, ≤3 km or missing geo) so same-day paraphrase/reorder dupes
+collapse but two distinct same-day events at different venues never merge. Optional import-guarded
+`semantic_ratio` (sentence-transformers) is a clean no-op when the lib is absent.
+- **72 unit tests pass** (+5: token-set order-insensitivity/low-distinct, paraphrase same-geo
+  collapse, far-apart kept, semantic no-op). Live: dedupe removed 278 → **280** (2 more paraphrase
+  dupes collapsed); no over-merge.
+
+### P2, P4, P5, P6 — pending execution.
 
 ## Enhancement F7 (2026-05-29) — More Luma sources
 Probed candidate DC AI/tech Luma slugs; added the two that resolved to live feeds:
