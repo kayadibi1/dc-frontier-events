@@ -119,6 +119,14 @@ BIG_NAME_PATTERNS = {
     "Gina Raimondo": r"\braimondo\b",
 }
 
+# Watchlist entries that are PEOPLE (not orgs). Only these may flag an event as
+# big-name when found among its speakers -- a speaker's employer (e.g. a panelist
+# who happens to work at Microsoft) must NOT make the event a "Microsoft event".
+BIG_NAME_PERSONS = {
+    "Dario Amodei", "Sam Altman", "Jensen Huang", "Brad Smith", "Jack Clark",
+    "Sundar Pichai", "Satya Nadella", "Demis Hassabis", "Lisa Su", "Gina Raimondo",
+}
+
 # DC-metro proximity. Bounding box covers DC + close NoVA + close MD suburbs.
 DC_BBOX = {"lat_min": 38.70, "lat_max": 39.20, "lng_min": -77.60, "lng_max": -76.80}
 

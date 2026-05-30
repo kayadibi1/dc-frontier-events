@@ -6,7 +6,26 @@ Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
 ## Implementation plans written (2026-05-29) for the remaining backlog — `docs/superpowers/plans/`
 Via the writing-plans skill, one plan per remaining subsystem (TDD, bite-sized, real code):
 P1 speaker-enrichment · P2 more-sources · P3 crosslang-dedupe · P4 archiving-partition ·
-P5 ics-enrichment · P6 live-ops-runbook. Ready to execute (not yet implemented).
+P5 ics-enrichment · P6 live-ops-runbook.
+
+## Executing the plans autonomously (2026-05-29/30)
+### P1 speaker-enrichment — DONE
+`aggregator/enrich.py`: `extract_speakers` (structured `[class*=name]` nodes + prose "featuring X
+and Y" fallback) and async `enrich_layer2` over Layer-2 detail pages (curl_cffi for cset, httpx
+else; best-effort). Pipeline runs it after fetch (before dedupe); `--no-enrich` skips it.
+**Precision (key design):** `speakers[]` rejects org/affiliation strings via an org-word stoplist;
+big-name flagging matches orgs+people against the event's own text but **only watchlisted PEOPLE
+against speakers** — a panelist's employer must not make it a "Microsoft event".
+- **68 unit tests pass.** Live: speakers added to 17 Layer-2 events; extracted names are clean
+  (Helen Toner, Jack Clark, The Honorable Alan Estevez). big-name=4: 3 via text (Microsoft/Amazon,
+  Anthropic, Databricks) + **1 newly surfaced via speaker — "What's Next for AI Red-Teaming?" →
+  Jack Clark** (a watchlisted person the listing card never named). The earlier false positive
+  ("Microsoft AR" affiliation) is eliminated.
+- NOTE: the first P1 commit (`0562598`) landed with a failing prose test + noisy extraction (a
+  batch-ordering mistake); fixed in the follow-up commit (prose whitespace + org filter +
+  person-only speaker match).
+
+### P2–P6 — pending execution.
 
 ## Enhancement F7 (2026-05-29) — More Luma sources
 Probed candidate DC AI/tech Luma slugs; added the two that resolved to live feeds:

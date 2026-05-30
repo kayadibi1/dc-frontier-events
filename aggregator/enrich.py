@@ -22,6 +22,19 @@ _NAME = re.compile(r"\b([A-Z][a-zA-Z.'-]+(?:\s+[A-Z][a-zA-Z.'-]+){1,3})\b")
 _STOP = {"Register Now", "Read More", "Learn More", "Add To", "Google Calendar",
          "Watch Now", "Event Page", "Privacy Policy", "United States",
          "New York", "Washington Dc", "Add To Calendar"}
+# If a candidate contains any of these tokens it is an organization / field /
+# affiliation, not a person name -- reject it (CSET/CSIS bios are full of these).
+_ORG_WORDS = {
+    "university", "college", "institute", "foundation", "center", "centre",
+    "committee", "partnership", "program", "programme", "initiative", "department",
+    "consulting", "studies", "policy", "science", "sciences", "community",
+    "security", "analytics", "government", "cybersecurity", "homeland",
+    "intelligence", "relations", "council", "association", "corporation",
+    "company", "agency", "office", "bureau", "division", "group", "network",
+    "coalition", "alliance", "laboratory", "school", "academy", "society",
+    "bank", "fund", "capital", "ventures", "partners", "technologies", "systems",
+    "solutions", "services", "foreign", "national", "federal", "neuroscience",
+}
 _INTRO = re.compile(r"(?:featuring|fireside chat with|joined by|with|moderated by|"
                     r"keynote by|in conversation with|speakers?:)\s+(.+?)(?:\.|\n|$)", re.I)
 
@@ -38,7 +51,11 @@ def _looks_like_name(s: str) -> bool:
     if s in _STOP or any(ch.isdigit() for ch in s):
         return False
     parts = s.split()
-    return 2 <= len(parts) <= 4 and all(p[:1].isupper() for p in parts)
+    if not (2 <= len(parts) <= 4 and all(p[:1].isupper() for p in parts)):
+        return False
+    # Reject organization / field / affiliation strings (e.g. "Carnegie Mellon
+    # University", "Open Government Partnership", "Political Science").
+    return not any(p.lower().strip(".,") in _ORG_WORDS for p in parts)
 
 
 def extract_speakers(html: str) -> list[str]:
@@ -52,9 +69,10 @@ def extract_speakers(html: str) -> list[str]:
         if _looks_like_name(cand):
             found.append(cand)
 
-    # 2) prose fallback ("featuring A and B, moderated by C")
+    # 2) prose fallback ("featuring A and B, moderated by C"). Collapse
+    # whitespace first so a name wrapped across a newline is not truncated.
     if not found:
-        body = tree.body.text(separator=" ") if tree.body else (tree.text() or "")
+        body = _clean(tree.body.text(separator=" ") if tree.body else (tree.text() or ""))
         for m in _INTRO.finditer(body):
             chunk = m.group(1)
             for piece in re.split(r",|\band\b|&", chunk):

@@ -41,6 +41,16 @@ def test_extract_speakers_empty_when_none():
     assert extract_speakers("<p>No speakers listed here.</p>") == []
 
 
+def test_extract_speakers_rejects_org_affiliations():
+    html = ('<div class="speaker"><span class="name">Carnegie Mellon University</span></div>'
+            '<div class="speaker"><span class="name">Dario Amodei</span></div>'
+            '<div class="speaker"><span class="name">Open Government Partnership</span></div>')
+    names = extract_speakers(html)
+    assert "Dario Amodei" in names
+    assert "Carnegie Mellon University" not in names
+    assert "Open Government Partnership" not in names
+
+
 def test_enrich_layer2_sets_speakers():
     events = [
         Event(id="csis-1", title="AI Talk", start="2026-06-01", source="csis",

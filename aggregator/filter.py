@@ -15,6 +15,7 @@ import re
 
 from .config import (
     BIG_NAME_PATTERNS,
+    BIG_NAME_PERSONS,
     DC_BBOX,
     DC_TEXT_PATTERN,
     SOURCES,
@@ -25,6 +26,7 @@ from .models import Event
 _DC_TEXT = re.compile(DC_TEXT_PATTERN, re.I)
 _VIRTUAL = re.compile(VIRTUAL_PATTERN, re.I)
 _BIG = {n: re.compile(p, re.I) for n, p in BIG_NAME_PATTERNS.items()}
+_BIG_PERSON = {n: rx for n, rx in _BIG.items() if n in BIG_NAME_PERSONS}
 _DC_CURATED = {s.slug for s in SOURCES if s.dc_curated}
 
 
@@ -37,12 +39,21 @@ def _geo_in_dc(ev: Event) -> bool:
 
 def _text_blob(ev: Event) -> str:
     return " ".join([ev.title, ev.description, ev.address, ev.organizer,
-                     " ".join(ev.speakers), ev.raw.get("location", "")])
+                     ev.raw.get("location", "")])
 
 
 def _big_names(ev: Event) -> list[str]:
+    # Orgs + people match the event's own text. Speakers may ONLY contribute a
+    # PERSON match -- a speaker's org affiliation ("Microsoft AR") must not flag
+    # the event as a big-name org event.
     blob = _text_blob(ev)
-    return [n for n, rx in _BIG.items() if rx.search(blob)]
+    names = [n for n, rx in _BIG.items() if rx.search(blob)]
+    if ev.speakers:
+        speaker_blob = " ".join(ev.speakers)
+        for n, rx in _BIG_PERSON.items():
+            if n not in names and rx.search(speaker_blob):
+                names.append(n)
+    return names
 
 
 def is_dc_relevant(ev: Event) -> bool:

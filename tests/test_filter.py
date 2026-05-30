@@ -73,6 +73,15 @@ def test_big_name_fires_on_speaker():
     assert kept and kept[0].is_big_name
 
 
+def test_big_name_does_not_fire_on_speaker_org_affiliation():
+    # A speaker's org affiliation ("Microsoft AR") must NOT flag the event as a
+    # big-name -- only watchlisted PEOPLE among speakers count.
+    ev = mk(title="AI Red-Teaming Panel", topics=["ai"], lat=38.9, lng=-77.03,
+            speakers=["Microsoft AR", "People Analytics"])
+    kept, _ = apply_filters([ev])
+    assert kept and not kept[0].is_big_name
+
+
 def test_inperson_nondc_geo_dropped_despite_dc_text():
     # Hampton Roads, VA: real coords ~200mi from DC, address says "VA 23462".
     # GEO is authoritative for in-person events -> dropped.
