@@ -43,6 +43,15 @@ class Credential:
     # carries the honest status ("enroll anytime", "cohort-based; check page").
     deadline: str | None = None
     deadline_note: str = ""
+    # `apply_url`: the real cohort/application/jobs page to SCRAPE for a date or
+    # open/closed status (the public `url` is usually marketing w/o dates). Falls
+    # back to `url`. `app_status` is auto-detected: "open" | "closed" | "".
+    apply_url: str = ""
+    app_status: str = ""
+
+    @property
+    def scrape_url(self) -> str:
+        return self.apply_url or self.url
 
     @property
     def prestige(self) -> bool:
@@ -101,7 +110,9 @@ CREDENTIALS = [
     Credential("Anthropic Fellows Program", "Anthropic", "fellowship", "competitive", True,
                "https://www.anthropic.com/research/fellows-program", ("ai", "policy"),
                "Competitive research fellowship; stipend. Highly selective.",
-               deadline_note="cohort-based; applications open periodically — check page"),
+               deadline_note="cohort-based; applications open periodically — check page",
+               # Program-specific page that states open/closed status + any date.
+               apply_url="https://alignment.anthropic.com/2025/anthropic-fellows-program/"),
     Credential("OpenAI Residency", "OpenAI", "fellowship", "competitive", True,
                "https://openai.com/residency/", ("ai", "ml"),
                "Paid pathway into AI research/engineering at OpenAI.",
@@ -125,6 +136,33 @@ def apply_fetched_deadlines(found: dict[str, str],
                                deadline_note=f"auto-detected from page ({iso})"))
         else:
             out.append(c)
+    return out
+
+
+def apply_fetched_info(found: dict[str, dict],
+                       creds: list[Credential] | None = None) -> list[Credential]:
+    """Merge auto-fetched {deadline, status} into the list, keyed on each
+    credential's scrape_url. A fetched future date sets `deadline` (+ note); a
+    detected open/closed status sets `app_status` and is reflected in the note."""
+    from dataclasses import replace
+    creds = CREDENTIALS if creds is None else creds
+    out = []
+    for c in creds:
+        info = found.get(c.scrape_url)
+        if not info:
+            out.append(c)
+            continue
+        iso = info.get("deadline")
+        status = info.get("status") or ""
+        note = c.deadline_note
+        if iso:
+            note = f"auto-detected deadline ({iso})"
+        elif status == "open":
+            note = "✅ applications OPEN — apply now (no date posted)"
+        elif status == "closed":
+            note = "applications closed — watch for the next cycle"
+        out.append(replace(c, deadline=iso or c.deadline,
+                           app_status=status or c.app_status, deadline_note=note))
     return out
 
 
@@ -152,17 +190,24 @@ def upcoming_deadlines(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
     return rows
 
 
+def open_applications(creds: list[Credential] | None = None) -> list[Credential]:
+    """Programs with applications detected OPEN but no concrete dated deadline
+    (so they wouldn't show in upcoming_deadlines) — still worth alerting on."""
+    creds = CREDENTIALS if creds is None else creds
+    return [c for c in creds if c.app_status == "open" and not c.deadline]
+
+
 def render_deadlines_md(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
                         creds: list[Credential] | None = None) -> str:
     """Deadline tracker: closing-soon (dated, <= window) first, then later dated,
     then rolling/anytime. Honest: undated programs are shown with their status,
     never an invented date."""
     creds = CREDENTIALS if creds is None else creds
-    soon, later, rolling = [], [], []
+    soon, later, open_now, rolling = [], [], [], []
     for c in creds:
         d = c.days_until(today_iso)
         if d is None:
-            rolling.append(c)
+            (open_now if c.app_status == "open" else rolling).append(c)
         elif d < 0:
             continue  # already closed; drop from the tracker
         elif d <= within_days:
@@ -184,6 +229,12 @@ def render_deadlines_md(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
             out.append(f"  {c.note} [{c.url}]({c.url})")
     else:
         out.append("_None with a verified date in range._")
+
+    if open_now:
+        out += ["", f"## ✅ Applications OPEN now (no date posted) ({len(open_now)})"]
+        for c in open_now:
+            out.append(f"- **{c.name}** · {c.provider} — apply now  ")
+            out.append(f"  [{c.scrape_url}]({c.scrape_url})")
 
     if later:
         out += ["", f"## 📅 Dated, further out ({len(later)})"]

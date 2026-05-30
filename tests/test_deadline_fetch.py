@@ -58,3 +58,58 @@ def test_apply_fetched_deadlines_merges_by_url():
     assert "auto-detected" in by_name["A"].deadline_note
     assert by_name["B"].deadline is None          # untouched
     assert by_name["B"].deadline_note == "anytime"
+
+
+# --- application open/closed status + combined info + JSON deadline ---
+from aggregator.deadline_fetch import extract_app_status, extract_info
+from aggregator.credentials import apply_fetched_info, open_applications, Credential
+
+
+def test_status_open():
+    assert extract_app_status("<p>Applications are now open! Apply today.</p>") == "open"
+    assert extract_app_status("Apply now for the 2026 cohort") == "open"
+
+
+def test_status_closed_wins():
+    # explicit close beats a stray 'apply'
+    assert extract_app_status("Applications have closed; apply next year") == "closed"
+
+
+def test_status_none():
+    assert extract_app_status("<p>Self-paced course, enroll anytime.</p>") == ""
+
+
+def test_extract_info_combines_json_deadline():
+    html = '<script>{"applicationDeadline":"2026-07-15T00:00:00Z"}</script> apply now'
+    info = extract_info(html, "2026-05-30")
+    assert info["deadline"] == "2026-07-15"
+    assert info["status"] == "open"
+
+
+def test_extract_info_null_json_deadline_is_none():
+    html = '{"applicationDeadline":null} applications are open'
+    info = extract_info(html, "2026-05-30")
+    assert info["deadline"] is None
+    assert info["status"] == "open"
+
+
+def test_apply_fetched_info_sets_open_status_and_note():
+    creds = [Credential("Fellows", "Anthropic", "fellowship", "competitive", True,
+                        "https://x/landing", ("ai",), "n",
+                        deadline=None, deadline_note="cohort-based",
+                        apply_url="https://x/cohort")]
+    merged = apply_fetched_info({"https://x/cohort": {"deadline": None, "status": "open"}}, creds)
+    c = merged[0]
+    assert c.app_status == "open"
+    assert "OPEN" in c.deadline_note
+    assert open_applications(merged) == [c]   # surfaces as an open application
+
+
+def test_apply_fetched_info_date_beats_status():
+    creds = [Credential("F", "OpenAI", "fellowship", "competitive", True,
+                        "https://x/l", ("ai",), "n", apply_url="https://x/jobs")]
+    merged = apply_fetched_info(
+        {"https://x/jobs": {"deadline": "2026-08-01", "status": "open"}}, creds)
+    assert merged[0].deadline == "2026-08-01"
+    # has a real date -> NOT counted as a date-less "open application"
+    assert open_applications(merged) == []

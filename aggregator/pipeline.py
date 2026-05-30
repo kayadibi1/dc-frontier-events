@@ -13,13 +13,14 @@ from .alerts import build_alerts
 from .config import SOURCES
 from .credentials import (
     CREDENTIALS,
-    apply_fetched_deadlines,
+    apply_fetched_info,
     credentials_dicts,
+    open_applications,
     render_credentials_md,
     render_deadlines_md,
     upcoming_deadlines,
 )
-from .deadline_fetch import fetch_deadlines
+from .deadline_fetch import fetch_deadline_info
 from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
@@ -97,12 +98,15 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     # program's page for a real future application deadline (best-effort; expired
     # / missing dates are simply not applied), then merge into the curated list.
     if enrich:
-        found = asyncio.run(fetch_deadlines([c.url for c in CREDENTIALS], today))
+        found = asyncio.run(
+            fetch_deadline_info([c.scrape_url for c in CREDENTIALS], today))
+        n_dates = sum(1 for i in found.values() if i.get("deadline"))
+        n_open = sum(1 for i in found.values() if i.get("status") == "open")
         if found:
-            print(f"[deadlines] auto-detected {len(found)} future deadline(s)")
+            print(f"[deadlines] auto-detected {n_dates} date(s), {n_open} open application(s)")
     else:
         found = {}
-    creds = apply_fetched_deadlines(found)
+    creds = apply_fetched_info(found)
     with open(f"{out_dir}/credentials.md", "w", encoding="utf-8") as f:
         f.write(render_credentials_md(creds))
     with open(f"{out_dir}/credentials.json", "w", encoding="utf-8") as f:
@@ -110,6 +114,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     with open(f"{out_dir}/deadlines.md", "w", encoding="utf-8") as f:
         f.write(render_deadlines_md(today, creds=creds))
     deadlines_soon = upcoming_deadlines(today, creds=creds)
+    open_apps = open_applications(creds)
 
     digest_md = build_digest(emitted, today)
     digest_html = render_html(emitted, today)
@@ -122,7 +127,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     new_big = [e for e in new_events if e.is_big_name]
     with open(f"{out_dir}/alerts.md", "w", encoding="utf-8") as f:
         f.write(build_alerts(new_events, new_big, today, first_run=not prior_ids,
-                             deadlines_soon=deadlines_soon))
+                             deadlines_soon=deadlines_soon, open_apps=open_apps))
 
     # Notify (digest + alerts). Dry-run unless SMTP_* env is set; never blocks.
     msg = build_message(digest_html, digest_md, today, up_n, len(new_big))

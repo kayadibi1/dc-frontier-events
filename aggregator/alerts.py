@@ -23,7 +23,8 @@ def _line(e: Event) -> str:
 
 def build_alerts(new_events: list[Event], new_big: list[Event],
                  today_iso: str, first_run: bool = False,
-                 deadlines_soon: list | None = None) -> str:
+                 deadlines_soon: list | None = None,
+                 open_apps: list | None = None) -> str:
     out = ["# DC AI & Semiconductor — Alerts", f"_Generated {today_iso}_", ""]
     if first_run:
         out += [f"_First run — baseline established ({len(new_events)} events, "
@@ -41,6 +42,14 @@ def build_alerts(new_events: list[Event], new_big: list[Event],
     else:
         out.append("_None within the alert window._")
     out.append("")
+
+    # Applications open now (no posted date) -- actionable even without a deadline.
+    open_apps = open_apps or []
+    if open_apps:
+        out.append(f"## ✅ Applications open now ({len(open_apps)})")
+        for c in open_apps:
+            out.append(f"- **{c.name}** · {c.provider} — apply now — {c.scrape_url}")
+        out.append("")
 
     out.append(f"## 🔔 New big-name events ({len(new_big)})")
     if new_big:

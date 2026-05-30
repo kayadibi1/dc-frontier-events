@@ -1,5 +1,18 @@
 # PROGRESS — dc-frontier-events
 
+## Deadlines AUTO-FETCH (2026-05-30, HEAD b4a798a) — self-updating, never invents/stale
+The deadline tracker now FETCHES deadlines itself instead of being hand-wired. `deadline_fetch.py`:
+`extract_deadline(html, today)` (pure, tested) scans a page for a date adjacent to an application
+keyword ("apply by", "applications close", "deadline", "due", "register by") and returns the soonest
+**future** date — expired/archived dates rejected, bare keyword-less dates ignored.
+`fetch_deadlines(urls, today)` runs it async/best-effort over all credential URLs;
+`credentials.apply_fetched_deadlines` merges hits into the frozen list. Pipeline auto-fetches each
+run (under `enrich`; `--no-enrich` skips). PROVEN on the real archived Anthropic Fellows page:
+today=2025-01-01 → 2025-01-20; today=2026-05-30 → None (expired rejected). 0 surfaced today only
+because no program currently posts a future deadline on its landing page. 123 unit tests; E2E PASS.
+- KNOWN LIMITATION: it currently fetches each credential's LANDING url, which is marketing copy w/o
+  dates. NEXT (user chose): hunt each program's real cohort/application/news page + scrape that.
+
 ## NEW TRACK (2026-05-30) — Prestige credentials & programs
 User wants official credentials from prestigious orgs (OpenAI/Anthropic/NVIDIA...) to upskill +
 put on a résumé, not just events. Added a curated **credentials track** (hybrid approach: curated
