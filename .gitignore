@@ -1,7 +1,16 @@
+# python
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.env
+
+# build / run outputs (regenerated; never committed)
 data/
 out/
+site/
+*.eml
 *.zip
-.env
+
+# editor / agent scratch
+/_*
+.claude/

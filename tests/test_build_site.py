@@ -1,0 +1,36 @@
+import os
+
+from scripts.build_site import DOMAIN, _site_dir, render_index, write_site_extras
+
+
+def test_domain_is_the_subdomain():
+    assert DOMAIN == "events.emersus.ai"
+
+
+def test_site_dir_defaults_and_env_override(monkeypatch):
+    monkeypatch.delenv("SITE_DIR", raising=False)
+    assert _site_dir() == "site"
+    monkeypatch.setenv("SITE_DIR", "/var/www/events.emersus.ai")
+    assert _site_dir() == "/var/www/events.emersus.ai"
+
+
+def test_render_index_has_subscribe_url_and_instructions():
+    html = render_index("events.emersus.ai", "2026-05-30")
+    assert "https://events.emersus.ai/events-upcoming.ics" in html
+    assert "Google Calendar" in html
+    assert "Subscribe" in html
+    assert "2026-05-30" in html
+
+
+def test_render_index_lists_all_feeds():
+    html = render_index("x.example", "2026-05-30")
+    for fn in ("events-upcoming.ics", "events.ics", "events-big-names.ics", "feed-upcoming.xml"):
+        assert f"https://x.example/{fn}" in html
+
+
+def test_write_site_extras_writes_index(tmp_path):
+    d = str(tmp_path / "site")
+    write_site_extras(d, "events.emersus.ai", "2026-05-30")
+    assert os.path.exists(os.path.join(d, "index.html"))
+    with open(os.path.join(d, "index.html"), encoding="utf-8") as f:
+        assert "events-upcoming.ics" in f.read()

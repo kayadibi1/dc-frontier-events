@@ -1,0 +1,16 @@
+# Run the rebuild twice a day. Install to
+# /etc/systemd/system/dc-frontier-events.timer, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dc-frontier-events.timer
+[Unit]
+Description=Rebuild dc-frontier-events calendar feeds twice daily
+
+[Timer]
+OnCalendar=*-*-* 06,18:00:00
+# Catch up if the box was off at the scheduled time.
+Persistent=true
+# Avoid every such timer firing at the same instant.
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

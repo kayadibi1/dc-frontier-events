@@ -1,0 +1,17 @@
+# Rebuild the calendar feeds into the Caddy web root.
+# Install to /etc/systemd/system/dc-frontier-events.service and edit the paths
+# (User, WorkingDirectory, the venv python, SITE_DIR) to match your box.
+[Unit]
+Description=Rebuild dc-frontier-events calendar feeds
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/opt/dc-frontier-events
+Environment=SITE_DIR=/var/www/events.emersus.ai
+# Use the project venv's python so deps (httpx, curl_cffi, selectolax, ...) resolve.
+ExecStart=/opt/dc-frontier-events/.venv/bin/python scripts/build_site.py
+# Be a good citizen to the sources; don't hammer if something wedges.
+TimeoutStartSec=600

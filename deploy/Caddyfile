@@ -1,0 +1,20 @@
+# Caddy site block for the calendar subdomain.
+# Append this to /etc/caddy/Caddyfile (or drop in /etc/caddy/Caddyfile.d/ if your
+# setup imports that). Caddy auto-provisions a Let's Encrypt cert for the domain,
+# so the .ics URL is HTTPS — which Google Calendar requires.
+#
+# The web root is whatever SITE_DIR the systemd timer builds into.
+
+events.emersus.ai {
+	root * /var/www/events.emersus.ai
+	file_server
+
+	# Serve .ics as a calendar (some clients are picky about the type).
+	@ics path *.ics
+	header @ics Content-Type "text/calendar; charset=utf-8"
+
+	encode gzip
+	log {
+		output file /var/log/caddy/events.emersus.ai.log
+	}
+}
