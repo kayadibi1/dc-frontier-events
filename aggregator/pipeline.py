@@ -7,8 +7,11 @@ from __future__ import annotations
 import asyncio
 from datetime import date, datetime, timedelta, timezone
 
+import json as _json
+
 from .alerts import build_alerts
 from .config import SOURCES
+from .credentials import credentials_dicts, render_credentials_md
 from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
@@ -81,6 +84,13 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     mapped = write_map(emitted, f"{out_dir}/map.html", today)
     archive_n = write_ics(sorted(roundtrip, key=lambda e: e.start or ""),
                           f"{out_dir}/events-archive.ics", today)
+    # Credentials track (curated prestige courses/certs/programs) — separate
+    # from the DC event pipeline; not date/location bound.
+    with open(f"{out_dir}/credentials.md", "w", encoding="utf-8") as f:
+        f.write(render_credentials_md())
+    with open(f"{out_dir}/credentials.json", "w", encoding="utf-8") as f:
+        _json.dump(credentials_dicts(), f, ensure_ascii=False, indent=2)
+
     digest_md = build_digest(emitted, today)
     digest_html = render_html(emitted, today)
     with open(f"{out_dir}/digest.md", "w", encoding="utf-8") as f:

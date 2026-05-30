@@ -1,5 +1,18 @@
 # PROGRESS — dc-frontier-events
 
+## NEW TRACK (2026-05-30) — Prestige credentials & programs
+User wants official credentials from prestigious orgs (OpenAI/Anthropic/NVIDIA...) to upskill +
+put on a résumé, not just events. Added a curated **credentials track** (hybrid approach: curated
+core now, scrape later where a real feed exists). `aggregator/credentials.py`: a `Credential`
+dataclass + hand-vetted list of 11 programs — **every URL confirmed HTTP 200 (2026-05-30)** — across
+courses (Anthropic AI Fluency, OpenAI Academy, Hugging Face, DeepLearning.AI, Google AI Essentials),
+pro certs (AWS AI Practitioner, Azure AI Engineer, GCP ML Engineer), a hands-on workshop (NVIDIA DLI),
+and fellowships (Anthropic Fellows, OpenAI Residency). Separate from the DC event pipeline (not
+date/location-bound). Pipeline emits `credentials.md` (grouped by kind, ⭐ prestige, cost + cert) and
+`credentials.json`. 108 unit tests (+5). E2E ALL PASS incl. event-pipeline-unchanged guards.
+- Next for this track: surface a digest pointer; add NVIDIA DLI live schedule scrape (it has dated
+  workshops) per the hybrid plan.
+
 ## Ranking by event TYPE (2026-05-30) — tuned for upskilling + policy angle
 User goal clarified: this is a personal **upskilling radar** angled at AI/chip **policy & strategy**,
 and (eventually) a Google Calendar subscription. Ranking now reflects that. `rank.event_kind`
