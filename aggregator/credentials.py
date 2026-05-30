@@ -48,6 +48,12 @@ class Credential:
     # back to `url`. `app_status` is auto-detected: "open" | "closed" | "".
     apply_url: str = ""
     app_status: str = ""
+    # `funding`: an honest note on how to do this for free / with subsidy
+    # (financial aid, free audit, cloud credits, employer-sponsored vouchers,
+    # stipend). Empty when none is known -- never invented. `funding_url` points
+    # to the specific aid/credits page when one exists.
+    funding: str = ""
+    funding_url: str = ""
 
     @property
     def scrape_url(self) -> str:
@@ -74,49 +80,65 @@ CREDENTIALS = [
     Credential("AI Fluency / Build with Claude", "Anthropic", "course", "free", True,
                "https://www.anthropic.com/learn", ("ai", "llm"),
                "Anthropic's own courses incl. AI Fluency (certificate).",
-               deadline_note="enroll anytime (self-paced)"),
+               deadline_note="enroll anytime (self-paced)",
+               funding="Free — no cost to complete or to earn the certificate."),
     Credential("OpenAI Academy", "OpenAI", "course", "free", True,
                "https://academy.openai.com/", ("ai", "llm"),
                "Free courses from OpenAI; certificates rolling out.",
-               deadline_note="enroll anytime (self-paced)"),
+               deadline_note="enroll anytime (self-paced)",
+               funding="Free — no cost."),
     Credential("Hugging Face Courses (LLM, Agents, NLP)", "Hugging Face", "course", "free", True,
                "https://huggingface.co/learn", ("ai", "llm", "ml"),
                "Free, hands-on, certificate on completion.",
-               deadline_note="enroll anytime (self-paced)"),
+               deadline_note="enroll anytime (self-paced)",
+               funding="Free — no cost; the certificate is free too."),
     Credential("NVIDIA Deep Learning Institute", "NVIDIA", "workshop", "paid", True,
                "https://www.nvidia.com/en-us/training/", ("ai", "ml", "compute"),
                "Instructor-led + self-paced; certificate of competency. Some virtual.",
-               deadline_note="self-paced anytime; instructor-led workshops scheduled (check page)"),
+               deadline_note="self-paced anytime; instructor-led workshops scheduled (check page)",
+               funding="Some self-paced DLI courses are free; NVIDIA periodically runs "
+                       "no-cost instructor-led workshops (often around GTC)."),
     Credential("DeepLearning.AI Specializations", "DeepLearning.AI", "course", "paid", True,
                "https://www.deeplearning.ai/courses/", ("ai", "ml", "llm"),
                "Andrew Ng's courses; audit free, Coursera certificate paid.",
-               deadline_note="enroll anytime (self-paced)"),
+               deadline_note="enroll anytime (self-paced)",
+               funding="Audit the course content free on Coursera; Coursera Financial "
+                       "Aid can waive the certificate fee if you apply."),
     Credential("Google AI Essentials", "Google", "course", "paid", True,
                "https://grow.google/ai-essentials/", ("ai",),
                "Beginner cert via Coursera.",
-               deadline_note="enroll anytime (self-paced)"),
+               deadline_note="enroll anytime (self-paced)",
+               funding="Delivered via Coursera — Coursera Financial Aid can waive the fee."),
     Credential("AWS Certified AI Practitioner", "AWS", "cert", "exam-fee", True,
                "https://aws.amazon.com/certification/certified-ai-practitioner/", ("ai", "compute"),
                "Industry-recognized professional certification (proctored exam).",
-               deadline_note="schedule the exam anytime"),
+               deadline_note="schedule the exam anytime",
+               funding="Free digital prep on AWS Skill Builder; AWS periodically offers "
+                       "exam-voucher / 50%-off retake promotions (check AWS Training events)."),
     Credential("Azure AI Engineer Associate", "Microsoft", "cert", "exam-fee", True,
                "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
                ("ai", "compute"), "Microsoft professional certification.",
-               deadline_note="schedule the exam anytime"),
+               deadline_note="schedule the exam anytime",
+               funding="Free training on Microsoft Learn; Microsoft Virtual Training Days "
+                       "periodically grant a free certification-exam voucher."),
     Credential("Google Cloud Professional ML Engineer", "Google", "cert", "exam-fee", True,
                "https://cloud.google.com/learn/certification/machine-learning-engineer",
                ("ai", "ml", "compute"), "Advanced GCP professional certification.",
-               deadline_note="schedule the exam anytime"),
+               deadline_note="schedule the exam anytime",
+               funding="Free learning + monthly credits via Google Cloud Skills Boost "
+                       "(Innovators program)."),
     Credential("Anthropic Fellows Program", "Anthropic", "fellowship", "competitive", True,
                "https://www.anthropic.com/research/fellows-program", ("ai", "policy"),
                "Competitive research fellowship; stipend. Highly selective.",
                deadline_note="cohort-based; applications open periodically — check page",
                # Program-specific page that states open/closed status + any date.
-               apply_url="https://alignment.anthropic.com/2025/anthropic-fellows-program/"),
+               apply_url="https://alignment.anthropic.com/2025/anthropic-fellows-program/",
+               funding="Funded — provides a stipend / covers costs (it pays you)."),
     Credential("OpenAI Residency", "OpenAI", "fellowship", "competitive", True,
                "https://openai.com/residency/", ("ai", "ml"),
                "Paid pathway into AI research/engineering at OpenAI.",
-               deadline_note="cohort-based; check page for the current cycle"),
+               deadline_note="cohort-based; check page for the current cycle",
+               funding="Funded — a paid (salaried) position."),
 ]
 
 
@@ -276,5 +298,8 @@ def render_credentials_md(creds: list[Credential] | None = None) -> str:
             cert = " · certificate" if (c.cert and c.kind != "fellowship") else ""
             out.append(f"- {star}**{c.name}** — {c.provider} · {c.cost}{cert}  ")
             out.append(f"  {c.note} [{c.url}]({c.url})")
+            if c.funding:
+                fund_link = f" [funding]({c.funding_url})" if c.funding_url else ""
+                out.append(f"  💰 {c.funding}{fund_link}")
         out.append("")
     return "\n".join(out) + "\n"

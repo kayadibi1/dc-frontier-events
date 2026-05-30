@@ -55,6 +55,44 @@ def test_render_md_groups_and_links():
     assert "certificate" in md
 
 
+# --- funding / scholarships (backlog idea #5) ---
+
+def test_every_live_credential_has_funding_note():
+    # Each program should tell the user how to do it for free / subsidized.
+    for c in CREDENTIALS:
+        assert c.funding, f"missing funding note: {c.name}"
+
+
+def test_free_courses_say_free():
+    hf = next(c for c in CREDENTIALS if c.provider == "Hugging Face")
+    assert "free" in hf.funding.lower()
+
+
+def test_fellowships_marked_funded():
+    for name in ("Anthropic Fellows Program", "OpenAI Residency"):
+        c = next(x for x in CREDENTIALS if x.name == name)
+        assert "fund" in c.funding.lower() or "paid" in c.funding.lower()
+
+
+def test_funding_rendered_with_marker():
+    md = render_credentials_md()
+    assert "💰" in md
+    # a specific, real funding mechanism shows up
+    assert "Financial Aid" in md
+
+
+def test_funding_in_dicts():
+    d = credentials_dicts()
+    assert all("funding" in row for row in d)
+    assert any(row["funding"] for row in d)
+
+
+def test_funding_note_honest_no_fabricated_url_when_blank():
+    # funding_url is optional; when blank the render must not emit a broken link.
+    md = render_credentials_md()
+    assert "[funding]()" not in md
+
+
 # --- deadline tracking ---
 
 def test_no_fabricated_dates_in_live_list():
