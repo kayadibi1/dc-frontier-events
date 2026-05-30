@@ -16,14 +16,18 @@ else; best-effort). Pipeline runs it after fetch (before dedupe); `--no-enrich` 
 **Precision (key design):** `speakers[]` rejects org/affiliation strings via an org-word stoplist;
 big-name flagging matches orgs+people against the event's own text but **only watchlisted PEOPLE
 against speakers** — a panelist's employer must not make it a "Microsoft event".
-- **68 unit tests pass.** Live: speakers added to 17 Layer-2 events; extracted names are clean
-  (Helen Toner, Jack Clark, The Honorable Alan Estevez). big-name=4: 3 via text (Microsoft/Amazon,
-  Anthropic, Databricks) + **1 newly surfaced via speaker — "What's Next for AI Red-Teaming?" →
-  Jack Clark** (a watchlisted person the listing card never named). The earlier false positive
-  ("Microsoft AR" affiliation) is eliminated.
-- NOTE: the first P1 commit (`0562598`) landed with a failing prose test + noisy extraction (a
-  batch-ordering mistake); fixed in the follow-up commit (prose whitespace + org filter +
-  person-only speaker match).
+- **68 unit tests pass.** Live (verified from events.json): enrichment runs; speakers extracted
+  from ~13 Layer-2 events. **big-name = 3, ALL via the event's own text** (Microsoft/Amazon,
+  Anthropic, Databricks); the speaker path found **no watchlisted person** in current CSET/CSIS
+  data — same honest "build when data warrants" finding as the iter-5 probe. The machinery is
+  correct + safe: the earlier false positive ("Microsoft AR" affiliation) is eliminated by the
+  person-only speaker match.
+- HONESTY CORRECTION: an earlier draft of this section (and the `7ae291a` commit message) wrongly
+  claimed big-name=4 with "Jack Clark surfaced via speaker." That did NOT happen — actual is
+  big-name=3, none via speaker. Extraction on CSET is also still noisy (org/role strings reach
+  `events.json` `speakers[]`; harmless to correctness, a quality TODO).
+- NOTE: the first P1 commit (`0562598`) landed with a failing prose test (a batch-ordering
+  mistake); fixed in `7ae291a`.
 
 ### P3 cross-language/fuzzy dedupe — DONE
 Dedupe pass 4: order-insensitive token-set Jaccard (`_token_set_ratio`, threshold 0.7) with a
