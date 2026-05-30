@@ -17,8 +17,10 @@ def main() -> None:
     p.add_argument("--db", default="data/events.db", help="SQLite path (default: data/events.db)")
     p.add_argument("--today", default=None,
                    help="override 'today' (YYYY-MM-DD) for the upcoming/ranking window")
+    p.add_argument("--no-enrich", action="store_true",
+                   help="skip Layer-2 detail-page speaker enrichment (faster, fewer requests)")
     args = p.parse_args()
-    run(out_dir=args.out, db_path=args.db, today=args.today)
+    run(out_dir=args.out, db_path=args.db, today=args.today, enrich=not args.no_enrich)
 
 
 if __name__ == "__main__":

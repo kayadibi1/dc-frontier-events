@@ -37,7 +37,7 @@ def _geo_in_dc(ev: Event) -> bool:
 
 def _text_blob(ev: Event) -> str:
     return " ".join([ev.title, ev.description, ev.address, ev.organizer,
-                     ev.raw.get("location", "")])
+                     " ".join(ev.speakers), ev.raw.get("location", "")])
 
 
 def _big_names(ev: Event) -> list[str]:

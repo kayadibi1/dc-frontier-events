@@ -66,6 +66,13 @@ def test_dc_curated_virtual_event_is_relevant():
     assert is_dc_relevant(ev) is True
 
 
+def test_big_name_fires_on_speaker():
+    ev = mk(title="Fireside chat", topics=["ai"], lat=38.9, lng=-77.03,
+            speakers=["Jensen Huang"])
+    kept, _ = apply_filters([ev])
+    assert kept and kept[0].is_big_name
+
+
 def test_inperson_nondc_geo_dropped_despite_dc_text():
     # Hampton Roads, VA: real coords ~200mi from DC, address says "VA 23462".
     # GEO is authoritative for in-person events -> dropped.

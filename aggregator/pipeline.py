@@ -12,6 +12,7 @@ from .config import SOURCES
 from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
+from .enrich import default_fetch, enrich_layer2
 from .fetchers import gather_all
 from .filter import apply_filters
 from .notify import build_message, deliver
@@ -20,7 +21,7 @@ from .storage import open_store
 
 
 def run(out_dir: str = "out", db_path: str = "data/events.db",
-        today: str | None = None) -> dict:
+        today: str | None = None, enrich: bool = True) -> dict:
     today = today or datetime.now(timezone.utc).date().isoformat()
     results = asyncio.run(gather_all(SOURCES))
 
@@ -40,6 +41,10 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         print(f"[fetch] {res.source.slug} (layer {res.source.layer}): {len(res.events)} events")
 
     total_raw = len(raw_events)
+    if enrich:
+        layer_by_source = {s.slug: s.layer for s in SOURCES}
+        n_enriched = asyncio.run(enrich_layer2(raw_events, layer_by_source, default_fetch))
+        print(f"[enrich] speakers added to {n_enriched} Layer-2 events")
     deduped, removed = dedupe(raw_events)
     kept, fstats = apply_filters(deduped)
 
