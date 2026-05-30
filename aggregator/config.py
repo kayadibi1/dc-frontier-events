@@ -156,3 +156,21 @@ ADMIN_EXCLUDE_PATTERN = (
     r"\bmaster of\b|\bgraduate program|\bmba program|\bapplication deadline\b|"
     r"\bcommencement\b|\bnursing tour\b|\bcampus tour\b"
 )
+
+# High-volume, low-curation sources: a whole-university calendar (gwu) and a
+# global org feed (aic-washington). For these, a topic mentioned only in the
+# description is almost always boilerplate ("...accelerated program...",
+# "...data science department..."), so require the topic in the TITLE. Curated
+# Layer-2 think tanks (CSET/CSIS/Brookings) stay lenient -- their desc-only AI
+# events are real (e.g. CSET "The Talent Map", "How the U.S. Wins the Global
+# Tech Competition"), so a title-OR-description topic match still qualifies there.
+STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington"}
+
+# High-volume, low-curation sources: a whole-university calendar (gwu) and a
+# global org feed (aic-washington). For these, a topic mentioned only in the
+# description is almost always boilerplate ("...accelerated program...",
+# "...data science department..."), so require the topic in the TITLE. Curated
+# Layer-2 think tanks (CSET/CSIS/Brookings) stay lenient -- their desc-only AI
+# events are real (e.g. CSET "The Talent Map", "How the U.S. Wins the Global
+# Tech Competition"), so we keep trusting a title-OR-description match there.
+STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington"}

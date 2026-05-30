@@ -20,9 +20,11 @@ from .config import (
     DC_BBOX,
     DC_TEXT_PATTERN,
     SOURCES,
+    STRICT_TITLE_TOPIC_SOURCES,
     VIRTUAL_PATTERN,
 )
 from .models import Event
+from .normalize import detect_topics
 
 _DC_TEXT = re.compile(DC_TEXT_PATTERN, re.I)
 _VIRTUAL = re.compile(VIRTUAL_PATTERN, re.I)
@@ -30,6 +32,16 @@ _ADMIN = re.compile(ADMIN_EXCLUDE_PATTERN, re.I)
 _BIG = {n: re.compile(p, re.I) for n, p in BIG_NAME_PATTERNS.items()}
 _BIG_PERSON = {n: rx for n, rx in _BIG.items() if n in BIG_NAME_PERSONS}
 _DC_CURATED = {s.slug for s in SOURCES if s.dc_curated}
+
+
+def _has_qualifying_topic(ev: Event) -> bool:
+    """Whether the event carries a real (non-big-name) topic that qualifies it.
+    Firehose sources (whole-campus / global feeds) must match in the TITLE --
+    a description-only keyword is boilerplate. Curated sources accept a
+    title-or-description match (their topics list already covers both)."""
+    if ev.source in STRICT_TITLE_TOPIC_SOURCES:
+        return bool(detect_topics(ev.title))
+    return any(not t.startswith("big:") for t in ev.topics)
 
 
 def _geo_in_dc(ev: Event) -> bool:
@@ -106,8 +118,7 @@ def apply_filters(events: list[Event]) -> tuple[list[Event], dict]:
             stats["dropped_location"] += 1
             continue
 
-        has_real_topic = any(not t.startswith("big:") for t in ev.topics)
-        if not (has_real_topic or ev.is_big_name):
+        if not (_has_qualifying_topic(ev) or ev.is_big_name):
             stats["dropped_topic"] += 1
             continue
 

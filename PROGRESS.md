@@ -1,5 +1,17 @@
 # PROGRESS — dc-frontier-events
 
+## Relevance precision II (2026-05-30) — per-source title-topic strictness
+User decision "tighten, keep both": the two firehose sources (gwu = whole-campus calendar,
+aic-washington = global org feed) now require the topic to appear in the TITLE; a description-only
+keyword there is boilerplate. Curated Layer-2 think tanks (CSET/CSIS/Brookings) stay lenient so
+their desc-only gems survive (e.g. CSET "How the U.S. Wins the Global Tech Competition", "The Talent
+Map"). `config.STRICT_TITLE_TOPIC_SOURCES` + `filter._has_qualifying_topic`.
+- Live before/after: kept 83 -> 78; the 5 newly-dropped are all GWU loose-desc noise (InnovationFest,
+  GWebinar: practical wisdom?, The Future of Medicine, Animals Tech & Law, JUXTAPOSITION). Verified:
+  0 kept strict-source events lack a title topic; all marquee events preserved (Data Centers AI,
+  economic mobility, Rewiring the Chip, AI+EXPO, Data Viz with AI); admin noise still absent.
+- **95 unit tests pass** (+4 strict-source tests, incl. a curated-source-keeps-desc-only guard).
+
 ## Relevance precision (2026-05-30) — kill admissions/boilerplate noise
 The upcoming feed was crowded with university admin events (GW Nursing Tour, GWSB info sessions,
 Grocery Retail Summit). Diagnosed by printing the exact regex hit per kept event — two root causes:

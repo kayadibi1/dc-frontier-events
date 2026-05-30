@@ -145,3 +145,75 @@ def test_real_ai_event_still_kept():
             topics=["ai"], lat=38.9, lng=-77.03)
     kept, _ = apply_filters([ev])
     assert len(kept) == 1
+
+
+# --- per-source topic strictness: firehose sources require a TITLE topic ---
+
+def test_strict_source_drops_desc_only_topic():
+    # gwu firehose: AI only in description (topics from normalize) but NOT in
+    # title -> dropped (boilerplate). Title is non-admin so it reaches the gate.
+    ev = mk(title="GW Faculty Research Showcase", source="gwu",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, stats = apply_filters([ev])
+    assert kept == []
+    assert stats["dropped_topic"] == 1
+
+
+def test_strict_source_keeps_title_topic():
+    ev = mk(title="The Many Faces of Trust: Innovating in AI", source="gwu",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert len(kept) == 1
+
+
+def test_strict_aic_drops_desc_only_topic():
+    ev = mk(title="Networking Happy Hour", source="aic-washington",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, stats = apply_filters([ev])
+    assert kept == []
+    assert stats["dropped_topic"] == 1
+
+
+def test_curated_source_keeps_desc_only_topic():
+    # CSET gem: no topic word in title, AI only in description -> STILL kept,
+    # because curated Layer-2 sources are not held to the title-only rule.
+    ev = mk(title="How the U.S. Wins the Global Tech Competition", source="cset",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert len(kept) == 1
+
+
+# --- per-source topic strictness: firehose sources require a TITLE topic ---
+
+def test_strict_source_drops_desc_only_topic():
+    # gwu firehose: AI only in description (topics from normalize), not title ->
+    # dropped as boilerplate. Title is non-admin so it reaches the topic gate.
+    ev = mk(title="GW Faculty Research Showcase", source="gwu",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, stats = apply_filters([ev])
+    assert kept == []
+    assert stats["dropped_topic"] == 1
+
+
+def test_strict_source_keeps_title_topic():
+    ev = mk(title="The Many Faces of Trust: Innovating in AI", source="gwu",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert len(kept) == 1
+
+
+def test_strict_aic_drops_desc_only_topic():
+    ev = mk(title="Networking Happy Hour", source="aic-washington",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, stats = apply_filters([ev])
+    assert kept == []
+    assert stats["dropped_topic"] == 1
+
+
+def test_curated_source_keeps_desc_only_topic():
+    # CSET gem: no topic word in title, AI only in description -> STILL kept,
+    # because curated Layer-2 sources are not held to the title-only rule.
+    ev = mk(title="How the U.S. Wins the Global Tech Competition", source="cset",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert len(kept) == 1
