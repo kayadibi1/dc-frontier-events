@@ -19,6 +19,7 @@ from .config import (
     BIG_NAME_PERSONS,
     DC_BBOX,
     DC_TEXT_PATTERN,
+    SOURCE_ORG,
     SOURCES,
     STRICT_TITLE_TOPIC_SOURCES,
     VIRTUAL_PATTERN,
@@ -62,6 +63,11 @@ def _big_names(ev: Event) -> list[str]:
     # the event as a big-name org event.
     blob = _text_blob(ev)
     names = [n for n, rx in _BIG.items() if rx.search(blob)]
+    # Drop the event's own host org: a CSIS-sourced event naming "CSIS" is not a
+    # prestige signal (circular). Cross-source mentions of the same org survive.
+    own_org = SOURCE_ORG.get(ev.source)
+    if own_org:
+        names = [n for n in names if n != own_org]
     if ev.speakers:
         speaker_blob = " ".join(ev.speakers)
         for n, rx in _BIG_PERSON.items():

@@ -62,6 +62,61 @@ def test_big_name_new_watchlist_hits():
         assert kept[0].is_big_name, f"missed big name in: {text!r}"
 
 
+def test_big_name_expanded_watchlist_hits():
+    # Newly added frontier labs, chip cos, AI leaders, and DC policy orgs.
+    for text in ["xAI releases Grok update",
+                 "Groq inference chips deep dive",
+                 "Cerebras wafer-scale compute",
+                 "Inflection AI strategy session",
+                 "A talk by Yann LeCun on world models",
+                 "Fireside with Mira Murati",
+                 "RAND Corporation on AI and deterrence",
+                 "The AI Safety Institute (CAISI) framework"]:
+        ev = mk(title=text, lat=38.9, lng=-77.03, topics=["ai"])
+        kept, _ = apply_filters([ev])
+        assert kept and kept[0].is_big_name, f"missed big name in: {text!r}"
+
+
+def test_big_name_expanded_watchlist_no_false_positives():
+    # Landmines the specific patterns must dodge.
+    for text in ["The inflection point for AI adoption",   # not Inflection AI
+                 "Numerical stability in deep learning",    # not Stability AI
+                 "Reducing perplexity in language models",  # not Perplexity (metric)
+                 "Senator Rand Paul on tech policy",        # not RAND Corporation
+                 "A 7-micron sensor for edge AI",           # not Micron (company)
+                 "Grokking: sudden generalization in nets"]:  # not Grok (xAI)
+        ev = mk(title=text, lat=38.9, lng=-77.03, topics=["ai"])
+        kept, _ = apply_filters([ev])
+        assert kept and not kept[0].is_big_name, f"false positive on: {text!r}"
+
+
+def test_host_org_self_mention_not_big_name():
+    # A CSIS-sourced event naming its own host "CSIS" is NOT a prestige signal.
+    ev = mk(title="CSIS Debrief: AI policy", source="csis", topics=["ai"],
+            lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert kept and not kept[0].is_big_name
+
+
+def test_cross_source_org_mention_is_big_name():
+    # The same org named in ANOTHER source's event IS a prestige signal.
+    ev = mk(title="GW panel featuring RAND Corporation", source="gwu",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert kept and kept[0].is_big_name
+
+
+def test_host_event_still_flags_other_marquee_org():
+    # A CSIS event featuring a real marquee lab (Anthropic) still flags big-name;
+    # only the circular self-mention is suppressed.
+    ev = mk(title="CSIS hosts Anthropic on frontier policy", source="csis",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert kept and kept[0].is_big_name
+    assert any(t == "big:Anthropic" for t in kept[0].topics)
+    assert not any(t == "big:CSIS" for t in kept[0].topics)
+
+
 def test_dc_curated_virtual_event_is_relevant():
     ev = mk(title="Virtual AI Talk", description="Online webinar", topics=["ai"])
     assert is_dc_relevant(ev) is True

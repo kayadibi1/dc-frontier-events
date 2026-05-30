@@ -100,9 +100,23 @@ BIG_NAME_PATTERNS = {
     "Scale AI": r"\bscale ai\b",
     "Databricks": r"\bdatabricks\b",
     "Palantir": r"\bpalantir\b",
+    # More frontier labs. Patterns are deliberately specific to dodge landmines:
+    # "inflection ai" not bare "inflection" (inflection point), "stability ai"
+    # not "stability", "perplexity ai" not bare "perplexity" (the NLP metric).
+    "xAI": r"\bxai\b|\bgrok\b",
+    "Inflection AI": r"\binflection ai\b",
+    "Stability AI": r"\bstability ai\b",
+    "Together AI": r"\btogether ai\b",
+    "Perplexity": r"\bperplexity ai\b",
     # --- semiconductor / compute ---
     "Nvidia": r"\bnvidia\b",
     "AMD": r"\bamd\b",
+    # AI-accelerator chip companies (the user's chip/compute angle). Distinctive
+    # names; "groq" is the company's deliberate respelling, distinct from "grok".
+    "Groq": r"\bgroq\b",
+    "Cerebras": r"\bcerebras\b",
+    "SambaNova": r"\bsambanova\b",
+    "Micron": r"\bmicron technology\b",  # not bare "micron" (the unit)
     # "Intel" (company) but not DC's ubiquitous "intel community"/"intelligence".
     "Intel": r"\bintel\b(?! (?:community|officer|officers|agency|agencies|analyst|analysts|"
              r"sharing|assessment|assessments|brief|briefing|gathering))",
@@ -111,7 +125,18 @@ BIG_NAME_PATTERNS = {
     "Qualcomm": r"\bqualcomm\b",
     "Broadcom": r"\bbroadcom\b",
     "IBM": r"\bibm\b",
-    # --- people: company leaders + key DC AI/chip policy figures ---
+    # --- DC policy ecosystem (the user's AI/chip policy angle is first-class
+    # prestige). Distinctive acronyms/phrases only -- "rand corporation" not bare
+    # "rand" (Rand Paul / brand / errand), "ai safety institute" for CAISI. ---
+    "CSET": r"\bcset\b",
+    "CSIS": r"\bcsis\b",
+    "CNAS": r"\bcnas\b",
+    "NIST": r"\bnist\b",
+    "CAISI": r"\bcaisi\b|\bai safety institute\b",
+    "RAND": r"\brand corporation\b",
+    "Brookings": r"\bbrookings\b",
+    "Atlantic Council": r"\batlantic council\b",
+    # --- people: company leaders + key AI researchers + DC AI/chip policy figures ---
     "Dario Amodei": r"\bdario amodei\b|\bamodei\b",
     "Sam Altman": r"\bsam altman\b|\baltman\b",
     "Jensen Huang": r"\bjensen huang\b|\bjensen\b",
@@ -122,6 +147,27 @@ BIG_NAME_PATTERNS = {
     "Demis Hassabis": r"\bhassabis\b",
     "Lisa Su": r"\blisa su\b",
     "Gina Raimondo": r"\braimondo\b",
+    "Mark Zuckerberg": r"\bzuckerberg\b",
+    "Mira Murati": r"\bmira murati\b|\bmurati\b",
+    "Greg Brockman": r"\bbrockman\b",
+    "Ilya Sutskever": r"\bsutskever\b",
+    "Andrej Karpathy": r"\bkarpathy\b",
+    "Yann LeCun": r"\blecun\b",
+    "Geoffrey Hinton": r"\bgeoffrey hinton\b|\bgeoff hinton\b",
+    "Fei-Fei Li": r"\bfei-?fei li\b",
+    "Arati Prabhakar": r"\bprabhakar\b",
+}
+
+# Maps a source slug to its own organization's watchlist name. A curated policy
+# source naturally names itself in every event ("CSIS hosts..."), so that
+# self-mention must NOT flag the event big-name (circular) -- the genuine prestige
+# signal is org X appearing in ANOTHER source's event (e.g. a GWU meetup featuring
+# RAND Corporation). The host's prestige is already encoded by its curated Layer-2
+# status + policy-event weight. Keep this in sync when adding policy sources.
+SOURCE_ORG = {
+    "cset": "CSET",
+    "csis": "CSIS",
+    "brookings": "Brookings",
 }
 
 # Watchlist entries that are PEOPLE (not orgs). Only these may flag an event as
@@ -130,6 +176,8 @@ BIG_NAME_PATTERNS = {
 BIG_NAME_PERSONS = {
     "Dario Amodei", "Sam Altman", "Jensen Huang", "Brad Smith", "Jack Clark",
     "Sundar Pichai", "Satya Nadella", "Demis Hassabis", "Lisa Su", "Gina Raimondo",
+    "Mark Zuckerberg", "Mira Murati", "Greg Brockman", "Ilya Sutskever",
+    "Andrej Karpathy", "Yann LeCun", "Geoffrey Hinton", "Fei-Fei Li", "Arati Prabhakar",
 }
 
 # DC-metro proximity. Bounding box covers DC + close NoVA + close MD suburbs.
