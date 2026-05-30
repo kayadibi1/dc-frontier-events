@@ -1,5 +1,6 @@
-from aggregator.filter import apply_filters, is_dc_relevant
+from aggregator.filter import apply_filters, is_admin_event, is_dc_relevant
 from aggregator.models import Event
+from aggregator.normalize import detect_topics
 
 
 def mk(**kw):
@@ -95,3 +96,52 @@ def test_virtual_curated_event_with_bogus_geo_kept():
     ev = mk(title="Online: Intro to AI Evals", description="Online webinar",
             topics=["ai"], lat=-8.5, lng=179.1, source="DC2")
     assert is_dc_relevant(ev) is True
+
+
+# --- relevance precision: kill admissions/boilerplate noise, keep real events ---
+
+def test_accelerated_degree_not_compute():
+    # "accelerated" in university boilerplate must NOT count as a compute topic.
+    assert "compute" not in detect_topics("Accelerated MBA program info")
+    assert "compute" not in detect_topics("GW Nursing Tour join our accelerated track")
+
+
+def test_real_compute_terms_still_match():
+    assert "compute" in detect_topics("Hands-on with GPU accelerators")
+    assert "compute" in detect_topics("Accelerated computing on NVIDIA hardware")
+    assert "compute" in detect_topics("Data center buildout for AI")
+
+
+def test_admin_info_session_excluded_even_with_topic():
+    ev = mk(title="GWSB MS in Artificial Intelligence Information Session",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, stats = apply_filters([ev])
+    assert kept == []
+    assert stats["dropped_admin"] == 1
+
+
+def test_admin_open_house_and_master_of_and_whygw_excluded():
+    for title in ["GW School of Business Graduate Programs Online Open House",
+                  "GWSB Master of Accountancy",
+                  "LLM Virtual Webinars: Why GW Law?"]:
+        ev = mk(title=title, topics=["ai", "data-science", "llm"], lat=38.9, lng=-77.03)
+        kept, stats = apply_filters([ev])
+        assert kept == [], f"should drop admin: {title!r}"
+        assert stats["dropped_admin"] == 1
+
+
+def test_real_talks_not_flagged_as_admin():
+    # Genuine talks/panels/workshops must survive the admin filter.
+    for title in ["AI in Action: Smarter Sourcing & Contracts",
+                  "Generative AI: Hands-On with the Tools Shaping Tomorrow",
+                  "Data Centers, AI, and the Future of U.S. Strategic Competitiveness",
+                  "Rewiring the Chip Landscape",
+                  "AI and economic mobility: Opportunities and challenges"]:
+        assert not is_admin_event(mk(title=title)), f"false admin hit: {title!r}"
+
+
+def test_real_ai_event_still_kept():
+    ev = mk(title="AI in Action: Smarter Sourcing & Contracts",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert len(kept) == 1

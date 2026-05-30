@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 
 from .config import (
+    ADMIN_EXCLUDE_PATTERN,
     BIG_NAME_PATTERNS,
     BIG_NAME_PERSONS,
     DC_BBOX,
@@ -25,6 +26,7 @@ from .models import Event
 
 _DC_TEXT = re.compile(DC_TEXT_PATTERN, re.I)
 _VIRTUAL = re.compile(VIRTUAL_PATTERN, re.I)
+_ADMIN = re.compile(ADMIN_EXCLUDE_PATTERN, re.I)
 _BIG = {n: re.compile(p, re.I) for n, p in BIG_NAME_PATTERNS.items()}
 _BIG_PERSON = {n: rx for n, rx in _BIG.items() if n in BIG_NAME_PERSONS}
 _DC_CURATED = {s.slug for s in SOURCES if s.dc_curated}
@@ -56,6 +58,13 @@ def _big_names(ev: Event) -> list[str]:
     return names
 
 
+def is_admin_event(ev: Event) -> bool:
+    """True for admissions/recruitment events (info sessions, open houses, degree
+    promos) — noise even if they mention a topic. Title-only (descriptions carry
+    boilerplate)."""
+    return bool(_ADMIN.search(ev.title))
+
+
 def is_dc_relevant(ev: Event) -> bool:
     if _geo_in_dc(ev):
         return True
@@ -78,8 +87,13 @@ def is_dc_relevant(ev: Event) -> bool:
 
 def apply_filters(events: list[Event]) -> tuple[list[Event], dict]:
     kept: list[Event] = []
-    stats = {"dropped_location": 0, "dropped_topic": 0, "big_name": 0}
+    stats = {"dropped_location": 0, "dropped_topic": 0, "dropped_admin": 0, "big_name": 0}
     for ev in events:
+        # Recruitment / admin events are noise regardless of topic or big-name.
+        if is_admin_event(ev):
+            stats["dropped_admin"] += 1
+            continue
+
         names = _big_names(ev)
         if names:
             ev.is_big_name = True

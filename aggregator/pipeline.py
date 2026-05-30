@@ -110,6 +110,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "kept_after_filter": len(kept),
         "dropped_location": fstats["dropped_location"],
         "dropped_topic": fstats["dropped_topic"],
+        "dropped_admin": fstats["dropped_admin"],
         "big_name": len(big),
         "new_events": len(new_events),
         "new_big_name": len(new_big),
@@ -140,7 +141,8 @@ def _print_summary(s: dict) -> None:
     print(f"raw events:        {s['raw_events']}")
     print(f"after dedupe:      {s['after_dedupe']}  (removed {s['deduped_removed']})")
     print(f"kept after filter: {s['kept_after_filter']}  "
-          f"(dropped {s['dropped_location']} loc, {s['dropped_topic']} topic)")
+          f"(dropped {s['dropped_location']} loc, {s['dropped_topic']} topic, "
+          f"{s['dropped_admin']} admin)")
     print(f"big-name events:   {s['big_name']}")
     print(f"new since last run:{s['new_events']}  (new big-name: {s['new_big_name']})")
     print(f"upcoming (>= {s['today']}): {s['upcoming']}")

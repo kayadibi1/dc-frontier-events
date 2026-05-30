@@ -1,5 +1,21 @@
 # PROGRESS — dc-frontier-events
 
+## Relevance precision (2026-05-30) — kill admissions/boilerplate noise
+The upcoming feed was crowded with university admin events (GW Nursing Tour, GWSB info sessions,
+Grocery Retail Summit). Diagnosed by printing the exact regex hit per kept event — two root causes:
+1. `compute` topic's bare `accelerat` matched "**accelerat**ed MBA / **Accelerat**or Alumni /
+   **Accelerat**ing Warfighting" → tightened to `\baccelerators?\b|accelerated comput` (real senses).
+2. Admissions/recruitment events match real topics but are marketing → new title-only
+   `ADMIN_EXCLUDE_PATTERN` (info session, open house, why gw, master of, MBA/graduate program,
+   nursing/campus tour, commencement, application deadline) + `filter.is_admin_event` (dropped early,
+   tracked as `dropped_admin`).
+- **Before/after diff (real data): dropped 26, added 0** — every drop genuine noise (incl. "LLM
+  Virtual Webinars: Why GW **Law**" = Master of Laws, not the AI sense). Zero real events lost;
+  marquee events verified present (Data Centers AI/CSIS, economic mobility/Brookings, Data Viz with
+  AI, Rewiring the Chip). kept 109 → **83**; upcoming list is now genuinely high-signal.
+- **91 unit tests pass** (+6 precision). E2E 32/32 incl. new guards: "no admin/recruitment noise in
+  output" + "real marquee events still present".
+
 ## BUG FIX (2026-05-30) — dead dedupe passes (found by inspecting real output)
 `aggregator/dedupe.py` had **two `dedupe()` definitions**; the second (an old 2-pass: exact-id +
 fuzzy only) shadowed the full 4-pass version, so **pass 3 (F1 multi-day series collapse) and pass 4

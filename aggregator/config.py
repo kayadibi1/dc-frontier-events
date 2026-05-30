@@ -75,7 +75,10 @@ TOPIC_PATTERNS = {
     "deep-learning": r"deep learning|neural network|\bnlp\b|computer vision|transformer",
     "data-science": r"data science|data scientist|\banalytics\b|data engineer|big data|\bdataset\b",
     "semiconductor": r"semiconductor|\bchips?\b|fab(rication)?\b|foundry|\btsmc\b|wafer|\basml\b",
-    "compute": r"\bgpus?\b|datacenter|data center|\bcompute\b|\bcuda\b|accelerat|\bhpc\b",
+    # NB: bare "accelerat" was removed — it matched "accelerated <degree>" in
+    # university boilerplate (Nursing Tour, MBA programs). Keep the real compute
+    # senses: hardware accelerators + "accelerated computing".
+    "compute": r"\bgpus?\b|datacenter|data center|\bcompute\b|\bcuda\b|\baccelerators?\b|accelerated comput|\bhpc\b",
     "policy": r"export control|chips act|ai policy|ai safety|ai governance|frontier model|ai regulation",
     "robotics": r"robotic|autonomous vehicle|self-driving",
 }
@@ -141,3 +144,15 @@ DC_TEXT_PATTERN = (
 )
 
 VIRTUAL_PATTERN = r"\bvirtual\b|\bonline\b|\bwebinar\b|\bzoom\b|livestream|live stream|\bremote\b"
+
+# Administrative / recruitment events to exclude even when they match a topic.
+# These are admissions marketing (info sessions, open houses, degree-program
+# promos, campus tours), not the talks / panels / workshops the aggregator is
+# for. Matched against the TITLE only (descriptions carry boilerplate like
+# "accelerated program" / "analytics"). Verified against live data: no real
+# AI/chip event title contains these phrases, so this drops noise only.
+ADMIN_EXCLUDE_PATTERN = (
+    r"\binfo(?:rmation)? session\b|\bopen house\b|\bopen day\b|\bwhy gw\b|"
+    r"\bmaster of\b|\bgraduate program|\bmba program|\bapplication deadline\b|"
+    r"\bcommencement\b|\bnursing tour\b|\bcampus tour\b"
+)
