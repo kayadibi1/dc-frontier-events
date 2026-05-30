@@ -33,7 +33,22 @@ Implementation plans for these live in `docs/superpowers/plans/`; execution stat
 - ~~ICS enrichment~~ ✅ executed P5 (per-event `COLOR` + 1-day `VALARM` on upcoming).
 
 Remaining:
-1. **More Layer-2/3 sources** — Brookings / ITIF / CNAS / Atlantic Council scrapers + more
-   university feeds; each a bespoke adapter with its own access strategy (plan P2).
+1. **More Layer-2/3 sources** — bespoke per-site adapters. Per-source findings (probed 2026-05-30,
+   no usable source shippable yet — each attempted adapter was BACKED OUT rather than ship unverified):
+   - **Brookings** (`/events/`, httpx, dc_curated): MOST PROMISING. `article` cards, real titles,
+     dates present ("June 10 2026", slugs are `ev-...`), 1 genuine upcoming AI event
+     ("AI and economic mobility", 2026-06-10). Adapter built + reverted: produced a `json=108`/`ics=107`
+     mismatch tied to a duplicated "social media" card, and the session's output channel was too flaky
+     to verify cleanly. RETRY under a stable shell: handle the duplicate-card DOM + resolve the
+     emit-count parity before committing.
+   - **Hudson** (`/events`, curl_cffi): listing cards have truncated link text ("Learn More"), and
+     the CURRENT listing is all geopolitics/energy — 0 AI/chip events. Detail pages have real
+     titles+dates but fetching all 22 for 0 yield isn't worth it. Revisit only if Hudson schedules AI events.
+   - **CNAS** (`/events`): 19 links but listing uses non-`article` cards (parsed 0 on saved fixture).
+   - Probed-dead: ITIF (2 links), Atlantic Council (0 event links), RAND (sub-site links);
+     university iCal UMD/Georgetown/Howard/American/VT/UMBC (404/403/0/DNS/SSL).
+   LESSON: these HTML listings don't have clean 1-article→1-title→1-link→1-date structure, so a
+   hand-written fixture test gives false confidence. Verify any new adapter against a SAVED REAL
+   fixture (dev-parse for ≥1 on-topic kept event) AND a live run before committing.
 2. **Live ops (no new code)** — enable the SMTP emailer (`SMTP_*` env) and Postgres
    (`DATABASE_URL`); both code-complete + fallback-tested, just need creds/a server (plan P6).

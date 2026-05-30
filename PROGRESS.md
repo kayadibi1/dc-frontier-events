@@ -1,5 +1,14 @@
 # PROGRESS — dc-frontier-events
 
+## Source-expansion probe (2026-05-30) — no source added (honest deferral)
+Attempted the P2 "more Layer-2 sources" backlog item again. Built adapters for **Hudson** and
+**Brookings**, verified each against real data, and **backed both out** rather than ship unverified:
+- Hudson: current listing is 0 AI/chip events (all geopolitics) + truncated link text → quarantined.
+- Brookings: genuinely promising (1 real upcoming AI event, "AI and economic mobility" 2026-06-10),
+  but produced an unresolved `events.json=108`/`events.ics=107` count mismatch (duplicate "social
+  media" card) that I couldn't verify cleanly under a flaky shell-output session. Deferred with full
+  notes in BACKLOG for a clean retry. Baseline left at the verified state below (81 tests, all outputs valid).
+
 ## Status: Enhancement portfolio (autonomous) COMPLETE — F1–F7 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
 
