@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import json as _json
 
-from .alerts import build_alerts
+from .alerts import build_alerts, big_names_in_dc
 from .config import SOURCES
 from .credentials import (
     CREDENTIALS,
@@ -127,9 +127,11 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
 
     new_events = [e for e in emitted if e.id not in prior_ids]
     new_big = [e for e in new_events if e.is_big_name]
+    big_in_dc = big_names_in_dc(emitted, today)
     with open(f"{out_dir}/alerts.md", "w", encoding="utf-8") as f:
         f.write(build_alerts(new_events, new_big, today, first_run=not prior_ids,
-                             deadlines_soon=deadlines_soon, open_apps=open_apps))
+                             deadlines_soon=deadlines_soon, open_apps=open_apps,
+                             big_in_dc=big_in_dc))
 
     # Notify (digest + alerts). Dry-run unless SMTP_* env is set; never blocks.
     msg = build_message(digest_html, digest_md, today, up_n, len(new_big))
@@ -152,6 +154,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "big_name": len(big),
         "new_events": len(new_events),
         "new_big_name": len(new_big),
+        "big_in_dc": len(big_in_dc),
         "notify": notify_mode,
         "upcoming": up_n,
         "today": today,
@@ -183,6 +186,7 @@ def _print_summary(s: dict) -> None:
           f"{s['dropped_admin']} admin)")
     print(f"big-name events:   {s['big_name']}")
     print(f"new since last run:{s['new_events']}  (new big-name: {s['new_big_name']})")
+    print(f"big names in DC:    {s['big_in_dc']}  (in person, upcoming)")
     print(f"upcoming (>= {s['today']}): {s['upcoming']}")
     print(f"stored total:      {s['stored_total']}  (archive.ics={s['archive_events']}, "
           f"gone-from-sources={s['gone']})")
