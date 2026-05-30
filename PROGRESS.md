@@ -3,6 +3,11 @@
 ## Status: Enhancement portfolio (autonomous) COMPLETE — F1–F7 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
 
+## Implementation plans written (2026-05-29) for the remaining backlog — `docs/superpowers/plans/`
+Via the writing-plans skill, one plan per remaining subsystem (TDD, bite-sized, real code):
+P1 speaker-enrichment · P2 more-sources · P3 crosslang-dedupe · P4 archiving-partition ·
+P5 ics-enrichment · P6 live-ops-runbook. Ready to execute (not yet implemented).
+
 ## Enhancement F7 (2026-05-29) — More Luma sources
 Probed candidate DC AI/tech Luma slugs; added the two that resolved to live feeds:
 **AI Tinkerers DC** (`cal-QhC1Y2193RQ7sZ6`, 15) and **DC Tech Meetup** (`cal-GzmqNpNKPBSmYdl`, 16),
