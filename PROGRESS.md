@@ -1,5 +1,37 @@
 # PROGRESS — dc-frontier-events
 
+## Autonomous backlog build-out (2026-05-30, HEAD 614ba99) — 5 features shipped, 3 honestly deferred
+Ran the surfaced backlog autonomously, one feature at a time, each TDD + full-suite + live-E2E +
+shown-output + committed. **185 unit tests pass; live: 11/12 sources across layers [1,2,3];
+events.json==events.ics==98; feeds valid.**
+- **Expanded prestige watchlist** (5bec89b): +18 orgs (xAI, Inflection/Stability/Together/Perplexity AI,
+  Groq, Cerebras, SambaNova, Micron, + DC policy orgs CSET/CSIS/CNAS/NIST/CAISI/RAND/Brookings/Atlantic
+  Council) + 9 people (Zuckerberg, Murati, Brockman, Sutskever, Karpathy, LeCun, Hinton, Fei-Fei Li,
+  Prabhakar). Every pattern vetted vs false-positive landmines ("inflection ai" not "inflection point",
+  "rand corporation" not "Rand Paul", "groq" not "grokking", …). Added a **self-mention guard** (SOURCE_ORG)
+  so a CSIS-hosted event naming "CSIS" isn't circularly flagged, and a **policy-org title/Layer-2-only rule**
+  (POLICY_ORG_NAMES) after the live run caught 3 false positives (NIST matched a line-broken "feminist";
+  Atlantic Council matched a careers-fair employer list). HONESTY: commit 6505c45's message was wrong
+  (claimed no inflation); corrected in 5bec89b. Live big-name = 3, all legit.
+- **Big-names-in-DC alerts** (58a7aac): `alerts.big_names_in_dc` → "🚨 Big names in DC — in person" section
+  (big-name + DC-bbox coords + upcoming), rendered first in alerts.md. Live = 0 (correct: current big-names
+  are virtual/geo-less or past); proven via a forced-positive demo. Dormant-by-design.
+- **Funding / scholarships** (7547c2c): `Credential.funding`/`funding_url` + 💰 render; all 11 programs
+  annotated with TRUE funding (free / Coursera Financial Aid / exam vouchers / cloud credits / funded
+  fellowships). Honest: empty when none known; no blank links.
+- **Google Calendar subscribe-readiness** (3819e57, the user's END GOAL): `.ics` feeds are now subscribable
+  calendars — X-WR-CALNAME (distinct per feed) + X-WR-CALDESC + X-WR-TIMEZONE + REFRESH-INTERVAL/
+  X-PUBLISHED-TTL (PT12H) + METHOD:PUBLISH; `SUBSCRIBE.md` documents the Google/Apple/Outlook From-URL flow,
+  with an honest refresh caveat + the manual public-hosting step.
+- **CNAS** (959741c) + **Atlantic Council** (614ba99): two Layer-2 policy sources. CNAS = figure.photo-listing__item
+  cards (18 fetched, 3 on-topic AI landed); AC = curl_cffi/WAF, div.gta-event-embed--container (5 fetched,
+  2 on-topic AI landed: "How the US and allies can win the AI era", "Pandora's prompt: AI and the bio threat").
+- **DEFERRED (honest, no dead sources):** RAND (all upcoming non-EU events are past-labelled; only AI one is
+  health-topic; events are Santa Monica/online → fail DC geo), NIST (only 1 on-topic, month-only dates → would
+  fabricate a day), NVIDIA DLI live schedule (JS-rendered; not scrapeable with the static httpx/curl_cffi stack;
+  workshops virtual/global). See [[aggregator-policy-sources-recon]] + [[aggregator-user-goal]].
+
+
 ## Deadlines AUTO-FETCH (2026-05-30, HEAD b4a798a) — self-updating, never invents/stale
 The deadline tracker now FETCHES deadlines itself instead of being hand-wired. `deadline_fetch.py`:
 `extract_deadline(html, today)` (pure, tested) scans a page for a date adjacent to an application
