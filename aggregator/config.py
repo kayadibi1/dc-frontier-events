@@ -56,6 +56,10 @@ CSET_SOURCES = [
     # CNAS HQ is in DC (1899 Pennsylvania Ave NW); httpx-accessible. Strong AI/chip
     # policy slate (US-China AI competition, Project Maven, Pentagon & Silicon Valley).
     Source("cnas", "CNAS", "cnas", 2, True, url="https://www.cnas.org/events"),
+    # Atlantic Council HQ is in DC (1400 L St NW); WAF -> curl_cffi adapter. AI-era
+    # strategy + AI/bio events ("How the US and allies can win the AI era").
+    Source("atlanticcouncil", "Atlantic Council", "atlanticcouncil", 2, True,
+           url="https://www.atlanticcouncil.org/events/"),
 ]
 
 # Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic

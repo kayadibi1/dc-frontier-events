@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 
 from ..config import Source
+from .atlanticcouncil import fetch_atlanticcouncil
 from .base import SourceResult
 from .brookings import fetch_brookings
 from .cnas import fetch_cnas
@@ -26,6 +27,7 @@ ADAPTERS = {
     "csis": fetch_csis,
     "brookings": fetch_brookings,
     "cnas": fetch_cnas,
+    "atlanticcouncil": fetch_atlanticcouncil,
 }
 
 
