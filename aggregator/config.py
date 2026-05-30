@@ -51,9 +51,6 @@ CSET_SOURCES = [
     Source("cset", "CSET (Georgetown)", "cset", 2, True, url="https://cset.georgetown.edu/events/"),
     # CSIS HQ is in DC (1616 Rhode Island Ave NW); httpx-accessible.
     Source("csis", "CSIS", "csis", 2, True, url="https://www.csis.org/events"),
-    # Hudson HQ is in DC (1201 Pennsylvania Ave NW); WAF -> curl_cffi. Listing
-    # has no dates, so the adapter resolves dates from on-topic detail pages.
-    Source("hudson", "Hudson Institute", "hudson", 2, True, url="https://www.hudson.org/events"),
 ]
 
 # Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic

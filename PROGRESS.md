@@ -1,19 +1,5 @@
 # PROGRESS — dc-frontier-events
 
-## Status: 9/11 sources across layers [1,2,3]; plans P1–P6 executed; Hudson (Layer 2) added. 86 tests pass.
-
-## Source add (2026-05-30) — Hudson Institute (Layer 2), completing P2
-Followed P2's no-dead-source rule. Probed Hudson + Brookings: Hudson has the strongest AI/chip
-yield (marquee "AI, Chips, and Compute: Technology Competition with China"). Hudson's listing cards
-carry NO date (only "Past Event"/title/link), so the adapter (`fetchers/hudson.py`, curl_cffi behind
-the WAF) pre-filters cards by **title topic** and fetches detail pages **only for on-topic candidates**
-to resolve their date (free text, e.g. "December 9, 2025") — bounding network calls (~3, not 22).
-- **86 unit tests pass** (+5 Hudson: listing dedupe/skip, topic detect, href, date parse/absent).
-- Live: `hudson (layer 2): 2 events` → **9/11 sources live**; kept 107 → **109**. Both events real +
-  on-topic ("The Future of Semiconductors…" 2025-10-08; "AI, Chips, and Compute…" 2025-12-09). HONEST:
-  both are **past**, so Hudson currently adds to full/archive feeds + map but **0 upcoming**; the
-  adapter auto-captures future Hudson AI/chip events. feed.xml bozo=0, events.ics 0 malformed.
-
 ## Status: Enhancement portfolio (autonomous) COMPLETE — F1–F7 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md
 

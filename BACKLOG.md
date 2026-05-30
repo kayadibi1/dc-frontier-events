@@ -31,15 +31,9 @@ Implementation plans for these live in `docs/superpowers/plans/`; execution stat
 - ~~Archiving partition + store pruning~~ ✅ executed P4 (`status` active/archived, `mark_archived`/`prune`).
 
 - ~~ICS enrichment~~ ✅ executed P5 (per-event `COLOR` + 1-day `VALARM` on upcoming).
-- ~~Live-ops emailer/Postgres hardening~~ ✅ executed P6 (send + never-blocks paths test-backed via mocked SMTP).
-- ~~More Layer-2 sources~~ ✅ added **Hudson Institute** (2026-05-30; on-topic detail-date adapter; 2 events).
 
 Remaining:
-1. **Even more sources** — each a bespoke adapter (P2 findings, 2026-05-30):
-   - **Brookings** (`/events/`): httpx 200, ~15 links, `article` cards, but listing dates are
-     JS-rendered (absent from HTML) → would need detail-page or API for dates; lower AI yield (1 card).
-   - **CNAS** (`/events`): 19 links but listing uses non-`article` cards → needs the right selector.
-   - Probed-dead: ITIF (2 links), Atlantic Council (0), RAND (sub-site links); university iCal
-     UMD/Georgetown/Howard/American/VT/UMBC (404/403/0).
-2. **Live SMTP / Postgres rollout** — provide real `SMTP_*` creds + a reachable `DATABASE_URL`,
-   then follow `docs/superpowers/plans/2026-05-29-live-ops-runbook.md` to verify live delivery.
+1. **More Layer-2/3 sources** — Brookings / ITIF / CNAS / Atlantic Council scrapers + more
+   university feeds; each a bespoke adapter with its own access strategy (plan P2).
+2. **Live ops (no new code)** — enable the SMTP emailer (`SMTP_*` env) and Postgres
+   (`DATABASE_URL`); both code-complete + fallback-tested, just need creds/a server (plan P6).
