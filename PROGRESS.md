@@ -1,5 +1,19 @@
 # PROGRESS — dc-frontier-events
 
+## BUG FIX (2026-05-30) — dead dedupe passes (found by inspecting real output)
+`aggregator/dedupe.py` had **two `dedupe()` definitions**; the second (an old 2-pass: exact-id +
+fuzzy only) shadowed the full 4-pass version, so **pass 3 (F1 multi-day series collapse) and pass 4
+(P3 paraphrase collapse) were silently dead in the live pipeline** — a leftover from the P3 rewrite.
+Symptom (visible only in the actual output, not structural checks): GW's "AI+EXPO 2026" appeared as
+3 separate rows / 3 "big-name" alerts instead of one collapsed multi-day event.
+- Fix: deleted the stale second definition. Now one `dedupe`, all 4 passes run.
+- Verified: fresh run kept 109 → **99** (dedupe removed 276 → 311 as the collapse passes re-engage);
+  events.json **99 rows / 99 unique ids / 0 duplicates**; AI+EXPO = **1 row** (range 05-07→05-09),
+  1 big-name alert. **86 unit tests pass.** E2E 33/33 incl. NEW regression guards: no duplicate ids
+  in events.json **or** events.ics, and an explicit "AI+EXPO collapsed to 1" assertion.
+- LESSON: structural E2E (parses, parity, counts) was all green while two features were dead —
+  duplicate rows are still individually valid. Inspecting the real product content caught it.
+
 ## Fix (2026-05-30) — alerts now itemize ALL new events ("as they are added")
 Surfaced by inspecting the real product output (not just structural checks): `alerts.md` detected
 the right count of new-since-last-run events but only **listed** big-name ones — regular new events
