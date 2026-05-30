@@ -1,9 +1,14 @@
 # PROGRESS — dc-frontier-events
 
-## Autonomous backlog build-out (2026-05-30, HEAD 614ba99) — 5 features shipped, 3 honestly deferred
+## Autonomous backlog build-out (2026-05-30, HEAD a094748) — 5 features shipped, 3 honestly deferred
 Ran the surfaced backlog autonomously, one feature at a time, each TDD + full-suite + live-E2E +
-shown-output + committed. **185 unit tests pass; live: 11/12 sources across layers [1,2,3];
-events.json==events.ics==98; feeds valid.**
+shown-output + committed. **186 unit tests pass; live: 10/13 sources across layers [1,2,3];
+events.json==events.ics (parity holds; the absolute count varies run-to-run as live sources fluctuate,
+e.g. gwu returned 531 one run and 0 the next); feeds valid (bozo=0); all 17 artifacts present.**
+A final comprehensive E2E caught + fixed a regression (a094748): CNAS + Atlantic Council were added as
+both sources AND watchlist orgs but missed from SOURCE_ORG, so every one of their events self-flagged
+big-name (3 -> 25); adding them to the self-mention guard restored big-name to 3 legit while keeping
+their on-topic AI events (CNAS AI=4, AC AI=2). +1 regression test.
 - **Expanded prestige watchlist** (5bec89b): +18 orgs (xAI, Inflection/Stability/Together/Perplexity AI,
   Groq, Cerebras, SambaNova, Micron, + DC policy orgs CSET/CSIS/CNAS/NIST/CAISI/RAND/Brookings/Atlantic
   Council) + 9 people (Zuckerberg, Murati, Brockman, Sutskever, Karpathy, LeCun, Hinton, Fei-Fei Li,
