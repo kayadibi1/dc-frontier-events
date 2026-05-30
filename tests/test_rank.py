@@ -52,6 +52,16 @@ def test_event_kind_classification():
     assert event_kind(mk(title="GenAI Collective NYC Demo Night")) == "talk"
 
 
+def test_founders_friday_and_brand_networking_detected():
+    # real brands seen in the live data that must classify as networking
+    assert event_kind(mk(title="Humans in AI Week: Founders Friday x Unstuck Labs")) == "networking"
+    assert event_kind(mk(title="GenAI Collective Founders Dinner")) == "networking"
+    assert event_kind(mk(title="AI Game Night")) == "networking"
+    # but community-talk formats stay neutral, not networking
+    assert event_kind(mk(title="GenAI Collective NYC Demo Night")) == "talk"
+    assert event_kind(mk(title="Founders Roundtable on AI Strategy")) == "policy"  # roundtable=policy
+
+
 def test_handson_beats_policy_beats_networking_precedence():
     # a workshop that also says "happy hour" is still hands-on
     assert event_kind(mk(title="AI Workshop + Happy Hour")) == "handson"

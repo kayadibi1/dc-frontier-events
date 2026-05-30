@@ -42,7 +42,8 @@ _POLICY_EVENT = re.compile(
 _NETWORKING = re.compile(
     r"happy hour|\bmixer\b|launch party|\bsoir|\breception\b|\bbrunch\b|cocktail|"
     r"wine tasting|\bgala\b|networking|pitch party|\bparty\b|\bsocial\b|"
-    r"co-?working|\bdrinks\b", re.I)
+    r"co-?working|\bdrinks\b|founders friday|founders dinner|founders breakfast|"
+    r"game night|meet ?(?:&|and) ?greet|\bnerdworking\b", re.I)
 _POLICY_TOPICS = {"policy", "semiconductor"}
 
 
