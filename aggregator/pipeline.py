@@ -12,11 +12,14 @@ import json as _json
 from .alerts import build_alerts
 from .config import SOURCES
 from .credentials import (
+    CREDENTIALS,
+    apply_fetched_deadlines,
     credentials_dicts,
     render_credentials_md,
     render_deadlines_md,
     upcoming_deadlines,
 )
+from .deadline_fetch import fetch_deadlines
 from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
@@ -90,14 +93,23 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     archive_n = write_ics(sorted(roundtrip, key=lambda e: e.start or ""),
                           f"{out_dir}/events-archive.ics", today)
     # Credentials track (curated prestige courses/certs/programs) — separate
-    # from the DC event pipeline; not date/location bound.
+    # from the DC event pipeline; not date/location bound. Auto-fetch each
+    # program's page for a real future application deadline (best-effort; expired
+    # / missing dates are simply not applied), then merge into the curated list.
+    if enrich:
+        found = asyncio.run(fetch_deadlines([c.url for c in CREDENTIALS], today))
+        if found:
+            print(f"[deadlines] auto-detected {len(found)} future deadline(s)")
+    else:
+        found = {}
+    creds = apply_fetched_deadlines(found)
     with open(f"{out_dir}/credentials.md", "w", encoding="utf-8") as f:
-        f.write(render_credentials_md())
+        f.write(render_credentials_md(creds))
     with open(f"{out_dir}/credentials.json", "w", encoding="utf-8") as f:
-        _json.dump(credentials_dicts(), f, ensure_ascii=False, indent=2)
+        _json.dump(credentials_dicts(creds), f, ensure_ascii=False, indent=2)
     with open(f"{out_dir}/deadlines.md", "w", encoding="utf-8") as f:
-        f.write(render_deadlines_md(today))
-    deadlines_soon = upcoming_deadlines(today)
+        f.write(render_deadlines_md(today, creds=creds))
+    deadlines_soon = upcoming_deadlines(today, creds=creds)
 
     digest_md = build_digest(emitted, today)
     digest_html = render_html(emitted, today)

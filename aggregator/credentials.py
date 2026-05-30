@@ -109,9 +109,28 @@ CREDENTIALS = [
 ]
 
 
-def credentials_dicts() -> list[dict]:
+def apply_fetched_deadlines(found: dict[str, str],
+                            creds: list[Credential] | None = None) -> list[Credential]:
+    """Return a new list with auto-fetched deadlines merged in by URL. `found`
+    maps url -> verified-future ISO date (from deadline_fetch.fetch_deadlines).
+    A fetched date wins over the curated value; the note records it was detected.
+    Curated entries without a fetched date are returned unchanged."""
+    from dataclasses import replace
+    creds = CREDENTIALS if creds is None else creds
     out = []
-    for c in CREDENTIALS:
+    for c in creds:
+        iso = found.get(c.url)
+        if iso:
+            out.append(replace(c, deadline=iso,
+                               deadline_note=f"auto-detected from page ({iso})"))
+        else:
+            out.append(c)
+    return out
+
+
+def credentials_dicts(creds: list[Credential] | None = None) -> list[dict]:
+    out = []
+    for c in (CREDENTIALS if creds is None else creds):
         d = asdict(c)
         d["topics"] = list(c.topics)
         d["prestige"] = c.prestige
@@ -133,12 +152,14 @@ def upcoming_deadlines(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
     return rows
 
 
-def render_deadlines_md(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS) -> str:
+def render_deadlines_md(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
+                        creds: list[Credential] | None = None) -> str:
     """Deadline tracker: closing-soon (dated, <= window) first, then later dated,
     then rolling/anytime. Honest: undated programs are shown with their status,
     never an invented date."""
+    creds = CREDENTIALS if creds is None else creds
     soon, later, rolling = [], [], []
-    for c in CREDENTIALS:
+    for c in creds:
         d = c.days_until(today_iso)
         if d is None:
             rolling.append(c)
@@ -182,14 +203,15 @@ _KIND_LABEL = {"course": "📘 course", "workshop": "🔧 workshop", "cert": "�
                "fellowship": "🏅 fellowship", "access": "🔑 access"}
 
 
-def render_credentials_md() -> str:
+def render_credentials_md(creds: list[Credential] | None = None) -> str:
     """Markdown for the credentials track: grouped by kind, prestige starred."""
+    creds = CREDENTIALS if creds is None else creds
     out = ["# Prestige Credentials & Programs",
            "_Official courses, certificates, and programs from leading AI orgs — "
            "earn proof, not just attendance. Confirm current details at each link._", ""]
     order = ["course", "cert", "workshop", "fellowship", "access"]
     by_kind: dict[str, list[Credential]] = {}
-    for c in CREDENTIALS:
+    for c in creds:
         by_kind.setdefault(c.kind, []).append(c)
     for kind in order:
         items = by_kind.get(kind, [])
