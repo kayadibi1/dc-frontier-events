@@ -19,6 +19,7 @@ COLUMNS = [
     "id", "title", "description", "start", "end", "tz", "venue_name", "address",
     "lat", "lng", "organizer", "speakers", "source", "source_url", "topics",
     "is_big_name", "raw", "dedupe_key", "updated_at", "first_seen", "last_seen",
+    "status",
 ]
 # Columns NOT overwritten on a conflicting upsert (preserve original insert).
 _PRESERVE = {"id", "first_seen"}
@@ -30,7 +31,7 @@ CREATE TABLE IF NOT EXISTS events (
   venue_name TEXT, address TEXT, lat REAL, lng REAL,
   organizer TEXT, speakers TEXT, source TEXT, source_url TEXT,
   topics TEXT, is_big_name INTEGER, raw TEXT, dedupe_key TEXT, updated_at TEXT,
-  first_seen TEXT, last_seen TEXT
+  first_seen TEXT, last_seen TEXT, status TEXT
 );
 """
 
@@ -43,6 +44,7 @@ def _rows(events: list[Event], now: str) -> list[tuple]:
         r["updated_at"] = now
         r["first_seen"] = now   # kept only on INSERT (excluded from UPDATE set)
         r["last_seen"] = now
+        r["status"] = "active"  # this run saw it; mark_archived demotes the rest
         out.append(tuple(r[c] for c in COLUMNS))
     return out
 
@@ -60,9 +62,9 @@ class Store:
         self.conn.commit()
 
     def _migrate(self) -> None:
-        # Add first_seen/last_seen to pre-existing databases.
+        # Add first_seen/last_seen/status to pre-existing databases.
         have = {r[1] for r in self.conn.execute("PRAGMA table_info(events)")}
-        for col in ("first_seen", "last_seen"):
+        for col in ("first_seen", "last_seen", "status"):
             if col not in have:
                 self.conn.execute(f'ALTER TABLE events ADD COLUMN {col} TEXT')
 
@@ -89,6 +91,31 @@ class Store:
     def count(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
 
+    def mark_archived(self, active_ids) -> int:
+        """Demote every row to 'archived', then re-mark this run's ids 'active'.
+        Returns the number of archived (no-longer-seen) rows."""
+        self.conn.execute("UPDATE events SET status='archived' WHERE status='active'")
+        self.conn.executemany("UPDATE events SET status='active' WHERE id=?",
+                              [(i,) for i in active_ids])
+        self.conn.commit()
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM events WHERE status='archived'").fetchone()[0]
+
+    def active_events(self) -> list[Event]:
+        cur = self.conn.execute("SELECT * FROM events WHERE status='active' ORDER BY start")
+        return [Event.from_row(r) for r in cur.fetchall()]
+
+    def archived_events(self) -> list[Event]:
+        cur = self.conn.execute("SELECT * FROM events WHERE status='archived' ORDER BY start")
+        return [Event.from_row(r) for r in cur.fetchall()]
+
+    def prune(self, before_iso: str) -> int:
+        """Delete archived rows whose start date is older than before_iso."""
+        cur = self.conn.execute(
+            "DELETE FROM events WHERE status='archived' AND start < ?", (before_iso,))
+        self.conn.commit()
+        return cur.rowcount
+
     def close(self) -> None:
         self.conn.close()
 
@@ -100,10 +127,11 @@ CREATE TABLE IF NOT EXISTS events (
   venue_name TEXT, address TEXT, lat DOUBLE PRECISION, lng DOUBLE PRECISION,
   organizer TEXT, speakers TEXT, source TEXT, source_url TEXT,
   topics TEXT, is_big_name INTEGER, raw TEXT, dedupe_key TEXT, updated_at TEXT,
-  first_seen TEXT, last_seen TEXT
+  first_seen TEXT, last_seen TEXT, status TEXT
 );
 ALTER TABLE events ADD COLUMN IF NOT EXISTS first_seen TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS last_seen TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS status TEXT;
 """
 
 
@@ -149,6 +177,31 @@ class PostgresStore:
         with self.conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM events")
             return cur.fetchone()[0]
+
+    def mark_archived(self, active_ids) -> int:
+        with self.conn.cursor() as cur:
+            cur.execute("UPDATE events SET status='archived' WHERE status='active'")
+            self._extras.execute_batch(
+                cur, "UPDATE events SET status='active' WHERE id=%s",
+                [(i,) for i in active_ids])
+            cur.execute("SELECT COUNT(*) FROM events WHERE status='archived'")
+            return cur.fetchone()[0]
+
+    def active_events(self) -> list[Event]:
+        with self.conn.cursor(cursor_factory=self._extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM events WHERE status='active' ORDER BY start")
+            return [Event.from_row(dict(r)) for r in cur.fetchall()]
+
+    def archived_events(self) -> list[Event]:
+        with self.conn.cursor(cursor_factory=self._extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM events WHERE status='archived' ORDER BY start")
+            return [Event.from_row(dict(r)) for r in cur.fetchall()]
+
+    def prune(self, before_iso: str) -> int:
+        with self.conn.cursor() as cur:
+            cur.execute("DELETE FROM events WHERE status='archived' AND start < %s",
+                        (before_iso,))
+            return cur.rowcount
 
     def close(self) -> None:
         self.conn.close()

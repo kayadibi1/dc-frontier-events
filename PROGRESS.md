@@ -38,7 +38,16 @@ collapse but two distinct same-day events at different venues never merge. Optio
   collapse, far-apart kept, semantic no-op). Live: dedupe removed 278 → **280** (2 more paraphrase
   dupes collapsed); no over-merge.
 
-### P2, P4, P5, P6 — pending execution.
+### P4 archiving partition + pruning — DONE
+Added a `status` column (active/archived) with safe migration (and `Event.from_row` now pops it —
+the coupled change that, when missed, throws `TypeError`). `Store`+`PostgresStore` gained
+`mark_archived(active_ids)` (demote all → re-mark this run's ids active), `active_events`,
+`archived_events`, and `prune(before_iso)` (delete archived rows older than a cutoff). Pipeline
+calls `mark_archived` + `prune(today−730d)` after upsert and prints a `partition:` line.
+- **76 unit tests pass** (+3: status active, partition, prune). Live: `partition: active=107
+  archived=0 pruned=0`; run 2 idempotent (0 new); `events-archive.ics`=107 VEVENTs.
+
+### P2, P5, P6 — pending execution.
 
 ## Enhancement F7 (2026-05-29) — More Luma sources
 Probed candidate DC AI/tech Luma slugs; added the two that resolved to live feeds:

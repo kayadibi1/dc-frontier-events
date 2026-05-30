@@ -5,7 +5,7 @@ concrete counts at each stage. Returns a summary dict (also used by tests).
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from .alerts import build_alerts
 from .config import SOURCES
@@ -54,6 +54,10 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     store = open_store(db_path)
     prior_ids = store.existing_ids()          # ids known before this run -> new-event diff
     store.upsert_many(kept)
+    archived_total = store.mark_archived({e.id for e in kept})  # demote no-longer-seen rows
+    # Prune archived events older than ~2 years to bound store growth.
+    cutoff = (date.fromisoformat(today) - timedelta(days=730)).isoformat()
+    pruned = store.prune(cutoff)
     roundtrip = store.all_events()
     store_total = store.count()
     store.close()
@@ -115,6 +119,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "mapped": mapped,
         "archive_events": archive_n,
         "gone": len(gone),
+        "archived_total": archived_total,
+        "pruned": pruned,
         "stored_total": store_total,
         "ics_events": ics_n,
         "rss_items": rss_n,
@@ -140,5 +146,7 @@ def _print_summary(s: dict) -> None:
     print(f"upcoming (>= {s['today']}): {s['upcoming']}")
     print(f"stored total:      {s['stored_total']}  (archive.ics={s['archive_events']}, "
           f"gone-from-sources={s['gone']})")
+    print(f"partition:         active={s['kept_after_filter']} archived={s['archived_total']} "
+          f"pruned={s['pruned']}")
     print(f"emitted:           events.ics={s['ics_events']}  feed.xml={s['rss_items']}  "
           f"map.html={s['mapped']} pins  events.json")

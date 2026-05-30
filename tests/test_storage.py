@@ -45,3 +45,38 @@ def test_first_seen_preserved_last_seen_refreshed(tmp_path):
     assert l2 >= l1          # last_seen refreshed
     assert s.count() == 1
     s.close()
+
+
+def test_upsert_marks_status_active(tmp_path):
+    s = Store(str(tmp_path / "e.db"))
+    s.upsert_many([Event(id="a", title="X", start="2026-06-01", source="cset")])
+    status = s.conn.execute("SELECT status FROM events WHERE id='a'").fetchone()[0]
+    assert status == "active"
+    s.close()
+
+
+def test_mark_archived_partitions(tmp_path):
+    s = Store(str(tmp_path / "e.db"))
+    s.upsert_many([
+        Event(id="a", title="A", start="2026-06-01", source="cset"),
+        Event(id="b", title="B", start="2026-06-02", source="cset"),
+        Event(id="c", title="C", start="2026-06-03", source="cset"),
+    ])
+    archived = s.mark_archived({"a", "b"})   # 'c' no longer seen -> archived
+    assert archived == 1
+    assert {e.id for e in s.active_events()} == {"a", "b"}
+    assert {e.id for e in s.archived_events()} == {"c"}
+    s.close()
+
+
+def test_prune_deletes_old_archived_only(tmp_path):
+    s = Store(str(tmp_path / "e.db"))
+    s.upsert_many([
+        Event(id="old", title="Old", start="2020-01-01", source="cset"),
+        Event(id="new", title="New", start="2026-06-01", source="cset"),
+    ])
+    s.mark_archived(set())            # archive both
+    deleted = s.prune("2021-01-01")   # only 'old' (start < cutoff) removed
+    assert deleted == 1
+    assert s.existing_ids() == {"new"}
+    s.close()

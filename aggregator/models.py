@@ -37,7 +37,7 @@ class Event:
     @classmethod
     def from_row(cls, row) -> "Event":
         d = dict(row)
-        for col in ("updated_at", "dedupe_key", "first_seen", "last_seen"):
+        for col in ("updated_at", "dedupe_key", "first_seen", "last_seen", "status"):
             d.pop(col, None)
         d["speakers"] = json.loads(d.get("speakers") or "[]")
         d["topics"] = json.loads(d.get("topics") or "[]")

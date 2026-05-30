@@ -25,16 +25,14 @@
 **Enhancement portfolio COMPLETE (F1–F7).** Remaining ideas below are blocked on externals or are future polish.
 
 ## Ranked (genuinely remaining after the 12 iterations + F1–F7 portfolio)
-Implementation plans for these live in `docs/superpowers/plans/`.
-1. **More Layer-2/3 sources** — Brookings / ITIF / CNAS / Atlantic Council scrapers + more
-   university feeds. Each is a bespoke adapter (`fetchers/<name>.py`); several block httpx or
-   export 0 via bare iCal, so each needs its own access strategy.
-2. **CSET/CSIS detail-page speaker enrichment** — fetch each event's detail page for `speakers[]`
-   + host orgs (and precise CSET times); match the watchlist against speakers.
-3. **Cross-language / fuzzy-embedding dedupe** — catch dupes that differ by translation/paraphrase
-   beyond exact-UID + title SequenceMatcher.
-4. **Archiving partition + store pruning** — split active vs archived (past / gone-from-source)
-   rows so the active set stays lean while history is retained.
-5. **ICS enrichment** — per-topic `CATEGORIES` colouring + `VALARM` reminders for upcoming events.
-6. **Live ops (no new code)** — enable the SMTP emailer (`SMTP_*` env) and Postgres
-   (`DATABASE_URL`); both are code-complete + fallback-tested, just need creds/a server.
+Implementation plans for these live in `docs/superpowers/plans/`; execution status in PROGRESS.md.
+- ~~CSET/CSIS detail-page speaker enrichment~~ ✅ executed P1 (machinery + person-only big-name match; live data has no watchlisted speakers yet).
+- ~~Cross-language / fuzzy dedupe~~ ✅ executed P3 (token-set pass 4 + optional embeddings).
+- ~~Archiving partition + store pruning~~ ✅ executed P4 (`status` active/archived, `mark_archived`/`prune`).
+
+Remaining:
+1. **ICS enrichment** — per-event `COLOR` + `VALARM` reminders for upcoming events (plan P5).
+2. **More Layer-2/3 sources** — Brookings / ITIF / CNAS / Atlantic Council scrapers + more
+   university feeds; each a bespoke adapter with its own access strategy (plan P2).
+3. **Live ops (no new code)** — enable the SMTP emailer (`SMTP_*` env) and Postgres
+   (`DATABASE_URL`); both code-complete + fallback-tested, just need creds/a server (plan P6).
