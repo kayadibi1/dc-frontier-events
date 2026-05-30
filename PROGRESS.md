@@ -1,5 +1,20 @@
 # PROGRESS — dc-frontier-events
 
+## Ranking by event TYPE (2026-05-30) — tuned for upskilling + policy angle
+User goal clarified: this is a personal **upskilling radar** angled at AI/chip **policy & strategy**,
+and (eventually) a Google Calendar subscription. Ranking now reflects that. `rank.event_kind`
+classifies each event (precedence hands-on > policy > networking > talk) and `score_event` weights:
+hands-on **+14** (workshops/hackathons/"laptop required"), policy/frontier **+12** (firesides/panels/
+testimony/think-tank), networking **−18** (parties/mixers/happy hours — downranked, NOT removed, per
+user), plus **+6** for policy/semiconductor topics. `is_big_name` (+50) still dominates so a
+marquee-org event of any type floats to the top. Community formats (meetup, demo night) stay neutral
+'talk' — not penalized. Digest now shows the kind tag (🔧/🏛️/🎙️/🍸).
+- Live effect: "Founders Friday" networking event #2 → **#6 (last)**; CSIS policy panel **#1 (54.0)**;
+  hands-on "Data Visualization with AI" workshop → **#2 (48.1)**. Exactly the intended reorder.
+- **101 unit tests pass** (+9 rank). E2E ALL PASS (parity 78==78, feeds valid, ranking assertions).
+- NEXT: expand the prestige watchlist (vetted — bare "RAND"/"AEI"/"SSI"/"Inflection" are false-positive
+  landmines; use specific phrases) + the Google Calendar .ics-subscribe path.
+
 ## Relevance precision II (2026-05-30) — per-source title-topic strictness
 User decision "tighten, keep both": the two firehose sources (gwu = whole-campus calendar,
 aic-washington = global org feed) now require the topic to appear in the TITLE; a description-only

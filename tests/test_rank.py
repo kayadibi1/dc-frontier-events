@@ -1,5 +1,5 @@
 from aggregator.models import Event
-from aggregator.rank import score_event, top_upcoming
+from aggregator.rank import event_kind, score_event, top_upcoming
 
 TODAY = "2026-05-29"
 
@@ -35,10 +35,59 @@ def test_closer_to_dc_scores_higher():
 
 
 def test_big_tags_dont_count_as_topics():
-    # only a big: tag, no real topic -> topic component is 0
+    # only a big: tag, no real topic -> topic component is 0; title 't' is a
+    # neutral 'talk' (no type weight) and big: tags aren't policy topics.
     ev = mk(topics=["big:Anthropic"], is_big_name=True)
-    # equals big weight + upcoming (no topic, no geo)
     assert score_event(ev, TODAY) == 50.0 + 20.0
+
+
+# --- event-type weighting for an upskilling / policy-angled radar ---
+
+def test_event_kind_classification():
+    assert event_kind(mk(title="Hands-on Workshop: Build an AI Agent")) == "handson"
+    assert event_kind(mk(title="AI Governance Fireside Chat")) == "policy"
+    assert event_kind(mk(title="AI Collective DC | Launch Party")) == "networking"
+    assert event_kind(mk(title="DC Tech Meetup #91: Integrating AI")) == "talk"
+    # community-talk formats are NOT penalized as networking
+    assert event_kind(mk(title="GenAI Collective NYC Demo Night")) == "talk"
+
+
+def test_handson_beats_policy_beats_networking_precedence():
+    # a workshop that also says "happy hour" is still hands-on
+    assert event_kind(mk(title="AI Workshop + Happy Hour")) == "handson"
+    # a fireside that also says "reception" is still policy
+    assert event_kind(mk(title="Fireside Chat & Reception")) == "policy"
+
+
+def test_handson_outranks_networking():
+    work = mk(title="Workshop: Build with AI (laptop required)", topics=["ai"])
+    party = mk(title="AI Founders Happy Hour", topics=["ai"])
+    assert score_event(work, TODAY) > score_event(party, TODAY)
+
+
+def test_policy_event_outranks_plain_talk():
+    panel = mk(title="Export Controls Panel", topics=["ai", "policy"])
+    talk = mk(title="Intro to AI", topics=["ai"])
+    assert score_event(panel, TODAY) > score_event(talk, TODAY)
+
+
+def test_networking_is_downranked_but_scoreable():
+    party = mk(title="AI Launch Party", topics=["ai"])
+    # networking penalty applies but the function still returns a number
+    assert isinstance(score_event(party, TODAY), float)
+
+
+def test_big_name_networking_still_outranks_plain_talk():
+    # a marquee-org networking event should still float above a plain talk
+    big_party = mk(title="Anthropic Launch Party", topics=["ai"], is_big_name=True)
+    plain = mk(title="Intro to AI", topics=["ai"])
+    assert score_event(big_party, TODAY) > score_event(plain, TODAY)
+
+
+def test_policy_topic_bonus():
+    pol = mk(title="Talk", topics=["ai", "semiconductor"])
+    non = mk(title="Talk", topics=["ai", "ml"])
+    assert score_event(pol, TODAY) > score_event(non, TODAY)
 
 
 def test_top_upcoming_excludes_past_and_sorts_desc():

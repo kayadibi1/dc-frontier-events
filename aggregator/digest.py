@@ -9,7 +9,7 @@ from xml.sax.saxutils import escape
 
 from .config import SOURCES
 from .models import Event
-from .rank import score_event, top_upcoming
+from .rank import event_kind, score_event, top_upcoming
 
 _NAME = {s.slug: s.name for s in SOURCES}
 
@@ -30,13 +30,18 @@ def _real_topics(ev: Event) -> list[str]:
     return [t for t in ev.topics if not t.startswith("big:")]
 
 
+_KIND_TAG = {"handson": "🔧 hands-on", "policy": "🏛️ policy",
+             "networking": "🍸 networking", "talk": "🎙️ talk"}
+
+
 def _line(ev: Event, today_iso: str) -> str:
     topics = ", ".join(_real_topics(ev)) or "—"
     src = _NAME.get(ev.source, ev.source)
     link = f" · [details]({ev.source_url})" if ev.source_url else ""
     star = "⭐ " if ev.is_big_name else ""
+    kind = _KIND_TAG.get(event_kind(ev), "")
     return (f"**{(ev.start or '')[:10]}** — {star}{ev.title}  \n"
-            f"  {src} · {_loc(ev)} · {topics} · score {score_event(ev, today_iso)}{link}")
+            f"  {src} · {kind} · {_loc(ev)} · {topics} · score {score_event(ev, today_iso)}{link}")
 
 
 def build_digest(events: list[Event], today_iso: str, top_n: int = 15) -> str:
