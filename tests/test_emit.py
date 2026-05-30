@@ -104,3 +104,36 @@ def test_ics_no_valarm_without_today(tmp_path):
     write_ics(evs, str(p))   # no today_iso -> no alarms (backward compatible)
     cal = Calendar.from_ical(p.read_bytes())
     assert len(list(list(cal.walk("VEVENT"))[0].walk("VALARM"))) == 0
+
+
+# --- Google Calendar subscribe-readiness (backlog idea #1, the end goal) ---
+
+def test_ics_has_subscription_headers(tmp_path):
+    p = tmp_path / "events.ics"
+    write_ics(sample(), str(p))
+    raw = p.read_text(encoding="utf-8")
+    # auto-refresh hints honored by Google/Apple/Outlook subscriptions
+    assert "REFRESH-INTERVAL" in raw and "PT12H" in raw
+    assert "X-PUBLISHED-TTL:PT12H" in raw
+    assert "METHOD:PUBLISH" in raw
+    assert "X-WR-TIMEZONE:UTC" in raw
+    assert "X-WR-CALDESC" in raw
+
+
+def test_ics_calendar_name_default_and_override(tmp_path):
+    d = tmp_path / "d.ics"
+    write_ics(sample(), str(d))
+    assert "X-WR-CALNAME:DC AI & Frontier Tech Events" in d.read_text(encoding="utf-8")
+    o = tmp_path / "o.ics"
+    write_ics(sample(), str(o), cal_name="DC AI — Upcoming")
+    raw = o.read_text(encoding="utf-8")
+    assert "X-WR-CALNAME:DC AI" in raw and "Upcoming" in raw
+
+
+def test_ics_still_parses_with_subscription_headers(tmp_path):
+    # The added calendar props must not break iCal parsing or change event count.
+    p = tmp_path / "s.ics"
+    n = write_ics(sample(), str(p))
+    cal = Calendar.from_ical(p.read_bytes())
+    assert n == 2 and len(list(cal.walk("VEVENT"))) == 2
+    assert str(cal.get("x-wr-calname"))  # present and non-empty

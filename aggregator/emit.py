@@ -23,6 +23,12 @@ PRODID = "-//dc-frontier-events//EN"
 _LAYER = {s.slug: s.layer for s in SOURCES}
 _NAME = {s.slug: s.name for s in SOURCES}
 
+# Default subscribable-calendar name (overridable per feed). Google Calendar's
+# "From URL" subscription reads X-WR-CALNAME as the calendar's display name and
+# honors REFRESH-INTERVAL / X-PUBLISHED-TTL as a polling hint.
+DEFAULT_CAL_NAME = "DC AI & Frontier Tech Events"
+REFRESH_HINT = "PT12H"   # ask clients to re-poll twice a day
+
 
 def _h(s: str) -> str:
     """Escape for HTML text and double-quoted attribute values."""
@@ -61,11 +67,22 @@ def _star(ev: Event) -> str:
     return "★ " if ev.is_big_name else ""
 
 
-def write_ics(events: list[Event], path: str, today_iso: str | None = None) -> int:
+def write_ics(events: list[Event], path: str, today_iso: str | None = None,
+              cal_name: str = DEFAULT_CAL_NAME) -> int:
     cal = Calendar()
     cal.add("prodid", PRODID)
     cal.add("version", "2.0")
-    cal.add("x-wr-calname", "DC AI & Semiconductor Events")
+    # Subscription metadata so the file works as a live calendar feed (Google
+    # Calendar "From URL", Apple Calendar, Outlook). NAME differs per feed so a
+    # subscriber can tell the upcoming / big-names / archive calendars apart.
+    cal.add("method", "PUBLISH")
+    cal.add("x-wr-calname", cal_name)
+    cal.add("name", cal_name)  # RFC 7986 NAME (newer clients)
+    cal.add("x-wr-caldesc", "Aggregated, deduped, ranked DC-metro AI, semiconductor "
+                            "& frontier-tech events. github.com/.../dc-frontier-events")
+    cal.add("x-wr-timezone", "UTC")
+    cal.add("refresh-interval;value=duration", REFRESH_HINT)
+    cal.add("x-published-ttl", REFRESH_HINT)
     now = datetime.now(timezone.utc)
     n = 0
     for ev in events:
