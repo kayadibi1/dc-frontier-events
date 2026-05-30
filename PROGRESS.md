@@ -1,13 +1,20 @@
 # PROGRESS — dc-frontier-events
 
-## Source-expansion probe (2026-05-30) — no source added (honest deferral)
-Attempted the P2 "more Layer-2 sources" backlog item again. Built adapters for **Hudson** and
-**Brookings**, verified each against real data, and **backed both out** rather than ship unverified:
-- Hudson: current listing is 0 AI/chip events (all geopolitics) + truncated link text → quarantined.
-- Brookings: genuinely promising (1 real upcoming AI event, "AI and economic mobility" 2026-06-10),
-  but produced an unresolved `events.json=108`/`events.ics=107` count mismatch (duplicate "social
-  media" card) that I couldn't verify cleanly under a flaky shell-output session. Deferred with full
-  notes in BACKLOG for a clean retry. Baseline left at the verified state below (81 tests, all outputs valid).
+## Source add (2026-05-30) — Brookings (Layer 2), verify-first
+Added Brookings after a strict step-by-step, verify-before-commit redo (an earlier Hudson + first
+Brookings attempt were both committed-then-reverted with false event claims; this time every step
+was confirmed against real output first). `fetchers/brookings.py` (httpx) parses `article` cards:
+title in a heading, date as free text ("June 10 2026" / "July 15, 2026"), `a[href*='/events/']`
+link; sub-brand `/event/` links and undated cards excluded. Brookings HQ in DC → dc_curated.
+- **Verified empirically:** live fetch = 14 event cards (3 on-topic AI) → real adapter vs the saved
+  real fixture = 14 parsed / 3 on-topic, all unique ids → 3 unit tests → full suite **84 passed**.
+- Live: `brookings (layer 2): 14 events` → **9/11 sources live**; kept 106 → **109** (+3 AI:
+  "AI and economic mobility" 2026-06-10 upcoming; "AI companion bots…" 2026-05-26; "AI in the
+  nursery" 2026-05-18).
+- **Output parity confirmed (the earlier "108/107 mismatch" was a phantom of a flaky shell):**
+  events.json == events.ics == **109**, 0 malformed, feed.xml + feed-upcoming bozo=0; the upcoming
+  AI event is in events-upcoming.ics, the two past ones are not.
+- Hudson stays deferred (current listing has 0 AI events; see BACKLOG).
 
 ## Status: Enhancement portfolio (autonomous) COMPLETE — F1–F7 done. GOAL ladder + final verification already PASSED.
 Design: docs/superpowers/specs/2026-05-29-aggregator-enhancements-design.md

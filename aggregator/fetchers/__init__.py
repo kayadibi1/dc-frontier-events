@@ -12,6 +12,7 @@ import asyncio
 
 from ..config import Source
 from .base import SourceResult
+from .brookings import fetch_brookings
 from .csis import fetch_csis
 from .cset import fetch_cset
 from .ics import fetch_ics
@@ -22,6 +23,7 @@ ADAPTERS = {
     "ics": fetch_ics,
     "cset": fetch_cset,
     "csis": fetch_csis,
+    "brookings": fetch_brookings,
 }
 
 
