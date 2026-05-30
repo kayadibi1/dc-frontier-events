@@ -114,3 +114,21 @@ docker stop dcfe-pg
 ## Notes
 - No code changes are required for either — both paths and their fallbacks are already
   unit-tested (F4/F5). This runbook only provides credentials/infra and verifies live behavior.
+
+---
+
+## Execution results (2026-05-30)
+This environment can't host a live SMTP server (Python 3.14 removed stdlib `smtpd`; `aiosmtpd`
+not installed) or Postgres (no Docker), so the *live* send / *live* DB hops were not exercised —
+they need real creds/infra (sections A2/B above), not faked here.
+
+**Verified offline instead — the high-value safety properties, via mocked SMTP:**
+- `deliver()` SUCCESS path: with `SMTP_*` set it does STARTTLS → login → `send_message` and returns
+  `("sent", <recipient>)` (test `test_deliver_smtp_success_path`).
+- `deliver()` NEVER-BLOCKS path: with `SMTP_*` set but the server erroring, it falls back to a
+  dry-run `.eml` and does not raise (test `test_deliver_smtp_failure_falls_back_to_dryrun`).
+- Dry-run `.eml` is a valid RFC822 message (F4 test); Postgres selection + unreachable-fallback are
+  covered by F5 tests.
+
+So both delivery paths are test-backed end-to-end except the final hop to a real SMTP server /
+Postgres instance, which is purely credential/infra and documented above.
