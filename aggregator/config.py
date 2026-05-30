@@ -170,6 +170,18 @@ SOURCE_ORG = {
     "brookings": "Brookings",
 }
 
+# DC-policy-ecosystem org names (the watchlist's institutional tier). These are
+# collision-prone (short acronyms: NIST matched the tail of a line-broken
+# "feminist") and appear incidentally in firehose descriptions (a careers fair
+# listing "the Atlantic Council" among employers). So a match here counts as a
+# big-name signal ONLY when it is in the event TITLE, or comes from a Layer-2
+# curated policy source's body (a legitimate cross-mention). The lab/big-tech/
+# people watchlist is unaffected (description matches there are reliable, e.g.
+# AI+EXPO "exhibitors including Microsoft"). See filter._big_names.
+POLICY_ORG_NAMES = {
+    "CSET", "CSIS", "CNAS", "NIST", "CAISI", "RAND", "Brookings", "Atlantic Council",
+}
+
 # Watchlist entries that are PEOPLE (not orgs). Only these may flag an event as
 # big-name when found among its speakers -- a speaker's employer (e.g. a panelist
 # who happens to work at Microsoft) must NOT make the event a "Microsoft event".

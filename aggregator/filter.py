@@ -19,6 +19,7 @@ from .config import (
     BIG_NAME_PERSONS,
     DC_BBOX,
     DC_TEXT_PATTERN,
+    POLICY_ORG_NAMES,
     SOURCE_ORG,
     SOURCES,
     STRICT_TITLE_TOPIC_SOURCES,
@@ -33,6 +34,7 @@ _ADMIN = re.compile(ADMIN_EXCLUDE_PATTERN, re.I)
 _BIG = {n: re.compile(p, re.I) for n, p in BIG_NAME_PATTERNS.items()}
 _BIG_PERSON = {n: rx for n, rx in _BIG.items() if n in BIG_NAME_PERSONS}
 _DC_CURATED = {s.slug for s in SOURCES if s.dc_curated}
+_LAYER2 = {s.slug for s in SOURCES if s.layer == 2}
 
 
 def _has_qualifying_topic(ev: Event) -> bool:
@@ -62,7 +64,15 @@ def _big_names(ev: Event) -> list[str]:
     # PERSON match -- a speaker's org affiliation ("Microsoft AR") must not flag
     # the event as a big-name org event.
     blob = _text_blob(ev)
-    names = [n for n, rx in _BIG.items() if rx.search(blob)]
+    names = []
+    for n, rx in _BIG.items():
+        if not rx.search(blob):
+            continue
+        # Policy-ecosystem orgs are collision-prone / often incidental in firehose
+        # bodies; accept them only from the TITLE or a Layer-2 curated source.
+        if n in POLICY_ORG_NAMES and not (rx.search(ev.title) or ev.source in _LAYER2):
+            continue
+        names.append(n)
     # Drop the event's own host org: a CSIS-sourced event naming "CSIS" is not a
     # prestige signal (circular). Cross-source mentions of the same org survive.
     own_org = SOURCE_ORG.get(ev.source)

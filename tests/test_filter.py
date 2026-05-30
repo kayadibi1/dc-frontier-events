@@ -1,4 +1,4 @@
-from aggregator.filter import apply_filters, is_admin_event, is_dc_relevant
+from aggregator.filter import _big_names, apply_filters, is_admin_event, is_dc_relevant
 from aggregator.models import Event
 from aggregator.normalize import detect_topics
 
@@ -115,6 +115,44 @@ def test_host_event_still_flags_other_marquee_org():
     assert kept and kept[0].is_big_name
     assert any(t == "big:Anthropic" for t in kept[0].topics)
     assert not any(t == "big:CSIS" for t in kept[0].topics)
+
+
+# --- policy-org names: title/Layer-2 only (kill firehose-description noise) ---
+
+def test_policy_org_in_firehose_speaker_bio_not_flagged():
+    # Real live false positives: policy-org names appearing in a firehose source's
+    # speaker bio set big-name, bypassing the topic filter and injecting off-topic
+    # events. A policy-org name in a non-Layer-2 DESCRIPTION must not flag. Tested
+    # on _big_names directly (the flag logic), isolated from the topic filter.
+    nist = mk(title="The Many Faces of Trust", source="gwu",
+              description="Deputy Director of the NIST-NSF Institute for Trustworthy AI")
+    assert _big_names(nist) == []
+    ac = mk(title="Careers in European Business and Policy", source="gwu",
+            description="speakers include Kristen Taylor (Atlantic Council)")
+    assert _big_names(ac) == []
+
+
+def test_policy_org_in_firehose_title_is_flagged():
+    # A policy org named in the TITLE is a genuine signal even in a firehose source.
+    ev = mk(title="Fireside with RAND Corporation", source="gwu")
+    assert "RAND" in _big_names(ev)
+
+
+def test_policy_org_in_title_still_big_name_even_in_firehose():
+    ev = mk(title="GW panel featuring RAND Corporation on AI", source="gwu",
+            topics=["ai"], lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert kept and kept[0].is_big_name
+
+
+def test_policy_org_in_layer2_body_is_big_name():
+    # A legit cross-mention in a curated Layer-2 source body still counts.
+    ev = mk(title="Frontier chips briefing", source="cset", topics=["ai"],
+            description="In partnership with RAND Corporation analysts.",
+            lat=38.9, lng=-77.03)
+    kept, _ = apply_filters([ev])
+    assert kept and kept[0].is_big_name
+    assert any(t == "big:RAND" for t in kept[0].topics)
 
 
 def test_dc_curated_virtual_event_is_relevant():
