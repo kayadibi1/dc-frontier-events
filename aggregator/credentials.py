@@ -17,11 +17,15 @@ at the URL.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from datetime import date
 
 # kind: course | workshop | cert | fellowship | access
 # cost: free | paid | exam-fee | competitive
 PRESTIGE_PROVIDERS = {"Anthropic", "OpenAI", "NVIDIA", "Google", "Hugging Face",
                       "Microsoft", "AWS", "DeepLearning.AI"}
+
+# A deadline within this many days of "today" is flagged as closing soon.
+DEADLINE_ALERT_DAYS = 60
 
 
 @dataclass(frozen=True)
@@ -34,47 +38,74 @@ class Credential:
     url: str
     topics: tuple
     note: str = ""
+    # Application/registration deadline. `deadline` is an ISO date ONLY when a
+    # real, verified date is known -- never a guess. When None, `deadline_note`
+    # carries the honest status ("enroll anytime", "cohort-based; check page").
+    deadline: str | None = None
+    deadline_note: str = ""
 
     @property
     def prestige(self) -> bool:
         return self.provider in PRESTIGE_PROVIDERS
 
+    def days_until(self, today_iso: str) -> int | None:
+        """Days from today until the deadline, or None if no concrete date."""
+        if not self.deadline:
+            return None
+        try:
+            return (date.fromisoformat(self.deadline) - date.fromisoformat(today_iso)).days
+        except ValueError:
+            return None
 
-# Curated list. Ordered roughly by prestige + résumé value. URLs verified 200.
+
+# Curated list. Ordered roughly by prestige + résumé value. URLs verified 200
+# (2026-05-30). deadline=None everywhere because no program publishes a verified
+# concrete application date right now; deadline_note carries the honest status.
 CREDENTIALS = [
     Credential("AI Fluency / Build with Claude", "Anthropic", "course", "free", True,
                "https://www.anthropic.com/learn", ("ai", "llm"),
-               "Anthropic's own courses incl. AI Fluency (certificate)."),
+               "Anthropic's own courses incl. AI Fluency (certificate).",
+               deadline_note="enroll anytime (self-paced)"),
     Credential("OpenAI Academy", "OpenAI", "course", "free", True,
                "https://academy.openai.com/", ("ai", "llm"),
-               "Free courses from OpenAI; certificates rolling out."),
+               "Free courses from OpenAI; certificates rolling out.",
+               deadline_note="enroll anytime (self-paced)"),
     Credential("Hugging Face Courses (LLM, Agents, NLP)", "Hugging Face", "course", "free", True,
                "https://huggingface.co/learn", ("ai", "llm", "ml"),
-               "Free, hands-on, certificate on completion."),
+               "Free, hands-on, certificate on completion.",
+               deadline_note="enroll anytime (self-paced)"),
     Credential("NVIDIA Deep Learning Institute", "NVIDIA", "workshop", "paid", True,
                "https://www.nvidia.com/en-us/training/", ("ai", "ml", "compute"),
-               "Instructor-led + self-paced; certificate of competency. Some virtual."),
+               "Instructor-led + self-paced; certificate of competency. Some virtual.",
+               deadline_note="self-paced anytime; instructor-led workshops scheduled (check page)"),
     Credential("DeepLearning.AI Specializations", "DeepLearning.AI", "course", "paid", True,
                "https://www.deeplearning.ai/courses/", ("ai", "ml", "llm"),
-               "Andrew Ng's courses; audit free, Coursera certificate paid."),
+               "Andrew Ng's courses; audit free, Coursera certificate paid.",
+               deadline_note="enroll anytime (self-paced)"),
     Credential("Google AI Essentials", "Google", "course", "paid", True,
                "https://grow.google/ai-essentials/", ("ai",),
-               "Beginner cert via Coursera."),
+               "Beginner cert via Coursera.",
+               deadline_note="enroll anytime (self-paced)"),
     Credential("AWS Certified AI Practitioner", "AWS", "cert", "exam-fee", True,
                "https://aws.amazon.com/certification/certified-ai-practitioner/", ("ai", "compute"),
-               "Industry-recognized professional certification (proctored exam)."),
+               "Industry-recognized professional certification (proctored exam).",
+               deadline_note="schedule the exam anytime"),
     Credential("Azure AI Engineer Associate", "Microsoft", "cert", "exam-fee", True,
                "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
-               ("ai", "compute"), "Microsoft professional certification."),
+               ("ai", "compute"), "Microsoft professional certification.",
+               deadline_note="schedule the exam anytime"),
     Credential("Google Cloud Professional ML Engineer", "Google", "cert", "exam-fee", True,
                "https://cloud.google.com/learn/certification/machine-learning-engineer",
-               ("ai", "ml", "compute"), "Advanced GCP professional certification."),
+               ("ai", "ml", "compute"), "Advanced GCP professional certification.",
+               deadline_note="schedule the exam anytime"),
     Credential("Anthropic Fellows Program", "Anthropic", "fellowship", "competitive", True,
-               "https://www.anthropic.com/fellows-program", ("ai", "policy"),
-               "Competitive research fellowship; stipend. Highly selective."),
+               "https://www.anthropic.com/research/fellows-program", ("ai", "policy"),
+               "Competitive research fellowship; stipend. Highly selective.",
+               deadline_note="cohort-based; applications open periodically — check page"),
     Credential("OpenAI Residency", "OpenAI", "fellowship", "competitive", True,
                "https://openai.com/residency/", ("ai", "ml"),
-               "Paid pathway into AI research/engineering at OpenAI."),
+               "Paid pathway into AI research/engineering at OpenAI.",
+               deadline_note="cohort-based; check page for the current cycle"),
 ]
 
 
@@ -86,6 +117,65 @@ def credentials_dicts() -> list[dict]:
         d["prestige"] = c.prestige
         out.append(d)
     return out
+
+
+def upcoming_deadlines(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
+                       creds: list[Credential] | None = None) -> list[tuple[Credential, int]]:
+    """Programs whose concrete deadline is today..+within_days, soonest first.
+    Only entries with a verified `deadline` date qualify (rolling/None excluded)."""
+    creds = CREDENTIALS if creds is None else creds
+    rows = []
+    for c in creds:
+        d = c.days_until(today_iso)
+        if d is not None and 0 <= d <= within_days:
+            rows.append((c, d))
+    rows.sort(key=lambda r: r[1])
+    return rows
+
+
+def render_deadlines_md(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS) -> str:
+    """Deadline tracker: closing-soon (dated, <= window) first, then later dated,
+    then rolling/anytime. Honest: undated programs are shown with their status,
+    never an invented date."""
+    soon, later, rolling = [], [], []
+    for c in CREDENTIALS:
+        d = c.days_until(today_iso)
+        if d is None:
+            rolling.append(c)
+        elif d < 0:
+            continue  # already closed; drop from the tracker
+        elif d <= within_days:
+            soon.append((c, d))
+        else:
+            later.append((c, d))
+    soon.sort(key=lambda r: r[1])
+    later.sort(key=lambda r: r[1])
+
+    out = ["# Application Deadlines & Windows",
+           f"_Generated {today_iso}. Concrete dates shown only when verified; "
+           "everything else lists its honest status — confirm at the link._", ""]
+
+    out.append(f"## ⏰ Closing soon (within {within_days} days) ({len(soon)})")
+    if soon:
+        for c, d in soon:
+            urgency = "‼️" if d <= 14 else "⏰"
+            out.append(f"- {urgency} **{c.deadline}** ({d} days) — {c.name} · {c.provider}  ")
+            out.append(f"  {c.note} [{c.url}]({c.url})")
+    else:
+        out.append("_None with a verified date in range._")
+
+    if later:
+        out += ["", f"## 📅 Dated, further out ({len(later)})"]
+        for c, d in later:
+            out.append(f"- **{c.deadline}** ({d} days) — {c.name} · {c.provider}  ")
+            out.append(f"  [{c.url}]({c.url})")
+
+    out += ["", f"## 🔄 Rolling / anytime / check page ({len(rolling)})"]
+    for c in rolling:
+        out.append(f"- **{c.name}** · {c.provider} — {c.deadline_note or 'check page'}  ")
+        out.append(f"  [{c.url}]({c.url})")
+    out.append("")
+    return "\n".join(out) + "\n"
 
 
 _KIND_LABEL = {"course": "📘 course", "workshop": "🔧 workshop", "cert": "🎓 cert",

@@ -11,7 +11,12 @@ import json as _json
 
 from .alerts import build_alerts
 from .config import SOURCES
-from .credentials import credentials_dicts, render_credentials_md
+from .credentials import (
+    credentials_dicts,
+    render_credentials_md,
+    render_deadlines_md,
+    upcoming_deadlines,
+)
 from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
@@ -90,6 +95,9 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         f.write(render_credentials_md())
     with open(f"{out_dir}/credentials.json", "w", encoding="utf-8") as f:
         _json.dump(credentials_dicts(), f, ensure_ascii=False, indent=2)
+    with open(f"{out_dir}/deadlines.md", "w", encoding="utf-8") as f:
+        f.write(render_deadlines_md(today))
+    deadlines_soon = upcoming_deadlines(today)
 
     digest_md = build_digest(emitted, today)
     digest_html = render_html(emitted, today)
@@ -101,7 +109,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     new_events = [e for e in emitted if e.id not in prior_ids]
     new_big = [e for e in new_events if e.is_big_name]
     with open(f"{out_dir}/alerts.md", "w", encoding="utf-8") as f:
-        f.write(build_alerts(new_events, new_big, today, first_run=not prior_ids))
+        f.write(build_alerts(new_events, new_big, today, first_run=not prior_ids,
+                             deadlines_soon=deadlines_soon))
 
     # Notify (digest + alerts). Dry-run unless SMTP_* env is set; never blocks.
     msg = build_message(digest_html, digest_md, today, up_n, len(new_big))

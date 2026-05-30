@@ -9,9 +9,25 @@ courses (Anthropic AI Fluency, OpenAI Academy, Hugging Face, DeepLearning.AI, Go
 pro certs (AWS AI Practitioner, Azure AI Engineer, GCP ML Engineer), a hands-on workshop (NVIDIA DLI),
 and fellowships (Anthropic Fellows, OpenAI Residency). Separate from the DC event pipeline (not
 date/location-bound). Pipeline emits `credentials.md` (grouped by kind, ⭐ prestige, cost + cert) and
-`credentials.json`. 108 unit tests (+5). E2E ALL PASS incl. event-pipeline-unchanged guards.
-- Next for this track: surface a digest pointer; add NVIDIA DLI live schedule scrape (it has dated
-  workshops) per the hybrid plan.
+`credentials.json`. Separate from the DC event pipeline (not date/location-bound).
+
+## Deadlines tracker (2026-05-30) — application windows, honest dates only
+User wants to be alerted before fellowship/cohort APPLICATION windows close (the high-value bit:
+courses are anytime, but a missed fellowship deadline is costly). Decisions: **honest status, NO
+fabricated dates** + **60-day alert window**. `Credential` gained `deadline` (ISO date — set ONLY
+when verified; currently None for all, since none publishes a stable date) + `deadline_note` (honest
+status). Added `days_until`, `upcoming_deadlines(today, within_days=60)`, `render_deadlines_md`.
+Pipeline emits `deadlines.md` (⏰ closing-soon dated / 📅 later dated / 🔄 rolling-anytime) and folds
+"⏳ deadlines closing soon" into `alerts.md`. Probed live for real dates — none stated on any page —
+confirming the status-based approach. Also FIXED 2 broken URLs found earlier: Anthropic Fellows →
+`/research/fellows-program` (was 404), OpenAI Residency confirmed 200 (was transient 403).
+- **116 unit tests pass** (+8 deadline, incl. urgency/sort/60-day-window with synthetic dated entries
+  + a "no fabricated dates in live list" honesty guard). E2E ALL PASS (json==ics 78==78, feeds valid,
+  deadlines.md emitted, alerts has deadline section, all cred URLs https, fellows URL fixed).
+- Live: all 11 programs are honestly "rolling/anytime" right now → closing-soon=0; the urgency/alert
+  path is proven by tests and lights up the moment a real dated program is added.
+- Next: add deadline-bearing programs as real dates surface (user-supplied or scraped, e.g. NVIDIA
+  DLI instructor-led schedule); digest pointer to credentials/deadlines.
 
 ## Ranking by event TYPE (2026-05-30) — tuned for upskilling + policy angle
 User goal clarified: this is a personal **upskilling radar** angled at AI/chip **policy & strategy**,
