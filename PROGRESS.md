@@ -1,5 +1,16 @@
 # PROGRESS — dc-frontier-events
 
+## Fix (2026-05-30) — alerts now itemize ALL new events ("as they are added")
+Surfaced by inspecting the real product output (not just structural checks): `alerts.md` detected
+the right count of new-since-last-run events but only **listed** big-name ones — regular new events
+showed as a bare number. Now `build_alerts` itemizes every newly-added event (⭐ big-names first,
+then a `🆕 New events since last run (N)` list with date · title · source · topics · link); the
+first/baseline run still suppresses the full dump.
+- Demonstrated with real data: seed DB → delete 2 upcoming AI events → re-run → alerts lists exactly
+  those 2 ("Online: A gentle intro to AI Evals…", "Tysons Investor Network: AI & The Future…").
+- **85 unit tests pass** (+1). Full E2E 31/31 (incl. baseline-note → detects-new → itemizes-new →
+  idempotent-0). NEW STANDING ROUTINE: run a full end-to-end check after each implementation.
+
 ## Source add (2026-05-30) — Brookings (Layer 2), verify-first
 Added Brookings after a strict step-by-step, verify-before-commit redo (an earlier Hudson + first
 Brookings attempt were both committed-then-reverted with false event claims; this time every step

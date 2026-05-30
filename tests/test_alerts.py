@@ -15,19 +15,32 @@ def test_alerts_lists_new_big_names():
     md = build_alerts(new, [new[1]], TODAY)
     assert "New big-name events (1)" in md
     assert "Fireside with Nvidia" in md
-    assert "New events since last run: 2" in md
+    assert "New events since last run (2)" in md
+
+
+def test_alerts_itemizes_all_new_events():
+    # Regular (non-big-name) new events must be LISTED, not just counted, so a
+    # subscriber can see what was added.
+    new = [E("a", "Plain AI Talk"), E("b", "Another AI Meetup")]
+    md = build_alerts(new, [], TODAY)
+    assert "New events since last run (2)" in md
+    assert "Plain AI Talk" in md
+    assert "Another AI Meetup" in md
 
 
 def test_alerts_empty():
     md = build_alerts([], [], TODAY)
     assert "New big-name events (0)" in md
     assert "_None._" in md
-    assert "New events since last run: 0" in md
+    assert "New events since last run (0)" in md
 
 
 def test_alerts_first_run_baseline_note():
     md = build_alerts([E("a", "x")], [], TODAY, first_run=True)
     assert "First run — baseline established" in md
+    # baseline run suppresses the full itemized list
+    assert "full list suppressed" in md
+    assert "Plain AI Talk" not in md
 
 
 def test_store_existing_ids_round_trip(tmp_path):

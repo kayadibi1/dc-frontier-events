@@ -12,21 +12,36 @@ from .models import Event
 _NAME = {s.slug: s.name for s in SOURCES}
 
 
+def _line(e: Event) -> str:
+    src = _NAME.get(e.source, e.source)
+    link = f" — {e.source_url}" if e.source_url else ""
+    star = "⭐ " if e.is_big_name else ""
+    topics = ", ".join(t for t in e.topics if not t.startswith("big:"))
+    tail = f" · {topics}" if topics else ""
+    return f"- {star}**{(e.start or '')[:10]}** · {e.title} · {src}{tail}{link}"
+
+
 def build_alerts(new_events: list[Event], new_big: list[Event],
                  today_iso: str, first_run: bool = False) -> str:
     out = ["# DC AI & Semiconductor — Alerts", f"_Generated {today_iso}_", ""]
     if first_run:
         out += [f"_First run — baseline established ({len(new_events)} events, "
-                f"{len(new_big)} big-name). Future runs alert only on newly-added events._", ""]
+                f"{len(new_big)} big-name). Future runs itemize only newly-added events._", ""]
 
     out.append(f"## 🔔 New big-name events ({len(new_big)})")
     if new_big:
-        for e in sorted(new_big, key=lambda x: x.start or ""):
-            src = _NAME.get(e.source, e.source)
-            link = f" — {e.source_url}" if e.source_url else ""
-            out.append(f"- **{(e.start or '')[:10]}** · {e.title} · {src}{link}")
+        out += [_line(e) for e in sorted(new_big, key=lambda x: x.start or "")]
     else:
         out.append("_None._")
 
-    out += ["", f"## New events since last run: {len(new_events)}"]
+    # Itemize ALL newly-added events (not just big names) so a subscriber sees
+    # exactly what appeared since the last run. On the first/baseline run the
+    # full set is everything, so we suppress the (huge) list and just note it.
+    out += ["", f"## 🆕 New events since last run ({len(new_events)})"]
+    if first_run:
+        out.append("_(baseline run — full list suppressed; itemized on future runs)_")
+    elif new_events:
+        out += [_line(e) for e in sorted(new_events, key=lambda x: x.start or "")]
+    else:
+        out.append("_None._")
     return "\n".join(out) + "\n"
