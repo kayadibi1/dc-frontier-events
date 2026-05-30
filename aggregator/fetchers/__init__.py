@@ -13,6 +13,7 @@ import asyncio
 from ..config import Source
 from .base import SourceResult
 from .brookings import fetch_brookings
+from .cnas import fetch_cnas
 from .csis import fetch_csis
 from .cset import fetch_cset
 from .ics import fetch_ics
@@ -24,6 +25,7 @@ ADAPTERS = {
     "cset": fetch_cset,
     "csis": fetch_csis,
     "brookings": fetch_brookings,
+    "cnas": fetch_cnas,
 }
 
 

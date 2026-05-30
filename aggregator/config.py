@@ -53,6 +53,9 @@ CSET_SOURCES = [
     Source("csis", "CSIS", "csis", 2, True, url="https://www.csis.org/events"),
     # Brookings HQ is in DC (1775 Massachusetts Ave NW); httpx-accessible.
     Source("brookings", "Brookings", "brookings", 2, True, url="https://www.brookings.edu/events/"),
+    # CNAS HQ is in DC (1899 Pennsylvania Ave NW); httpx-accessible. Strong AI/chip
+    # policy slate (US-China AI competition, Project Maven, Pentagon & Silicon Valley).
+    Source("cnas", "CNAS", "cnas", 2, True, url="https://www.cnas.org/events"),
 ]
 
 # Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic
