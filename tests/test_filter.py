@@ -98,6 +98,19 @@ def test_host_org_self_mention_not_big_name():
     assert kept and not kept[0].is_big_name
 
 
+def test_policy_source_events_not_self_flagged_bigname():
+    # Every curated policy SOURCE must suppress its own org self-mention, else its
+    # whole slate (organizer == the org) would be spuriously big-name. Regression
+    # for the cnas/atlanticcouncil leak: they were added as sources + watchlist
+    # orgs but missed from SOURCE_ORG, inflating big-name by their full feed.
+    for slug, org in [("cnas", "CNAS"), ("atlanticcouncil", "Atlantic Council"),
+                      ("csis", "CSIS"), ("cset", "CSET"), ("brookings", "Brookings")]:
+        ev = mk(title="AI and the Future of War", source=slug, topics=["ai"],
+                lat=38.9, lng=-77.03, organizer=org)
+        kept, _ = apply_filters([ev])
+        assert kept and not kept[0].is_big_name, f"{slug} self-flagged big-name"
+
+
 def test_cross_source_org_mention_is_big_name():
     # The same org named in ANOTHER source's event IS a prestige signal.
     ev = mk(title="GW panel featuring RAND Corporation", source="gwu",

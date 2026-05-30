@@ -175,6 +175,8 @@ SOURCE_ORG = {
     "cset": "CSET",
     "csis": "CSIS",
     "brookings": "Brookings",
+    "cnas": "CNAS",
+    "atlanticcouncil": "Atlantic Council",
 }
 
 # DC-policy-ecosystem org names (the watchlist's institutional tier). These are
