@@ -79,6 +79,23 @@ def test_status_none():
     assert extract_app_status("<p>Self-paced course, enroll anytime.</p>") == ""
 
 
+def test_status_ignores_application_openings_noun():
+    # Live false positive from OpenAI Residency: the page describes ROLLING hiring
+    # -- "we open Residency spots ... For updates on application openings, check
+    # our careers site." 'openings' (a noun) must NOT read as 'applications open'.
+    text = ("Our application process is adaptive to our business needs, so we open "
+            "Residency spots and hire on a rolling basis. For updates on application "
+            "openings, check our careers site and follow our social media accounts.")
+    assert extract_app_status(text) == ""
+
+
+def test_status_open_still_matches_real_phrasings():
+    # The tightening must not break genuine open signals.
+    assert extract_app_status("Applications are now open for 2026.") == "open"
+    assert extract_app_status("We are currently open for applications.") == "open"
+    assert extract_app_status("Apply now for our AI safety research fellowship.") == "open"
+
+
 def test_extract_info_combines_json_deadline():
     html = '<script>{"applicationDeadline":"2026-07-15T00:00:00Z"}</script> apply now'
     info = extract_info(html, "2026-05-30")
@@ -113,3 +130,64 @@ def test_apply_fetched_info_date_beats_status():
     assert merged[0].deadline == "2026-08-01"
     # has a real date -> NOT counted as a date-less "open application"
     assert open_applications(merged) == []
+
+
+# --- fetch fidelity: a page we couldn't read must never yield a verdict ---
+from aggregator.deadline_fetch import _interpret, MIN_READABLE_CHARS
+
+_LONG = "Applications are now open. Apply now for the 2026 cohort. " * 20  # > 500 chars
+
+
+def test_interpret_readable_page_extracts_status():
+    r = _interpret(200, f"<p>{_LONG}</p>", TODAY)
+    assert r["ok"] is True
+    assert r["status"] == "open"
+    assert r["code"] == 200
+
+
+def test_interpret_403_block_page_is_not_ok_even_with_apply_now():
+    # THE blind-spot guard: a Cloudflare 403 body can literally say "apply now"
+    # -- it must NOT be read as an open application, because we never saw the page.
+    r = _interpret(403, "<html>apply now applications are open</html>", TODAY)
+    assert r["ok"] is False
+    assert r["status"] == ""          # no false status
+    assert r["deadline"] is None      # no false date
+    assert r["code"] == 403
+
+
+def test_interpret_200_but_empty_shell_is_not_ok():
+    # a 200 that returns a tiny JS shell (no real content) is not "readable"
+    r = _interpret(200, "<html><body>apply now</body></html>", TODAY)
+    assert len("apply now") < MIN_READABLE_CHARS
+    assert r["ok"] is False
+    assert r["status"] == ""
+
+
+def test_interpret_readable_with_no_signal_is_ok_rolling():
+    r = _interpret(200, f"<p>{'Self-paced course, enroll anytime. ' * 30}</p>", TODAY)
+    assert r["ok"] is True            # we DID read it
+    assert r["deadline"] is None and r["status"] == ""   # genuinely nothing -> rolling
+
+
+# --- confirmation guard: a positive signal must reproduce on a second fetch ---
+from aggregator.deadline_fetch import _reconcile
+
+
+def test_reconcile_agreeing_keeps_signal():
+    a = {"deadline": None, "status": "open", "ok": True, "code": 200}
+    r = _reconcile(a, dict(a))
+    assert r["status"] == "open" and r["unstable"] is False
+
+
+def test_reconcile_agreeing_keeps_deadline():
+    a = {"deadline": "2026-08-01", "status": "", "ok": True, "code": 200}
+    r = _reconcile(a, dict(a))
+    assert r["deadline"] == "2026-08-01" and r["unstable"] is False
+
+
+def test_reconcile_disagreeing_drops_signal_and_flags_unstable():
+    # the live OpenAI case: fetch 1 says 'open', fetch 2 says nothing -> drop it
+    a = {"deadline": None, "status": "open", "ok": True, "code": 200}
+    b = {"deadline": None, "status": "", "ok": True, "code": 200}
+    r = _reconcile(a, b)
+    assert r["status"] == "" and r["deadline"] is None and r["unstable"] is True

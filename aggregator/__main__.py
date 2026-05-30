@@ -19,7 +19,14 @@ def main() -> None:
                    help="override 'today' (YYYY-MM-DD) for the upcoming/ranking window")
     p.add_argument("--no-enrich", action="store_true",
                    help="skip Layer-2 detail-page speaker enrichment (faster, fewer requests)")
+    p.add_argument("--verify", action="store_true",
+                   help="ground-truth check: fetch each credential page and report what "
+                        "was actually readable (writes out/verify.md); skips the pipeline")
     args = p.parse_args()
+    if args.verify:
+        from .verify import run_verify
+        run_verify(today_iso=args.today, out_dir=args.out)
+        return
     run(out_dir=args.out, db_path=args.db, today=args.today, enrich=not args.no_enrich)
 
 

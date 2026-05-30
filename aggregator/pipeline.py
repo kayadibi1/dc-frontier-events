@@ -102,8 +102,10 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
             fetch_deadline_info([c.scrape_url for c in CREDENTIALS], today))
         n_dates = sum(1 for i in found.values() if i.get("deadline"))
         n_open = sum(1 for i in found.values() if i.get("status") == "open")
+        n_blind = sum(1 for i in found.values() if not i.get("ok"))
         if found:
-            print(f"[deadlines] auto-detected {n_dates} date(s), {n_open} open application(s)")
+            print(f"[deadlines] auto-detected {n_dates} date(s), {n_open} open "
+                  f"application(s), {n_blind} unreadable page(s)")
     else:
         found = {}
     creds = apply_fetched_info(found)
