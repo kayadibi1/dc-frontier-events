@@ -70,3 +70,37 @@ def test_empty_inputs_produce_valid_empty_feeds(tmp_path):
     assert write_rss([], str(rss)) == 0
     assert Calendar.from_ical(ics.read_bytes()) is not None
     assert feedparser.parse(rss.read_bytes()).bozo == 0
+
+def test_ics_per_event_color(tmp_path):
+    evs = [
+        Event(id="big", title="Fireside", start="2026-06-10", source="csis",
+              is_big_name=True, topics=["ai"]),
+        Event(id="comm", title="Meetup", start="2026-06-10", source="DC2", topics=["ai"]),
+    ]
+    p = tmp_path / "c.ics"
+    write_ics(evs, str(p))
+    cal = Calendar.from_ical(p.read_bytes())
+    colors = {str(v.get("uid")): str(v.get("color")) for v in cal.walk("VEVENT")}
+    assert colors["big"] == "red"      # big-name -> red
+    assert colors["comm"] == "blue"    # Layer-1 community -> blue
+
+
+def test_ics_valarm_only_for_upcoming(tmp_path):
+    evs = [
+        Event(id="future", title="Upcoming AI", start="2026-12-01", source="DC2", topics=["ai"]),
+        Event(id="past", title="Old AI", start="2024-01-01", source="DC2", topics=["ai"]),
+    ]
+    p = tmp_path / "a.ics"
+    write_ics(evs, str(p), "2026-05-29")
+    cal = Calendar.from_ical(p.read_bytes())
+    alarms = {str(v.get("uid")): len(list(v.walk("VALARM"))) for v in cal.walk("VEVENT")}
+    assert alarms["future"] == 1
+    assert alarms["past"] == 0
+
+
+def test_ics_no_valarm_without_today(tmp_path):
+    evs = [Event(id="x", title="AI", start="2026-12-01", source="DC2", topics=["ai"])]
+    p = tmp_path / "n.ics"
+    write_ics(evs, str(p))   # no today_iso -> no alarms (backward compatible)
+    cal = Calendar.from_ical(p.read_bytes())
+    assert len(list(list(cal.walk("VEVENT"))[0].walk("VALARM"))) == 0

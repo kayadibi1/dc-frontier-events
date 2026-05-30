@@ -9,11 +9,11 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import asdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from email.utils import format_datetime
 from xml.sax.saxutils import escape
 
-from icalendar import Calendar
+from icalendar import Alarm, Calendar
 from icalendar import Event as IcsEvent
 
 from .config import SOURCES
@@ -61,7 +61,7 @@ def _star(ev: Event) -> str:
     return "★ " if ev.is_big_name else ""
 
 
-def write_ics(events: list[Event], path: str) -> int:
+def write_ics(events: list[Event], path: str, today_iso: str | None = None) -> int:
     cal = Calendar()
     cal.add("prodid", PRODID)
     cal.add("version", "2.0")
@@ -86,11 +86,22 @@ def write_ics(events: list[Event], path: str) -> int:
             ie.add("geo", (ev.lat, ev.lng))
         if ev.topics:
             ie.add("categories", ev.topics)
+        # RFC 7986 COLOR: red=big-name, purple=L2 policy, green=L3 univ, blue=L1.
+        color = ("red" if ev.is_big_name
+                 else {2: "purple", 3: "green"}.get(_LAYER.get(ev.source, 1), "blue"))
+        ie.add("color", color)
         desc = ev.description
         if ev.source_url:
             ie.add("url", ev.source_url)
             desc = f"{desc}\n\nSource: {ev.source_url}".strip()
         ie.add("description", desc)
+        # A 1-day-before reminder, only for upcoming events.
+        if today_iso and (ev.start or "")[:10] >= today_iso:
+            alarm = Alarm()
+            alarm.add("action", "DISPLAY")
+            alarm.add("description", ev.title)
+            alarm.add("trigger", timedelta(days=-1))
+            ie.add_component(alarm)
         cal.add_component(ie)
         n += 1
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)

@@ -30,9 +30,10 @@ Implementation plans for these live in `docs/superpowers/plans/`; execution stat
 - ~~Cross-language / fuzzy dedupe~~ ✅ executed P3 (token-set pass 4 + optional embeddings).
 - ~~Archiving partition + store pruning~~ ✅ executed P4 (`status` active/archived, `mark_archived`/`prune`).
 
+- ~~ICS enrichment~~ ✅ executed P5 (per-event `COLOR` + 1-day `VALARM` on upcoming).
+
 Remaining:
-1. **ICS enrichment** — per-event `COLOR` + `VALARM` reminders for upcoming events (plan P5).
-2. **More Layer-2/3 sources** — Brookings / ITIF / CNAS / Atlantic Council scrapers + more
+1. **More Layer-2/3 sources** — Brookings / ITIF / CNAS / Atlantic Council scrapers + more
    university feeds; each a bespoke adapter with its own access strategy (plan P2).
-3. **Live ops (no new code)** — enable the SMTP emailer (`SMTP_*` env) and Postgres
+2. **Live ops (no new code)** — enable the SMTP emailer (`SMTP_*` env) and Postgres
    (`DATABASE_URL`); both code-complete + fallback-tested, just need creds/a server (plan P6).

@@ -47,7 +47,15 @@ calls `mark_archived` + `prune(today−730d)` after upsert and prints a `partiti
 - **76 unit tests pass** (+3: status active, partition, prune). Live: `partition: active=107
   archived=0 pruned=0`; run 2 idempotent (0 new); `events-archive.ics`=107 VEVENTs.
 
-### P2, P5, P6 — pending execution.
+### P5 ICS enrichment (COLOR + VALARM) — DONE
+`emit.write_ics` now adds a per-event RFC-7986 `COLOR` (red=big-name / purple=L2 / green=L3 /
+blue=L1) and, when given `today_iso`, a 1-day `VALARM` reminder on upcoming events. The param
+defaults to `None` (no alarms) so existing callers/tests are unaffected; the pipeline passes
+`today` to the events / upcoming / big-names / archive ICS writers.
+- **79 unit tests pass** (+3: per-event color, VALARM-only-for-upcoming, no-alarm-without-today).
+  Live: COLOR on all 107 VEVENTs; **23 VALARMs == 23 upcoming**; events.ics reparses (0 malformed).
+
+### P2, P6 — pending execution.
 
 ## Enhancement F7 (2026-05-29) — More Luma sources
 Probed candidate DC AI/tech Luma slugs; added the two that resolved to live feeds:
