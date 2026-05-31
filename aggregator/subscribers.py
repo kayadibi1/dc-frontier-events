@@ -20,6 +20,7 @@ import os
 import re
 import secrets
 import sqlite3
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -71,8 +72,14 @@ class SubscriberStore:
     def __init__(self, path: str = "data/subscribers.db"):
         self.path = path
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        self.conn = sqlite3.connect(path)
+        # check_same_thread=False: the signup service is a ThreadingHTTPServer, so
+        # requests touch this connection from worker threads. SQLite allows that
+        # for reads; a lock (self._lock) serializes the writes below so concurrent
+        # requests can't interleave a transaction. WAL keeps readers unblocked.
+        self.conn = sqlite3.connect(path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self._lock = threading.Lock()
         self.conn.executescript(_DDL)
         self.conn.commit()
 
@@ -85,20 +92,21 @@ class SubscriberStore:
         email = (email or "").strip().lower()
         if not valid_email(email):
             return SubscribeResult("invalid")
-        row = self.conn.execute(
-            "SELECT status FROM subscribers WHERE email=?", (email,)).fetchone()
-        if row and row["status"] == "verified":
-            return SubscribeResult("already_verified", email)
-        token = _token()
-        if row is None:
-            self.conn.execute(
-                "INSERT INTO subscribers (email,status,verify_token,unsub_token,created_at) "
-                "VALUES (?,?,?,?,?)", (email, "pending", token, _token(), _now()))
-        else:  # pending or unsubscribed -> restart pending with a fresh token
-            self.conn.execute(
-                "UPDATE subscribers SET status='pending', verify_token=?, created_at=? "
-                "WHERE email=?", (token, _now(), email))
-        self.conn.commit()
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT status FROM subscribers WHERE email=?", (email,)).fetchone()
+            if row and row["status"] == "verified":
+                return SubscribeResult("already_verified", email)
+            token = _token()
+            if row is None:
+                self.conn.execute(
+                    "INSERT INTO subscribers (email,status,verify_token,unsub_token,created_at) "
+                    "VALUES (?,?,?,?,?)", (email, "pending", token, _token(), _now()))
+            else:  # pending or unsubscribed -> restart pending with a fresh token
+                self.conn.execute(
+                    "UPDATE subscribers SET status='pending', verify_token=?, created_at=? "
+                    "WHERE email=?", (token, _now(), email))
+            self.conn.commit()
         return SubscribeResult("send_verify", email, token)
 
     def verify(self, token: str, now_iso: str | None = None) -> VerifyResult:
@@ -107,41 +115,43 @@ class SubscriberStore:
         once). A token older than PENDING_TTL_HOURS is rejected as 'invalid'."""
         if not token:
             return VerifyResult("invalid")
-        row = self.conn.execute(
-            "SELECT email,status,created_at,unsub_token FROM subscribers "
-            "WHERE verify_token=?", (token,)).fetchone()
-        if row is None:
-            return VerifyResult("invalid")
-        if row["status"] == "verified":
-            return VerifyResult("already", row["email"], row["unsub_token"])
-        # pending -> check expiry
-        now = datetime.fromisoformat(now_iso) if now_iso else datetime.now(timezone.utc)
-        try:
-            created = datetime.fromisoformat(row["created_at"])
-        except (ValueError, TypeError):
-            created = now
-        if now - created > timedelta(hours=PENDING_TTL_HOURS):
-            return VerifyResult("invalid")
-        self.conn.execute(
-            "UPDATE subscribers SET status='verified', verified_at=? WHERE email=?",
-            (_now(), row["email"]))
-        self.conn.commit()
-        return VerifyResult("verified", row["email"], row["unsub_token"])
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT email,status,created_at,unsub_token FROM subscribers "
+                "WHERE verify_token=?", (token,)).fetchone()
+            if row is None:
+                return VerifyResult("invalid")
+            if row["status"] == "verified":
+                return VerifyResult("already", row["email"], row["unsub_token"])
+            # pending -> check expiry
+            now = datetime.fromisoformat(now_iso) if now_iso else datetime.now(timezone.utc)
+            try:
+                created = datetime.fromisoformat(row["created_at"])
+            except (ValueError, TypeError):
+                created = now
+            if now - created > timedelta(hours=PENDING_TTL_HOURS):
+                return VerifyResult("invalid")
+            self.conn.execute(
+                "UPDATE subscribers SET status='verified', verified_at=? WHERE email=?",
+                (_now(), row["email"]))
+            self.conn.commit()
+            return VerifyResult("verified", row["email"], row["unsub_token"])
 
     def unsubscribe(self, token: str) -> bool:
         """Mark a subscriber unsubscribed by their (stable) unsub token. Idempotent;
         returns True if a matching subscriber was found."""
         if not token:
             return False
-        row = self.conn.execute(
-            "SELECT email FROM subscribers WHERE unsub_token=?", (token,)).fetchone()
-        if row is None:
-            return False
-        self.conn.execute(
-            "UPDATE subscribers SET status='unsubscribed', unsub_at=? WHERE email=?",
-            (_now(), row["email"]))
-        self.conn.commit()
-        return True
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT email FROM subscribers WHERE unsub_token=?", (token,)).fetchone()
+            if row is None:
+                return False
+            self.conn.execute(
+                "UPDATE subscribers SET status='unsubscribed', unsub_at=? WHERE email=?",
+                (_now(), row["email"]))
+            self.conn.commit()
+            return True
 
     # -- reads ----------------------------------------------------------------
     def verified(self) -> list[tuple[str, str]]:

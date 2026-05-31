@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timedelta, timezone
 
 from aggregator.subscribers import SubscriberStore, valid_email
@@ -97,6 +98,30 @@ def test_unsubscribe_bad_token(tmp_path):
     s = SubscriberStore(str(tmp_path / "subs.db"))
     assert s.unsubscribe("nope") is False
     assert s.unsubscribe("") is False
+    s.close()
+
+
+def test_store_is_usable_from_multiple_threads(tmp_path):
+    # Reproduces the ThreadingHTTPServer failure: the store is opened in one
+    # thread and used from many. Must not raise sqlite3.ProgrammingError, and
+    # every distinct subscribe must persist.
+    s = SubscriberStore(str(tmp_path / "subs.db"))
+    errors: list[Exception] = []
+
+    def worker(i: int):
+        try:
+            r = s.subscribe(f"user{i}@example.com")
+            s.verify(r.token)
+        except Exception as e:           # capture cross-thread errors
+            errors.append(e)
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []                  # no ProgrammingError / interleave
+    assert s.count(status="verified") == 20
     s.close()
 
 
