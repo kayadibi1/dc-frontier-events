@@ -56,7 +56,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     if enrich:
         layer_by_source = {s.slug: s.layer for s in SOURCES}
         n_enriched = asyncio.run(enrich_layer2(raw_events, layer_by_source, default_fetch))
-        print(f"[enrich] speakers added to {n_enriched} Layer-2 events")
+        print(f"[enrich] enriched {n_enriched} Layer-2 events (descriptions + speakers)")
     deduped, removed = dedupe(raw_events)
     kept, fstats = apply_filters(deduped)
 

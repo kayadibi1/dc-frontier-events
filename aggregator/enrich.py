@@ -1,9 +1,15 @@
-"""Speaker enrichment for Layer-2 detail pages.
+"""Layer-2 enrichment from each event's detail page: descriptions + speakers.
 
-extract_speakers parses both structured speaker markup (CSIS:
-[class*=speaker]/[class*=participant]) and prose ("featuring X and Y, moderated
-by Z" -- CSET). enrich_layer2 fetches each Layer-2 event's detail page and sets
-Event.speakers (best-effort; failures leave speakers empty).
+Layer-2 listing pages (CSET, CSIS, Brookings, CNAS, Atlantic Council) carry only a
+title + date -- no blurb and no speaker names -- so without enrichment the calendar
+shows a bare "Source: <url>" body and the big-name watchlist can't see who is
+speaking. enrich_layer2 fetches each Layer-2 event's detail page and pulls:
+  - a description from the page's og:/meta description (extract_description), used
+    only when the event has no description yet (a listing-sourced blurb wins), and
+  - speaker names (extract_speakers) from structured markup (CSIS:
+    [class*=speaker]/[class*=participant]) and prose ("featuring X and Y, moderated
+    by Z" -- CSET), set on Event.speakers for the big-name matcher.
+Best-effort: a failed fetch leaves both empty.
 """
 
 from __future__ import annotations
@@ -37,6 +43,17 @@ _ORG_WORDS = {
 }
 _INTRO = re.compile(r"(?:featuring|fireside chat with|joined by|with|moderated by|"
                     r"keynote by|in conversation with|speakers?:)\s+(.+?)(?:\.|\n|$)", re.I)
+
+# Meta tags carrying the event blurb, richest first. og:description is the best on
+# CSIS / Atlantic Council; plain meta / twitter descriptions are fallbacks.
+_DESC_SELECTORS = ('meta[property="og:description"]',
+                   'meta[name="description"]',
+                   'meta[name="twitter:description"]')
+# Require a real blurb so junk metas ("Events", a bare org name) are skipped.
+_MIN_DESC_CHARS = 40
+# Layer-2 sources behind a WAF that 403s plain httpx -- fetch via curl_cffi
+# (Chrome TLS impersonation), like their listing fetchers.
+_WAF_SOURCES = {"cset", "atlanticcouncil"}
 
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -89,9 +106,24 @@ def extract_speakers(html: str) -> list[str]:
     return out
 
 
+def extract_description(html: str) -> str:
+    """Pull a human blurb from a detail page's og:/meta description tags. Returns
+    '' when none is long enough to be a real description (skips junk like 'Events')."""
+    tree = HTMLParser(html)
+    for sel in _DESC_SELECTORS:
+        node = tree.css_first(sel)
+        if node is None:
+            continue
+        content = _clean(node.attributes.get("content") or "")
+        if len(content) >= _MIN_DESC_CHARS:
+            return content
+    return ""
+
+
 async def default_fetch(url: str, source_kind: str) -> str:
-    """Fetch a detail page: curl_cffi (browser TLS) for cset (WAF), httpx else."""
-    if source_kind == "cset":
+    """Fetch a detail page: curl_cffi (browser TLS) for WAF-fronted sources
+    (CSET, Atlantic Council), httpx for the rest."""
+    if source_kind in _WAF_SOURCES:
         def _go():
             from curl_cffi import requests as creq
             return creq.Session(impersonate="chrome").get(url, timeout=30).text
@@ -105,9 +137,10 @@ async def default_fetch(url: str, source_kind: str) -> str:
 async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
                         fetch) -> int:
     """For each Layer-2 event with a source_url, fetch its detail page via
-    `fetch(url, source_kind)` and set ev.speakers. Best-effort: a failed fetch
-    leaves speakers empty. `fetch` is async and returns HTML (or '' on failure).
-    Returns the number of events enriched with >=1 speaker."""
+    `fetch(url, source_kind)` and set ev.speakers + (when missing) ev.description.
+    Best-effort: a failed fetch leaves both empty. `fetch` is async and returns
+    HTML (or '' on failure). Returns the number of events enriched (speakers found
+    and/or a description newly filled in)."""
     targets = [e for e in events
                if layer_by_source.get(e.source, 0) == 2 and e.source_url]
 
@@ -117,7 +150,11 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
         except Exception:
             return 0
         ev.speakers = extract_speakers(html or "")
-        return 1 if ev.speakers else 0
+        added_desc = False
+        if not ev.description:
+            ev.description = extract_description(html or "")
+            added_desc = bool(ev.description)
+        return 1 if (ev.speakers or added_desc) else 0
 
     results = await asyncio.gather(*[one(e) for e in targets])
     return sum(results)

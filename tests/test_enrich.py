@@ -1,7 +1,7 @@
 import asyncio
 
 from aggregator.config import Source
-from aggregator.enrich import enrich_layer2, extract_speakers
+from aggregator.enrich import enrich_layer2, extract_description, extract_speakers
 from aggregator.models import Event
 
 CSIS_HTML = """
@@ -51,6 +51,26 @@ def test_extract_speakers_rejects_org_affiliations():
     assert "Open Government Partnership" not in names
 
 
+def test_extract_description_prefers_og_over_meta():
+    html = ('<meta property="og:description" content="The og blurb is long enough '
+            'to count as a real event description.">'
+            '<meta name="description" content="A meta fallback that is also long enough.">')
+    assert extract_description(html).startswith("The og blurb")
+
+
+def test_extract_description_falls_back_to_meta_then_twitter():
+    meta = '<meta name="description" content="Only a plain meta description, sufficiently long.">'
+    assert extract_description(meta).startswith("Only a plain meta")
+    tw = '<meta name="twitter:description" content="A twitter card description, long enough here.">'
+    assert extract_description(tw).startswith("A twitter card")
+
+
+def test_extract_description_skips_short_and_missing():
+    # Below _MIN_DESC_CHARS (40) -> treated as junk and ignored.
+    assert extract_description('<meta property="og:description" content="Events">') == ""
+    assert extract_description("<html><head></head><body>no meta tags</body></html>") == ""
+
+
 def test_enrich_layer2_sets_speakers():
     events = [
         Event(id="csis-1", title="AI Talk", start="2026-06-01", source="csis",
@@ -65,6 +85,34 @@ def test_enrich_layer2_sets_speakers():
     asyncio.run(enrich_layer2(events, layer, fake_fetch))
     assert events[0].speakers == ["Sam Altman"]
     assert events[1].speakers == []          # Layer-1 event untouched
+
+
+def test_enrich_layer2_fills_description_when_empty():
+    ev = Event(id="csis-3", title="AI", start="2026-06-01", source="csis",
+               source_url="https://www.csis.org/events/ai")
+
+    async def fake_fetch(url, kind):
+        return ('<meta property="og:description" content="A deep dive into AI compute '
+                'policy and export controls in 2026.">')
+
+    n = asyncio.run(enrich_layer2([ev], {"csis": 2}, fake_fetch))
+    assert n == 1
+    assert ev.description.startswith("A deep dive into AI compute policy")
+
+
+def test_enrich_layer2_keeps_existing_description():
+    ev = Event(id="csis-4", title="AI", start="2026-06-01", source="csis",
+               source_url="https://www.csis.org/events/ai",
+               description="Original listing blurb.")
+
+    async def fake_fetch(url, kind):
+        return ('<meta property="og:description" content="Meta blurb that must not '
+                'overwrite the listing one.">'
+                '<div class="speaker"><span class="name">Jane Roe</span></div>')
+
+    asyncio.run(enrich_layer2([ev], {"csis": 2}, fake_fetch))
+    assert ev.description == "Original listing blurb."   # not overwritten
+    assert ev.speakers == ["Jane Roe"]                   # speakers still extracted
 
 
 def test_enrich_layer2_tolerates_fetch_failure():
