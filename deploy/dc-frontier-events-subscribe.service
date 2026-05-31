@@ -1,0 +1,33 @@
+# Long-running HTTP service for double-opt-in digest signups. Listens on
+# localhost:8800; Caddy reverse-proxies /api/* to it. Install to
+# /etc/systemd/system/dc-frontier-events-subscribe.service.
+[Unit]
+Description=dc-frontier-events subscribe API (double opt-in signups)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=emersus
+WorkingDirectory=/opt/dc-frontier-events
+# SMTP_* (Resend) for sending verify/welcome emails; CAL_DOMAIN for links.
+EnvironmentFile=/etc/dc-frontier-events.env
+Environment=CAL_DOMAIN=events.emersus.ai
+# 8800 is taken by glitchtip-web on this box; use 8810.
+Environment=SUBSCRIBE_PORT=8810
+ExecStart=/opt/dc-frontier-events/.venv/bin/python -m aggregator.subscribe_server
+Restart=on-failure
+RestartSec=5
+# Hardening: this is a public-facing endpoint.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/dc-frontier-events/data /opt/dc-frontier-events/out
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target

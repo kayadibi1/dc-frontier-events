@@ -213,9 +213,12 @@ class SubscribeHandler(BaseHTTPRequestHandler):
         pass   # stay quiet in the journal
 
 
-def serve(host: str = "127.0.0.1", port: int = 8800,
+def serve(host: str | None = None, port: int | None = None,
           db_path: str = "data/subscribers.db",
           events_db: str = "data/events.db", out_dir: str = "out") -> None:
+    # Host/port overridable via env (the box is busy; 8800 is glitchtip).
+    host = host or os.environ.get("SUBSCRIBE_HOST", "127.0.0.1")
+    port = port or int(os.environ.get("SUBSCRIBE_PORT", "8810"))
     SubscribeHandler.deps = make_production_deps(db_path, events_db, out_dir)
     httpd = ThreadingHTTPServer((host, port), SubscribeHandler)
     print(f"[subscribe] listening on http://{host}:{port}")
