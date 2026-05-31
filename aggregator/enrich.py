@@ -20,6 +20,7 @@ import re
 import httpx
 from selectolax.parser import HTMLParser
 
+from .config import SOURCE_HQ
 from .models import Event
 
 # A person name: 2-4 capitalized words (allowing internal hyphen/period/').
@@ -106,6 +107,25 @@ def extract_speakers(html: str) -> list[str]:
     return out
 
 
+# A real postal address node contains a 5-digit ZIP; this keeps us from grabbing
+# nav/footer junk out of the loosely-classed address elements.
+_ZIP = re.compile(r"\b\d{5}\b")
+_ADDR_SELECTORS = "[class*='location'], [class*='venue'], [class*='address'], address"
+
+
+def extract_location(html: str) -> str:
+    """Scrape a real per-event venue address from the detail page, if present.
+    Only accepts a node that looks like a postal address (has a ZIP) so we don't
+    pull navigation/footer text. Returns '' when none found (caller falls back to
+    the host org's HQ)."""
+    tree = HTMLParser(html)
+    for node in tree.css(_ADDR_SELECTORS):
+        text = _clean(node.text())
+        if _ZIP.search(text) and 8 < len(text) < 160:
+            return text
+    return ""
+
+
 def extract_description(html: str) -> str:
     """Pull a human blurb from a detail page's og:/meta description tags. Returns
     '' when none is long enough to be a real description (skips junk like 'Events')."""
@@ -137,10 +157,10 @@ async def default_fetch(url: str, source_kind: str) -> str:
 async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
                         fetch) -> int:
     """For each Layer-2 event with a source_url, fetch its detail page via
-    `fetch(url, source_kind)` and set ev.speakers + (when missing) ev.description.
-    Best-effort: a failed fetch leaves both empty. `fetch` is async and returns
-    HTML (or '' on failure). Returns the number of events enriched (speakers found
-    and/or a description newly filled in)."""
+    `fetch(url, source_kind)` and set ev.speakers + (when missing) ev.description
+    and ev.address (scraped venue, else the source's HQ). Best-effort: a failed
+    fetch leaves them empty. `fetch` is async and returns HTML (or '' on failure).
+    Returns the number of events enriched (speakers, description, or location)."""
     targets = [e for e in events
                if layer_by_source.get(e.source, 0) == 2 and e.source_url]
 
@@ -154,7 +174,13 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
         if not ev.description:
             ev.description = extract_description(html or "")
             added_desc = bool(ev.description)
-        return 1 if (ev.speakers or added_desc) else 0
+        # Fill location when missing: a scraped venue wins; else the host's HQ
+        # (better than "TBD" for these always-DC think tanks).
+        added_loc = False
+        if not ev.address:
+            ev.address = extract_location(html or "") or SOURCE_HQ.get(ev.source, "")
+            added_loc = bool(ev.address)
+        return 1 if (ev.speakers or added_desc or added_loc) else 0
 
     results = await asyncio.gather(*[one(e) for e in targets])
     return sum(results)

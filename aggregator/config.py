@@ -179,6 +179,19 @@ SOURCE_ORG = {
     "atlanticcouncil": "Atlantic Council",
 }
 
+# Known DC headquarters for the policy sources. Their event detail pages mostly do
+# NOT expose a per-event address (only Brookings does), so when enrichment can't
+# scrape a real venue we fall back to the host org's HQ -- think tanks host at
+# their own building, so this is right far more often than not, and it replaces an
+# unhelpful "TBD" with a real DC location. A scraped per-event address always wins.
+SOURCE_HQ = {
+    "csis": "CSIS, 1616 Rhode Island Ave NW, Washington, DC 20036",
+    "brookings": "Brookings Institution, 1775 Massachusetts Ave NW, Washington, DC 20036",
+    "cnas": "CNAS, 1899 Pennsylvania Ave NW, Washington, DC 20006",
+    "atlanticcouncil": "Atlantic Council, 1400 L St NW, Washington, DC 20005",
+    "cset": "CSET, Georgetown University, Washington, DC",
+}
+
 # DC-policy-ecosystem org names (the watchlist's institutional tier). These are
 # collision-prone (short acronyms: NIST matched the tail of a line-broken
 # "feminist") and appear incidentally in firehose descriptions (a careers fair

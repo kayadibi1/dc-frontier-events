@@ -1,7 +1,12 @@
 import asyncio
 
-from aggregator.config import Source
-from aggregator.enrich import enrich_layer2, extract_description, extract_speakers
+from aggregator.config import SOURCE_HQ, Source
+from aggregator.enrich import (
+    enrich_layer2,
+    extract_description,
+    extract_location,
+    extract_speakers,
+)
 from aggregator.models import Event
 
 CSIS_HTML = """
@@ -69,6 +74,57 @@ def test_extract_description_skips_short_and_missing():
     # Below _MIN_DESC_CHARS (40) -> treated as junk and ignored.
     assert extract_description('<meta property="og:description" content="Events">') == ""
     assert extract_description("<html><head></head><body>no meta tags</body></html>") == ""
+
+
+def test_extract_location_finds_postal_address():
+    html = ('<div class="event-venue">The Brookings Institution, Saul Auditorium, '
+            '1775 Massachusetts Ave NW, Washington, DC 20036</div>')
+    loc = extract_location(html)
+    assert "1775 Massachusetts Ave NW" in loc
+    assert "20036" in loc
+
+
+def test_extract_location_ignores_nodes_without_zip():
+    # An address-classed nav blob with no ZIP must not be mistaken for a venue.
+    html = '<div class="location-nav">Locations | Contact | About</div>'
+    assert extract_location(html) == ""
+    assert extract_location("<p>no address here</p>") == ""
+
+
+def test_enrich_layer2_fills_location_from_hq_when_page_has_none():
+    ev = Event(id="csis-5", title="AI", start="2026-06-01", source="csis",
+               source_url="https://www.csis.org/events/ai")
+
+    async def fake_fetch(url, kind):
+        return '<meta property="og:description" content="A long enough blurb about AI policy here.">'
+
+    asyncio.run(enrich_layer2([ev], {"csis": 2}, fake_fetch))
+    assert ev.address == SOURCE_HQ["csis"]        # HQ fallback, not "TBD"
+
+
+def test_enrich_layer2_prefers_scraped_address_over_hq():
+    ev = Event(id="brk-1", title="AI", start="2026-06-01", source="brookings",
+               source_url="https://www.brookings.edu/events/ai")
+
+    async def fake_fetch(url, kind):
+        return ('<div class="address">Brookings, Saul/Zilkha Auditorium, '
+                '1775 Massachusetts Ave NW, Washington, DC 20036</div>')
+
+    asyncio.run(enrich_layer2([ev], {"brookings": 2}, fake_fetch))
+    assert "Auditorium" in ev.address              # the real scraped venue won
+    assert ev.address != SOURCE_HQ["brookings"]
+
+
+def test_enrich_layer2_keeps_existing_address():
+    ev = Event(id="csis-6", title="AI", start="2026-06-01", source="csis",
+               source_url="https://www.csis.org/events/ai",
+               address="123 Real Venue St, Washington, DC 20001")
+
+    async def fake_fetch(url, kind):
+        return '<meta property="og:description" content="A long enough blurb about AI policy here.">'
+
+    asyncio.run(enrich_layer2([ev], {"csis": 2}, fake_fetch))
+    assert ev.address == "123 Real Venue St, Washington, DC 20001"  # not overwritten
 
 
 def test_enrich_layer2_sets_speakers():
