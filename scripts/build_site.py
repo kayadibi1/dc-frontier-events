@@ -15,6 +15,7 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 # Allow running as a plain script ("python scripts/build_site.py"): ensure the
 # repo root (this file's parent's parent) is importable so `aggregator` resolves.
@@ -45,6 +46,10 @@ _PAGES = [("credentials.html", "Prestige credentials, fellowships &amp; funding"
 def render_index(domain: str, today_iso: str) -> str:
     base = f"https://{domain}"
     sub = f"{base}/events-upcoming.ics"
+    # One-click Google Calendar subscribe: the cid is the URL-encoded https ICS URL.
+    gcal = f"https://calendar.google.com/calendar/u/0/r?cid={quote(sub, safe='')}"
+    # webcal:// makes Apple Calendar / Outlook offer a one-click subscribe too.
+    webcal = "webcal://" + sub.split("://", 1)[1]
     feeds = "\n".join(
         f'  <li><a href="{base}/{fn}"><code>{label}</code></a> — {blurb}</li>'
         for fn, label, blurb in _FEEDS)
@@ -58,6 +63,10 @@ body{{font-family:system-ui,Arial,sans-serif;max-width:720px;margin:2rem auto;pa
 code{{background:#f3f3f7;padding:1px 5px;border-radius:4px;font-size:.95em}}
 .box{{background:#eef3ff;border:1px solid #cdd9f5;border-radius:8px;padding:1rem 1.2rem;margin:1.3rem 0}}
 a{{color:#1a4fd0}} h1{{margin-bottom:.2rem}} h2{{margin-top:1.6rem}} .sub{{color:#666}} ul{{padding-left:1.1rem}}
+.gcal-btn{{display:inline-block;background:#1a73e8;color:#fff;font-weight:600;text-decoration:none;
+padding:10px 18px;border-radius:8px;margin:.2rem 0}}
+.gcal-btn:hover{{background:#1559b8}}
+.alt{{display:inline-block;margin-left:.6rem}}
 </style></head>
 <body>
 <h1>DC AI &amp; Frontier Tech Events</h1>
@@ -65,11 +74,13 @@ a{{color:#1a4fd0}} h1{{margin-bottom:.2rem}} h2{{margin-top:1.6rem}} .sub{{color
 DC metro, tuned for AI-policy &amp; upskilling. Rebuilt automatically.</p>
 
 <div class="box">
-<b>📅 Subscribe in Google Calendar</b><br>
-<i>Other calendars → From URL</i>, then paste:<br>
-<code>{sub}</code>
-<p class="sub" style="margin:.5rem 0 0">Apple Calendar / Outlook accept the same URL as a subscription.
-Google re-polls the feed on its own schedule (typically every several hours).</p>
+<a class="gcal-btn" href="{gcal}" target="_blank" rel="noopener">📅 Add to Google Calendar</a>
+<a class="alt" href="{webcal}">Apple / Outlook</a>
+<p class="sub" style="margin:.7rem 0 0">One click adds it as a subscription that auto-refreshes.
+If the button doesn't take (Google can be picky), subscribe manually with
+<i>Other calendars → From URL</i> and this address:<br>
+<code>{sub}</code></p>
+<p class="sub" style="margin:.4rem 0 0">Google re-polls the feed on its own schedule (typically every several hours).</p>
 </div>
 
 <h2>Feeds</h2>

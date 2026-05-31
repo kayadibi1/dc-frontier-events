@@ -16,10 +16,24 @@ def test_site_dir_defaults_and_env_override(monkeypatch):
 
 def test_render_index_has_subscribe_url_and_instructions():
     html = render_index("events.emersus.ai", "2026-05-30")
-    assert "https://events.emersus.ai/events-upcoming.ics" in html
+    assert "https://events.emersus.ai/events-upcoming.ics" in html  # fallback URL still shown
     assert "Google Calendar" in html
-    assert "Subscribe" in html
+    assert "subscri" in html.lower()                                 # subscribe/subscription wording
     assert "2026-05-30" in html
+
+
+def test_render_index_has_add_to_gcal_button():
+    html = render_index("events.emersus.ai", "2026-05-30")
+    # one-click Google Calendar subscribe: cid = URL-encoded https ICS URL
+    assert "calendar.google.com/calendar" in html
+    assert "cid=https%3A%2F%2Fevents.emersus.ai%2Fevents-upcoming.ics" in html
+    assert "Add to Google Calendar" in html
+
+
+def test_render_index_has_webcal_for_apple_outlook():
+    html = render_index("events.emersus.ai", "2026-05-30")
+    # webcal:// triggers a one-click subscribe in Apple Calendar / Outlook
+    assert "webcal://events.emersus.ai/events-upcoming.ics" in html
 
 
 def test_render_index_lists_all_feeds():
