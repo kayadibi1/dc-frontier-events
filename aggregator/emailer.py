@@ -49,6 +49,21 @@ def build_weekly_message(events: list, new_events: list, today_iso: str,
     return msg
 
 
+def send_transactional(to: str, subject: str, html: str, out_dir: str,
+                       slug: str, text: str | None = None) -> tuple[str, str]:
+    """Send a single transactional email (verify / welcome) to one recipient via
+    the shared SMTP-or-dry-run transport. `slug` names the dry-run .eml so signup
+    mails never overwrite the weekly digest. Returns (mode, target)."""
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = os.environ.get("SMTP_FROM", "dc-frontier-events@localhost")
+    msg["To"] = to
+    msg.set_content(text or "Open this email in an HTML-capable client.")
+    msg.add_alternative(html, subtype="html")
+    # today_iso is unused here because slug overrides the dry-run filename.
+    return deliver(msg, out_dir, today_iso="txn", slug=slug)
+
+
 def send_weekly(out_dir: str = "out", db_path: str = "data/events.db",
                 today: str | None = None, domain: str | None = None) -> tuple[str, str]:
     """Read the store, render the weekly digest, and deliver it. Returns

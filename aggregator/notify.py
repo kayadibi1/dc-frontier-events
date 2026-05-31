@@ -28,26 +28,30 @@ def build_message(html_body: str, text_body: str, today_iso: str,
     return msg
 
 
-def deliver(msg: EmailMessage, out_dir: str, today_iso: str) -> tuple[str, str]:
-    """Return (mode, target): ("sent", recipient) or ("dry-run", eml_path)."""
+def deliver(msg: EmailMessage, out_dir: str, today_iso: str,
+            slug: str | None = None) -> tuple[str, str]:
+    """Return (mode, target): ("sent", recipient) or ("dry-run", eml_path).
+    `slug` names the dry-run .eml (defaults to digest-<today>); transactional
+    emails pass their own so they don't collide with the digest. SMTP send goes
+    to msg["To"] (the actual recipient), enabling per-recipient transactional mail."""
     host = os.environ.get("SMTP_HOST")
     user = os.environ.get("SMTP_USER")
     pw = os.environ.get("SMTP_PASS")
-    to = os.environ.get("SMTP_TO")
-    if host and user and pw and to:
+    guard_to = os.environ.get("SMTP_TO")
+    if host and user and pw and guard_to:
         try:
             port = int(os.environ.get("SMTP_PORT", "587"))
             with smtplib.SMTP(host, port, timeout=30) as s:
                 s.starttls()
                 s.login(user, pw)
                 s.send_message(msg)
-            return ("sent", to)
+            return ("sent", msg.get("To") or guard_to)
         except Exception as e:  # never block the run on a send failure
             print(f"[notify] SMTP send failed ({e!r}); falling back to dry-run.")
 
     email_dir = os.path.join(out_dir, "email")
     os.makedirs(email_dir, exist_ok=True)
-    path = os.path.join(email_dir, f"digest-{today_iso}.eml")
+    path = os.path.join(email_dir, f"{slug or ('digest-' + today_iso)}.eml")
     with open(path, "wb") as f:
         f.write(msg.as_bytes())
     return ("dry-run", path)
