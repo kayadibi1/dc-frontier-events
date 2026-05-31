@@ -32,6 +32,18 @@ def test_build_weekly_message_counts_only_upcoming_as_new():
     assert "(0 new)" in msg["Subject"]   # a past event is not "new this week"
 
 
+def test_reply_to_set_from_env(monkeypatch):
+    monkeypatch.setenv("SMTP_REPLY_TO", "radar@emersus.ai")
+    msg = build_weekly_message([], [], "2026-05-31", "events.emersus.ai")
+    assert msg["Reply-To"] == "radar@emersus.ai"
+
+
+def test_no_reply_to_when_env_unset(monkeypatch):
+    monkeypatch.delenv("SMTP_REPLY_TO", raising=False)
+    msg = build_weekly_message([], [], "2026-05-31", "events.emersus.ai")
+    assert msg["Reply-To"] is None
+
+
 def test_send_weekly_dryrun_reads_store_and_writes_eml(tmp_path, monkeypatch):
     for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS"):
         monkeypatch.delenv(k, raising=False)

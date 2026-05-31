@@ -33,6 +33,14 @@ def since_iso(today_iso: str, days: int = WEEKLY_WINDOW_DAYS) -> str:
     return (date.fromisoformat(today_iso) - timedelta(days=days)).isoformat()
 
 
+def _set_reply_to(msg: EmailMessage) -> None:
+    """Add Reply-To from SMTP_REPLY_TO so replies reach a real inbox (a forwarding
+    alias) instead of the send-only From. No-op if unset."""
+    reply = os.environ.get("SMTP_REPLY_TO")
+    if reply:
+        msg["Reply-To"] = reply
+
+
 def build_weekly_message(events: list, new_events: list, today_iso: str,
                          domain: str, sender: str | None = None,
                          to: str | None = None,
@@ -47,6 +55,7 @@ def build_weekly_message(events: list, new_events: list, today_iso: str,
     msg["Subject"] = f"DC AI & Frontier Tech — week of {today_iso} ({len(new_up)} new)"
     msg["From"] = sender or os.environ.get("SMTP_FROM", "dc-frontier-events@localhost")
     msg["To"] = to or os.environ.get("SMTP_TO", "subscriber@localhost")
+    _set_reply_to(msg)
     msg.set_content(text)                       # plain-text alternative
     msg.add_alternative(html, subtype="html")   # preferred HTML body
     return msg
@@ -61,6 +70,7 @@ def send_transactional(to: str, subject: str, html: str, out_dir: str,
     msg["Subject"] = subject
     msg["From"] = os.environ.get("SMTP_FROM", "dc-frontier-events@localhost")
     msg["To"] = to
+    _set_reply_to(msg)
     msg.set_content(text or "Open this email in an HTML-capable client.")
     msg.add_alternative(html, subtype="html")
     # today_iso is unused here because slug overrides the dry-run filename.

@@ -114,6 +114,9 @@ Confirm your address and we'll send a quick sample right away.</p>
 {pages}
 </ul>
 
+<p class="sub" style="margin-top:1.6rem;border-top:1px solid #eee;padding-top:.8rem">
+Curated by <a href="https://www.linkedin.com/in/sidar-aslanoglu/" target="_blank" rel="noopener">Sidar Aslanoglu</a>
+· <a href="mailto:radar@emersus.ai">suggest an event</a></p>
 <p class="sub">Generated {today_iso}.</p>
 </body></html>
 """
