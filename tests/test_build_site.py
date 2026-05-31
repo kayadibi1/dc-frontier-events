@@ -65,6 +65,13 @@ def test_render_index_has_attribution():
     assert "linkedin.com/in/sidar-aslanoglu" in html
 
 
+def test_render_index_has_spam_note():
+    # Deliverability nudge near the signup form (new sending domain -> Outlook junks).
+    html = render_index("events.emersus.ai", "2026-05-30")
+    assert "spamnote" in html
+    assert "spam" in html.lower() and "Not junk" in html
+
+
 def test_write_site_extras_writes_index(tmp_path):
     d = str(tmp_path / "site")
     write_site_extras(d, "events.emersus.ai", "2026-05-30")

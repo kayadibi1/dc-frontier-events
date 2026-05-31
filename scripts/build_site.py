@@ -76,6 +76,7 @@ padding:10px 18px;border-radius:8px;margin:.2rem 0}}
 .signup button{{background:#1a73e8;color:#fff;font-weight:600;border:0;border-radius:8px;padding:9px 18px;font-size:1rem;cursor:pointer}}
 .signup button:hover{{background:#1559b8}}
 .signup .hp{{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}}
+.spamnote{{background:#fff6e5;border:1px solid #f3d9a4;border-radius:8px;padding:.55rem .7rem;margin:.6rem 0 0;font-size:.9rem;color:#5a4a2a;line-height:1.45}}
 </style></head>
 <body>
 <h1>DC AI &amp; Frontier Tech Events</h1>
@@ -101,6 +102,7 @@ Confirm your address and we'll send a quick sample right away.</p>
 <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 <button type="submit">Subscribe</button>
 </form>
+<p class="spamnote">📬 <b>Check your spam/junk folder</b> for the confirmation email — if it landed there, mark it <b>“Not junk”</b> so future digests reach your inbox.</p>
 <p class="sub" style="margin:.5rem 0 0">Double opt-in · unsubscribe anytime · the calendar above always has the full list.</p>
 </div>
 
