@@ -1,0 +1,18 @@
+# Send the weekly digest email. Reads the store the twice-daily build already
+# refreshed (no re-fetch) and delivers via Resend SMTP. Install to
+# /etc/systemd/system/dc-frontier-events-email.service and edit paths to match.
+[Unit]
+Description=Send dc-frontier-events weekly digest email
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=emersus
+WorkingDirectory=/opt/dc-frontier-events
+# SMTP_* (Resend) credentials live here, root-readable only (chmod 600).
+EnvironmentFile=/etc/dc-frontier-events.env
+# --email reads the existing store and delivers; --out is only used for the
+# dry-run .eml fallback if SMTP send fails (kept out of the public web root).
+ExecStart=/opt/dc-frontier-events/.venv/bin/python -m aggregator --email --out /opt/dc-frontier-events/out
+TimeoutStartSec=300

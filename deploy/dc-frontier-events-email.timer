@@ -1,0 +1,17 @@
+# Weekly digest email: Mondays at 08:00 America/New_York (8am ET, auto-DST).
+# Install to /etc/systemd/system/dc-frontier-events-email.timer, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dc-frontier-events-email.timer
+# Independent of the twice-daily feed-rebuild timer: the calendar refreshes 2x/day
+# for freshness, subscribers get ONE email per week from the already-built store.
+[Unit]
+Description=Send dc-frontier-events weekly digest every Monday morning (ET)
+
+[Timer]
+OnCalendar=Mon *-*-* 08:00:00 America/New_York
+# Catch up if the box was off at the scheduled time.
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
