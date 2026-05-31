@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.request
 from datetime import datetime, timezone
 from urllib.parse import quote
 
@@ -116,12 +117,31 @@ def write_site_extras(site_dir: str, domain: str, today_iso: str) -> None:
             f.write(render_credentials_html(cred_dicts, today_iso))
 
 
+def _heartbeat(url: str | None = None) -> bool:
+    """Ping a dead-man's-switch (e.g. healthchecks.io) so a *missed* run alerts us.
+    Called only after a fully successful build, so a silent failure -- box down,
+    timer disabled, pipeline wedged -- stops the pings and the monitor emails us.
+    Best-effort: reads HEALTHCHECK_URL from the env, never raises, never blocks the
+    build. Returns True if a ping was sent."""
+    url = url or os.environ.get("HEALTHCHECK_URL")
+    if not url:
+        return False
+    try:
+        urllib.request.urlopen(url, timeout=10)
+        print("[heartbeat] pinged monitor")
+        return True
+    except Exception as e:  # monitoring must never break the run
+        print(f"[heartbeat] ping failed ({e!r}); ignored")
+        return False
+
+
 def build(today: str | None = None) -> None:
     today_iso = today or datetime.now(timezone.utc).date().isoformat()
     site_dir = _site_dir()
     run(out_dir=site_dir, db_path="data/events.db", today=today)
     write_site_extras(site_dir, DOMAIN, today_iso)
     print(f"[site] built {site_dir}/ for {DOMAIN} ({today_iso})")
+    _heartbeat()  # success ping last, so it only fires when everything above worked
 
 
 if __name__ == "__main__":
