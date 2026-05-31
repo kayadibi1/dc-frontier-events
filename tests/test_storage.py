@@ -69,6 +69,31 @@ def test_mark_archived_partitions(tmp_path):
     s.close()
 
 
+def test_new_since_returns_recently_first_seen(tmp_path):
+    s = Store(str(tmp_path / "e.db"))
+    # Two events inserted now; first_seen is stamped at insert time.
+    s.upsert_many([
+        Event(id="a", title="A", start="2026-06-01", source="cset"),
+        Event(id="b", title="B", start="2026-06-02", source="cset"),
+    ])
+    # Backdate one event's first_seen to before the window.
+    s.conn.execute("UPDATE events SET first_seen='2026-05-01T00:00:00+00:00' WHERE id='a'")
+    s.conn.commit()
+    new = s.new_since("2026-05-24")
+    ids = {e.id for e in new}
+    assert "b" in ids          # first_seen is today -> in the last-7-days window
+    assert "a" not in ids      # backdated -> excluded
+    s.close()
+
+
+def test_new_since_excludes_archived(tmp_path):
+    s = Store(str(tmp_path / "e.db"))
+    s.upsert_many([Event(id="a", title="A", start="2026-06-01", source="cset")])
+    s.mark_archived(set())     # archive everything (none active this run)
+    assert s.new_since("2026-05-01") == []   # archived rows never count as "new"
+    s.close()
+
+
 def test_prune_deletes_old_archived_only(tmp_path):
     s = Store(str(tmp_path / "e.db"))
     s.upsert_many([

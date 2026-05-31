@@ -22,10 +22,17 @@ def main() -> None:
     p.add_argument("--verify", action="store_true",
                    help="ground-truth check: fetch each credential page and report what "
                         "was actually readable (writes out/verify.md); skips the pipeline")
+    p.add_argument("--email", action="store_true",
+                   help="render + deliver the weekly digest email from the existing store "
+                        "(dry-run .eml unless SMTP_* is set); does NOT re-fetch")
     args = p.parse_args()
     if args.verify:
         from .verify import run_verify
         run_verify(today_iso=args.today, out_dir=args.out)
+        return
+    if args.email:
+        from .emailer import send_weekly
+        send_weekly(out_dir=args.out, db_path=args.db, today=args.today)
         return
     run(out_dir=args.out, db_path=args.db, today=args.today, enrich=not args.no_enrich)
 

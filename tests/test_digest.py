@@ -1,7 +1,40 @@
 from selectolax.parser import HTMLParser
 
-from aggregator.digest import build_digest, render_html
+from aggregator.digest import build_digest, render_email_html, render_html
 from aggregator.models import Event
+
+
+def test_render_email_html_has_sections_button_and_new_block():
+    big = Event(id="b1", title="Anthropic policy talk", start="2026-06-01",
+                source="cset", source_url="https://cset.georgetown.edu/e/1",
+                topics=["ai", "policy"], is_big_name=True)
+    other = Event(id="o1", title="AI builders meetup", start="2026-06-03",
+                  source="DC2", topics=["ai"])
+    html = render_email_html([big, other], "2026-05-31", new_events=[other],
+                             domain="events.emersus.ai")
+    # the three sections
+    assert "New this week (1)" in html
+    assert "Big names" in html and "Top upcoming" in html
+    # one-click subscribe button with the webcal cid (same rule as the site button)
+    assert "cid=webcal%3A%2F%2Fevents.emersus.ai%2Fevents-upcoming.ics" in html
+    # the new event appears, with a Jun / 03 date pill
+    assert "AI builders meetup" in html
+    assert ">Jun<" in html and ">03<" in html
+    # email-client-safe: inline styles only, no <style> block
+    assert "<style>" not in html
+
+
+def test_render_email_html_excludes_past_new_events():
+    past = Event(id="p1", title="Old talk", start="2026-01-01", source="DC2")
+    html = render_email_html([past], "2026-05-31", new_events=[past])
+    assert "New this week (0)" in html            # past event not counted as new
+    assert "Nothing new since last week" in html  # empty-state copy shown
+
+
+def test_render_email_html_safe_when_empty():
+    html = render_email_html([], "2026-05-31", new_events=[])
+    assert "No upcoming events in range." in html
+    assert "Nothing new since last week" in html
 
 TODAY = "2026-05-29"
 

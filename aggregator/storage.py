@@ -105,6 +105,16 @@ class Store:
         cur = self.conn.execute("SELECT * FROM events WHERE status='active' ORDER BY start")
         return [Event.from_row(r) for r in cur.fetchall()]
 
+    def new_since(self, since_iso: str) -> list[Event]:
+        """Active events first seen on/after since_iso (a date or ISO timestamp) --
+        i.e. genuinely new listings, for the 'new this week' email section. ISO
+        date/timestamp strings compare correctly lexicographically, so a date bound
+        like '2026-05-24' matches any first_seen on that day or later."""
+        cur = self.conn.execute(
+            "SELECT * FROM events WHERE status='active' AND first_seen >= ? "
+            "ORDER BY start", (since_iso,))
+        return [Event.from_row(r) for r in cur.fetchall()]
+
     def archived_events(self) -> list[Event]:
         cur = self.conn.execute("SELECT * FROM events WHERE status='archived' ORDER BY start")
         return [Event.from_row(r) for r in cur.fetchall()]
@@ -190,6 +200,13 @@ class PostgresStore:
     def active_events(self) -> list[Event]:
         with self.conn.cursor(cursor_factory=self._extras.RealDictCursor) as cur:
             cur.execute("SELECT * FROM events WHERE status='active' ORDER BY start")
+            return [Event.from_row(dict(r)) for r in cur.fetchall()]
+
+    def new_since(self, since_iso: str) -> list[Event]:
+        """Active events first seen on/after since_iso (see Store.new_since)."""
+        with self.conn.cursor(cursor_factory=self._extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM events WHERE status='active' AND first_seen >= %s "
+                        "ORDER BY start", (since_iso,))
             return [Event.from_row(dict(r)) for r in cur.fetchall()]
 
     def archived_events(self) -> list[Event]:
