@@ -1,7 +1,52 @@
 from selectolax.parser import HTMLParser
 
-from aggregator.digest import build_digest, render_email_html, render_html
+from aggregator.digest import (
+    build_digest,
+    render_email_html,
+    render_html,
+    render_verify_email_html,
+    render_welcome_email_html,
+)
 from aggregator.models import Event
+
+
+def test_render_verify_email_has_button_and_expiry():
+    url = "https://events.emersus.ai/api/verify?token=abc123"
+    html = render_verify_email_html(url)
+    assert url in html                      # the verify link is present
+    assert "Confirm my subscription" in html
+    assert "48 hours" in html               # expiry disclosed
+    assert "did not sign up" in html        # safe footer for misdelivery
+    assert "<style>" not in html            # inline styles only (email-safe)
+
+
+def test_render_welcome_email_has_taste_button_and_monday_pointer():
+    evs = [
+        Event(id="a", title="AI policy panel", start="2026-06-02", source="cset",
+              topics=["ai", "policy"], source_url="https://cset.org/e/a"),
+        Event(id="b", title="Chip workshop", start="2026-06-03", source="DC2",
+              topics=["semiconductor"]),
+        Event(id="c", title="Data center futures", start="2026-06-04", source="csis",
+              topics=["ai", "compute"]),
+        Event(id="d", title="Fourth event", start="2026-06-05", source="DC2", topics=["ai"]),
+    ]
+    html = render_welcome_email_html(evs, "2026-05-31", taste_n=3,
+                                     unsubscribe_url="https://x/api/unsubscribe?token=z")
+    assert "You" in html and "in." in html  # "You're in."
+    # hero: add-to-google-calendar with the webcal cid
+    assert "cid=webcal%3A%2F%2Fevents.emersus.ai%2Fevents-upcoming.ics" in html
+    # taste = exactly 3 events (the 4th must not appear)
+    assert "AI policy panel" in html
+    assert "Fourth event" not in html
+    # explicitly points at Monday's digest so the weekly send isn't redundant
+    assert "Monday" in html
+    assert "api/unsubscribe?token=z" in html
+
+
+def test_render_welcome_email_safe_when_no_events():
+    html = render_welcome_email_html([], "2026-05-31")
+    assert "You" in html
+    assert "Monday" in html                 # still nudges to the weekly digest
 
 
 def test_render_email_html_has_sections_button_and_new_block():

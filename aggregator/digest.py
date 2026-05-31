@@ -237,3 +237,105 @@ def render_email_html(events: list[Event], today_iso: str,
         f'<a href="{_h(unsubscribe_url)}" style="color:{_E_MUTED}">Unsubscribe</a></td></tr>'
         f'</table></td></tr></table></body></html>'
     )
+
+
+# ---------------------------------------------------------------------------
+# Transactional emails for the double-opt-in signup flow: the verify email (sent
+# on signup) and the welcome email (sent after the verify click, with a Top-3
+# "taste" of upcoming events). Same email-client-safe card chrome as the weekly
+# digest; inline styles only.
+# ---------------------------------------------------------------------------
+def _email_shell(heading: str, body_html: str, footer_html: str,
+                 title: str = "DC AI & Frontier Tech") -> str:
+    """Wrap body_html in the shared card chrome (blue header band + footer)."""
+    return (
+        f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+        f'<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f'<title>{_h(title)}</title></head>'
+        f'<body style="margin:0;padding:0;background:{_E_BG};">'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        f'style="background:{_E_BG};padding:24px 12px"><tr><td align="center">'
+        f'<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
+        f'style="max-width:600px;width:100%;background:{_E_CARD};border-radius:14px;'
+        f'overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">'
+        f'<tr><td style="background:{_E_ACCENT};padding:22px 26px">'
+        f'<div style="font-size:19px;font-weight:700;color:#fff">{_h(heading)}</div>'
+        f'<div style="font-size:13px;color:#cfe0ff;margin-top:2px">'
+        f'Weekly radar · AI / semiconductors / policy in the DC metro</div></td></tr>'
+        f'<tr><td style="padding:20px 26px 24px">{body_html}</td></tr>'
+        f'<tr><td style="background:#fafbfe;border-top:1px solid #eef0f5;padding:16px 26px;'
+        f'font-size:12px;color:{_E_MUTED}">{footer_html}</td></tr>'
+        f'</table></td></tr></table></body></html>'
+    )
+
+
+def _gcal_button(domain: str) -> str:
+    gcal = ("https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2F"
+            + domain + "%2Fevents-upcoming.ics")
+    return (f'<a href="{gcal}" style="display:inline-block;background:{_E_ACCENT};color:#fff;'
+            f'font-weight:600;font-size:14px;text-decoration:none;padding:11px 20px;'
+            f'border-radius:8px">📅 Add to Google Calendar</a>')
+
+
+def render_verify_email_html(verify_url: str,
+                             domain: str = "events.emersus.ai") -> str:
+    """Confirmation email: one clear button to verify the subscription. No event
+    content -- it exists only to prove the address is real (double opt-in)."""
+    body = (
+        f'<p style="font-size:15px;color:{_E_INK};line-height:1.5;margin:6px 0 4px">'
+        f'Almost there — please confirm your email to start getting the weekly '
+        f'DC AI &amp; frontier-tech radar.</p>'
+        f'<p style="margin:20px 0">'
+        f'<a href="{_h(verify_url)}" style="display:inline-block;background:{_E_ACCENT};'
+        f'color:#fff;font-weight:600;font-size:15px;text-decoration:none;padding:12px 22px;'
+        f'border-radius:8px">Confirm my subscription</a></p>'
+        f'<p style="font-size:13px;color:{_E_MUTED};line-height:1.5;margin:4px 0">'
+        f'This link expires in 48 hours. If the button does not work, copy this URL '
+        f'into your browser:<br><span style="color:{_E_ACCENT};word-break:break-all">'
+        f'{_h(verify_url)}</span></p>'
+    )
+    footer = ("If you did not sign up, just ignore this email — no subscription is "
+              "created until you click the button above.")
+    return _email_shell("Confirm your subscription", body, footer)
+
+
+def render_welcome_email_html(events: list[Event], today_iso: str,
+                              unsubscribe_url: str = "#",
+                              domain: str = "events.emersus.ai",
+                              taste_n: int = 3) -> str:
+    """Welcome email sent right after verification. Hero is the Add-to-Google-
+    Calendar button (that gives the FULL live list); below it a Top-`taste_n`
+    sampler of upcoming events as a teaser, explicitly pointing to Monday's full
+    digest so the weekly send is never redundant."""
+    taste = top_upcoming(events, today_iso, n=taste_n)
+    sub = f"https://{domain}/events-upcoming.ics"
+    if taste:
+        rows = "".join(_email_row(e, today_iso) for e in taste)
+        taste_block = (
+            f'<div style="font-size:12px;font-weight:700;letter-spacing:.05em;'
+            f'text-transform:uppercase;color:{_E_ACCENT};padding:6px 0 2px">'
+            f'A taste of what&rsquo;s on the radar</div>'
+            f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
+            f'{rows}</table>'
+            f'<p style="font-size:13px;color:{_E_MUTED};margin:14px 0 0">'
+            f'Your full weekly digest — with everything new — lands Monday morning.</p>'
+        )
+    else:
+        taste_block = (
+            f'<p style="font-size:13px;color:{_E_MUTED};margin:14px 0 0">'
+            f'Nothing on the calendar right now, but your first weekly digest lands '
+            f'Monday morning.</p>')
+    body = (
+        f'<p style="font-size:17px;font-weight:700;color:{_E_INK};margin:4px 0 2px">'
+        f'You&rsquo;re in. ✅</p>'
+        f'<p style="font-size:14px;color:{_E_MUTED};line-height:1.5;margin:0 0 16px">'
+        f'Add the calendar below for the full live list of events — it always stays '
+        f'current. The email is just the highlights.</p>'
+        f'<p style="margin:0 0 18px">{_gcal_button(domain)}</p>'
+        f'{taste_block}'
+    )
+    footer = (
+        f'You are subscribed to the DC AI &amp; Frontier Tech weekly radar.<br>'
+        f'Subscribe in any calendar app: <a href="{sub}" style="color:{_E_ACCENT}">{sub}</a><br>'
+        f'<a href="{_h(unsubscribe_url)}" style="color:{_E_MUTED}">Unsubscribe</a>')
+    return _email_shell("Welcome aboard", body, footer)
