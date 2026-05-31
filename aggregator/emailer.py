@@ -18,9 +18,12 @@ import os
 from datetime import date, datetime, timedelta, timezone
 from email.message import EmailMessage
 
+from urllib.parse import quote
+
 from .digest import build_digest, render_email_html
 from .notify import deliver
 from .storage import open_store
+from .subscribers import SubscriberStore
 
 WEEKLY_WINDOW_DAYS = 7
 
@@ -65,21 +68,43 @@ def send_transactional(to: str, subject: str, html: str, out_dir: str,
 
 
 def send_weekly(out_dir: str = "out", db_path: str = "data/events.db",
-                today: str | None = None, domain: str | None = None) -> tuple[str, str]:
-    """Read the store, render the weekly digest, and deliver it. Returns
-    (mode, target): ('sent', recipient) or ('dry-run', eml_path). Reads only the
-    already-built store -- it never triggers a fetch, so it is cheap and safe to
-    run on its own weekly schedule."""
+                today: str | None = None, domain: str | None = None,
+                subscribers_db: str = "data/subscribers.db") -> tuple[int, int]:
+    """Render the weekly digest and send it to every VERIFIED subscriber, each
+    with their own unsubscribe link. Reads only the already-built stores (no
+    fetch). If there are no verified subscribers, falls back to a single send to
+    SMTP_TO so the owner's solo digest keeps working. Returns (sent, total)."""
     today_iso = today or datetime.now(timezone.utc).date().isoformat()
     domain = domain or os.environ.get("CAL_DOMAIN", "events.emersus.ai")
+    base = f"https://{domain}"
     store = open_store(db_path)
     try:
         events = store.active_events()
         new_events = store.new_since(since_iso(today_iso))
     finally:
         store.close()
-    msg = build_weekly_message(events, new_events, today_iso, domain)
-    mode, target = deliver(msg, out_dir, today_iso)
-    print(f"[email] {mode}: {target} "
+
+    subs = SubscriberStore(subscribers_db)
+    try:
+        recipients = subs.verified()   # [(email, unsub_token), ...]
+    finally:
+        subs.close()
+
+    # No subscribers yet -> keep the owner's solo digest working via SMTP_TO.
+    if not recipients:
+        owner = os.environ.get("SMTP_TO")
+        recipients = [(owner, "")] if owner else []
+
+    sent = 0
+    for email, unsub_token in recipients:
+        unsub = (f"{base}/api/unsubscribe?token={quote(unsub_token)}"
+                 if unsub_token else "#")
+        msg = build_weekly_message(events, new_events, today_iso, domain,
+                                   to=email, unsubscribe_url=unsub)
+        mode, _ = deliver(msg, out_dir, today_iso,
+                          slug=f"digest-{today_iso}")
+        if mode == "sent":
+            sent += 1
+    print(f"[email] weekly digest: {sent}/{len(recipients)} sent "
           f"({len(new_events)} new this week, {len(events)} active events)")
-    return mode, target
+    return sent, len(recipients)

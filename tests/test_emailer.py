@@ -33,19 +33,44 @@ def test_build_weekly_message_counts_only_upcoming_as_new():
 
 
 def test_send_weekly_dryrun_reads_store_and_writes_eml(tmp_path, monkeypatch):
-    for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_TO"):
+    for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS"):
         monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("SMTP_TO", "owner@example.com")   # owner-fallback path
     db = str(tmp_path / "e.db")
     s = Store(db)
     s.upsert_many([Event(id="a", title="New AI talk", start="2026-06-10",
                          source="cset", topics=["ai"])])
     s.close()
-    mode, target = send_weekly(out_dir=str(tmp_path / "out"), db_path=db,
-                               today="2026-05-31")
-    assert mode == "dry-run"
+    sent, total = send_weekly(out_dir=str(tmp_path / "out"), db_path=db,
+                              today="2026-05-31",
+                              subscribers_db=str(tmp_path / "subs.db"))
+    assert (sent, total) == (0, 1)       # dry-run (no SMTP creds) to the 1 owner
     eml_path = tmp_path / "out" / "email" / "digest-2026-05-31.eml"
     assert eml_path.exists()
     parsed = email.message_from_bytes(eml_path.read_bytes(), policy=policy.default)
     html = parsed.get_body(preferencelist=("html",)).get_content()
     assert "New AI talk" in html
     assert "New this week (1)" in html   # the just-upserted event is new + upcoming
+
+
+def test_send_weekly_targets_verified_subscribers(tmp_path, monkeypatch):
+    from aggregator.subscribers import SubscriberStore
+    for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_TO"):
+        monkeypatch.delenv(k, raising=False)
+    db = str(tmp_path / "e.db")
+    Store(db).close()
+    subs_db = str(tmp_path / "subs.db")
+    subs = SubscriberStore(subs_db)
+    subs.verify(subs.subscribe("alice@example.com").token)   # verified
+    subs.subscribe("pending@example.com")                    # NOT verified
+    subs.close()
+
+    sent, total = send_weekly(out_dir=str(tmp_path / "out"), db_path=db,
+                              today="2026-05-31", subscribers_db=subs_db)
+    assert total == 1                    # only the verified subscriber
+    # dry-run .eml is addressed to the verified subscriber, with an unsub link
+    eml = (tmp_path / "out" / "email" / "digest-2026-05-31.eml")
+    parsed = email.message_from_bytes(eml.read_bytes(), policy=policy.default)
+    assert parsed["To"] == "alice@example.com"
+    html = parsed.get_body(preferencelist=("html",)).get_content()
+    assert "api/unsubscribe?token=" in html   # personal unsubscribe link
