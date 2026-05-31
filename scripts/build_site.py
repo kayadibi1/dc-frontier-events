@@ -11,6 +11,7 @@ SITE_DIR env var (defaults to ./site for local preview). Pure render helpers
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -19,6 +20,7 @@ from datetime import datetime, timezone
 # repo root (this file's parent's parent) is importable so `aggregator` resolves.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from aggregator.credentials import render_credentials_html
 from aggregator.pipeline import run
 
 DOMAIN = os.environ.get("CAL_DOMAIN", "events.emersus.ai")
@@ -36,7 +38,8 @@ _FEEDS = [
     ("events-big-names.ics", "events-big-names.ics", "Marquee orgs / people only."),
     ("feed-upcoming.xml", "feed-upcoming.xml", "Upcoming, as an RSS feed."),
 ]
-_PAGES = [("map.html", "Interactive map"), ("digest.html", "Weekly digest")]
+_PAGES = [("credentials.html", "Prestige credentials, fellowships &amp; funding"),
+          ("map.html", "Interactive map"), ("digest.html", "Weekly digest")]
 
 
 def render_index(domain: str, today_iso: str) -> str:
@@ -85,10 +88,18 @@ Google re-polls the feed on its own schedule (typically every several hours).</p
 
 
 def write_site_extras(site_dir: str, domain: str, today_iso: str) -> None:
-    """Write the landing index.html into site_dir."""
+    """Write the landing index.html + the credentials subpage into site_dir.
+    The credentials page is rendered from the credentials.json the pipeline just
+    wrote (already merged with fetched deadlines/status); skipped if absent."""
     os.makedirs(site_dir, exist_ok=True)
     with open(os.path.join(site_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(render_index(domain, today_iso))
+    cj = os.path.join(site_dir, "credentials.json")
+    if os.path.exists(cj):
+        with open(cj, encoding="utf-8") as f:
+            cred_dicts = json.load(f)
+        with open(os.path.join(site_dir, "credentials.html"), "w", encoding="utf-8") as f:
+            f.write(render_credentials_html(cred_dicts, today_iso))
 
 
 def build(today: str | None = None) -> None:
