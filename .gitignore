@@ -14,3 +14,6 @@ site/
 # editor / agent scratch
 /_*
 .claude/
+
+# local keeper backups (binary, not source)
+backups/
