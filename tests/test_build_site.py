@@ -24,9 +24,12 @@ def test_render_index_has_subscribe_url_and_instructions():
 
 def test_render_index_has_add_to_gcal_button():
     html = render_index("events.emersus.ai", "2026-05-30")
-    # one-click Google Calendar subscribe: cid = URL-encoded https ICS URL
-    assert "calendar.google.com/calendar" in html
-    assert "cid=https%3A%2F%2Fevents.emersus.ai%2Fevents-upcoming.ics" in html
+    # one-click Google Calendar subscribe: the cid MUST carry the webcal:// URL
+    # (Google rejects an https:// cid with "Unable to add this calendar"), and
+    # no /u/0/ (that forces the first signed-in account).
+    assert "calendar.google.com/calendar/r?cid=" in html
+    assert "/u/0/" not in html
+    assert "cid=webcal%3A%2F%2Fevents.emersus.ai%2Fevents-upcoming.ics" in html
     assert "Add to Google Calendar" in html
 
 

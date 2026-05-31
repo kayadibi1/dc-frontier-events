@@ -46,10 +46,13 @@ _PAGES = [("credentials.html", "Prestige credentials, fellowships &amp; funding"
 def render_index(domain: str, today_iso: str) -> str:
     base = f"https://{domain}"
     sub = f"{base}/events-upcoming.ics"
-    # One-click Google Calendar subscribe: the cid is the URL-encoded https ICS URL.
-    gcal = f"https://calendar.google.com/calendar/u/0/r?cid={quote(sub, safe='')}"
     # webcal:// makes Apple Calendar / Outlook offer a one-click subscribe too.
     webcal = "webcal://" + sub.split("://", 1)[1]
+    # One-click Google Calendar subscribe. The cid MUST use the webcal:// scheme:
+    # Google's r?cid= endpoint rejects an https:// URL with "Unable to add this
+    # calendar. Please check the URL." We also omit /u/0/ so Google adds it to the
+    # active account rather than forcing the first signed-in one.
+    gcal = f"https://calendar.google.com/calendar/r?cid={quote(webcal, safe='')}"
     feeds = "\n".join(
         f'  <li><a href="{base}/{fn}"><code>{label}</code></a> — {blurb}</li>'
         for fn, label, blurb in _FEEDS)
