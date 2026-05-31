@@ -4,15 +4,35 @@ from aggregator.subscribers import SubscriberStore
 
 def _deps(tmp_path):
     """Real subscriber store + recording fake send callbacks."""
-    sent = {"verify": [], "welcome": []}
+    sent = {"verify": [], "welcome": [], "admin": []}
     store = SubscriberStore(str(tmp_path / "subs.db"))
     deps = Deps(
         store=store,
         send_verify=lambda email, token: sent["verify"].append((email, token)),
         send_welcome=lambda email, tok: sent["welcome"].append((email, tok)),
         rate=RateLimiter(max_hits=100, window_s=3600),
+        send_admin_notify=lambda email: sent["admin"].append(email),
     )
     return deps, sent
+
+
+def test_verify_notifies_admin_once(tmp_path):
+    deps, sent = _deps(tmp_path)
+    token = deps.store.subscribe("a@b.co").token
+    route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    assert sent["admin"] == ["a@b.co"]           # owner alerted on confirm
+    # re-click -> 'already' -> must NOT alert again
+    route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    assert sent["admin"] == ["a@b.co"]
+    deps.store.close()
+
+
+def test_bare_subscribe_does_not_notify_admin(tmp_path):
+    # only a CONFIRMED signup alerts the owner, not an unconfirmed form submit
+    deps, sent = _deps(tmp_path)
+    route("POST", "/api/subscribe", {}, {"email": "a@b.co"}, "1.1.1.1", deps, 1000.0)
+    assert sent["admin"] == []
+    deps.store.close()
 
 
 def test_subscribe_sends_verify_and_shows_inbox_page(tmp_path):

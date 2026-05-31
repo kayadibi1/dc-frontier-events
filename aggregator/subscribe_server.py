@@ -20,6 +20,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
+from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlsplit
 
@@ -64,6 +65,9 @@ class Deps:
     send_verify: callable      # (email, token) -> None
     send_welcome: callable     # (email, unsub_token) -> None
     rate: RateLimiter
+    # Owner alert when a subscriber is newly CONFIRMED. Default no-op so tests /
+    # other callers that don't care can omit it.
+    send_admin_notify: callable = lambda email: None   # (email) -> None
 
 
 _PAGE_CSS = (
@@ -111,6 +115,7 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
         result = deps.store.verify(token)
         if result.status == "verified":
             deps.send_welcome(result.email, result.unsub_token)
+            deps.send_admin_notify(result.email)   # owner alert: a real new subscriber
             return _page("You're in", "You&rsquo;re subscribed ✅",
                          '<p>Welcome aboard! A confirmation email with a taste of '
                          'what&rsquo;s coming is on its way.</p>'
@@ -174,8 +179,23 @@ def make_production_deps(db_path: str, events_db: str, out_dir: str) -> Deps:
         send_transactional(email, "You're in — DC AI & Frontier Tech radar", html,
                            out_dir, slug=f"welcome-{unsub_token[:10]}")
 
+    def send_admin_notify(email: str) -> None:
+        """Email the owner (SMTP_TO) when someone confirms their subscription."""
+        owner = os.environ.get("SMTP_TO")
+        if not owner:
+            return
+        n = store.count("verified")
+        safe = escape(email)
+        html = (f"<p>🎉 <b>{safe}</b> just confirmed their subscription to the "
+                f"DC AI &amp; Frontier Tech weekly digest.</p>"
+                f"<p>You now have <b>{n}</b> verified subscriber(s).</p>")
+        slug_email = "".join(c if c.isalnum() else "-" for c in email)[:24]
+        send_transactional(owner, f"New subscriber: {email} ({n} total)", html,
+                           out_dir, slug=f"newsub-{slug_email}",
+                           text=f"{email} confirmed. {n} verified subscriber(s).")
+
     return Deps(store=store, send_verify=send_verify, send_welcome=send_welcome,
-                rate=RateLimiter())
+                rate=RateLimiter(), send_admin_notify=send_admin_notify)
 
 
 class SubscribeHandler(BaseHTTPRequestHandler):
