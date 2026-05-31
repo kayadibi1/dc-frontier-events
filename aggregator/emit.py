@@ -217,6 +217,8 @@ body{margin:0;font-family:system-ui,Arial,sans-serif;font-size:14px}
 #list li small{color:#666}
 #map{flex:1}
 .star{color:#d62728}
+.evname{color:#1a4fd0;text-decoration:none;font-weight:700}
+#list li:hover .evname{text-decoration:underline}
 .lg{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle}
 </style></head>
 <body><div id="app"><div id="sidebar"><div id="controls">
@@ -245,9 +247,14 @@ lis.forEach(function(li){
     var color=li.getAttribute('data-big')==='1'?'#d62728':(ly==='2'?'#9467bd':(ly==='3'?'#2ca02c':'#1f77b4'));
     var m=L.circleMarker([lat,lng],{radius:7,color:color,fillColor:color,fillOpacity:.85,weight:1});
     var url=li.getAttribute('data-url');
-    m.bindPopup('<b>'+li.querySelector('b').textContent+'</b><br>'+(li.getAttribute('data-date')||'')+(url?'<br><a href="'+url+'" target="_blank">details</a>':''));
+    var nm=li.querySelector('.evname').textContent;
+    var titleHtml=url?('<a href="'+url+'" target="_blank" rel="noopener"><b>'+nm+'</b></a>'):('<b>'+nm+'</b>');
+    m.bindPopup(titleHtml+'<br>'+(li.getAttribute('data-date')||'')+(url?'<br><a href="'+url+'" target="_blank" rel="noopener">Event page →</a>':''));
     li._m=m;
   }
+  // Clicking the event NAME opens its page; don't also fly the map.
+  var a=li.querySelector('a.evname');
+  if(a){a.addEventListener('click',function(e){e.stopPropagation();});}
   li.addEventListener('click',function(){if(li._m){map.setView(li._m.getLatLng(),14);cluster.zoomToShowLayer(li._m,function(){li._m.openPopup();});}});
 });
 function render(){
@@ -285,10 +292,16 @@ def _li(ev: Event, today_iso: str) -> str:
     meta = f"{date} · {_h(src)} · {_h(topics) or '—'}"
     if score is not None:
         meta += f" · ●{score}"
+    # The event name links to its source/detail page (new tab). Falls back to
+    # bold text when an event has no source_url.
+    name = _h(ev.title)
+    title_html = (f'<a class="evname" href="{_h(ev.source_url)}" target="_blank" '
+                  f'rel="noopener">{name}</a>' if ev.source_url
+                  else f'<b class="evname">{name}</b>')
     return (f'<li class="ev" data-layer="{layer}" data-big="{1 if ev.is_big_name else 0}"'
             f' data-up="{1 if date >= today_iso else 0}" data-date="{date}"'
             f' data-url="{_h(ev.source_url)}" data-text="{_h(text)}"{coords}>'
-            f'{star}<b>{_h(ev.title)}</b><br><small>{meta}</small></li>')
+            f'{star}{title_html}<br><small>{meta}</small></li>')
 
 
 def write_map(events: list[Event], path: str, today_iso: str) -> int:

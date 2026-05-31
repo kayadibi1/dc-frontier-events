@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import date
+from xml.sax.saxutils import escape
 
 # kind: course | workshop | cert | fellowship | access
 # cost: free | paid | exam-fee | competitive
@@ -303,3 +304,84 @@ def render_credentials_md(creds: list[Credential] | None = None) -> str:
                 out.append(f"  💰 {c.funding}{fund_link}")
         out.append("")
     return "\n".join(out) + "\n"
+
+
+def _he(s) -> str:
+    """Escape for HTML text + double-quoted attribute values."""
+    return escape(str(s or ""), {'"': "&quot;"})
+
+
+def _cred_status_html(c: dict, today_iso: str) -> str:
+    """Application status / deadline badge for a credential dict (from
+    credentials.json). Honest: a concrete date only when verified-future, else the
+    detected open/closed status, else the rolling note."""
+    deadline = c.get("deadline")
+    if deadline and deadline >= today_iso:
+        return f'<span class="badge soon">⏰ Apply by {_he(deadline)}</span>'
+    if c.get("app_status") == "open":
+        return '<span class="badge open">✅ Applications open now</span>'
+    if c.get("app_status") == "closed":
+        return '<span class="badge closed">Applications closed — watch for next cycle</span>'
+    return f'<span class="badge rolling">{_he(c.get("deadline_note") or "check page")}</span>'
+
+
+def render_credentials_html(creds: list[dict], today_iso: str) -> str:
+    """Self-contained HTML page for the curated prestige programs (courses, certs,
+    workshops, fellowships) with funding notes + live application status. `creds`
+    is the list of dicts from credentials.json (already merged with fetched
+    deadlines/status). Links each program to its apply/details page."""
+    order = ["course", "cert", "workshop", "fellowship", "access"]
+    by_kind: dict[str, list[dict]] = {}
+    for c in creds:
+        by_kind.setdefault(c.get("kind", ""), []).append(c)
+
+    sections = []
+    for kind in order:
+        items = by_kind.get(kind, [])
+        if not items:
+            continue
+        rows = []
+        for c in items:
+            star = "⭐ " if c.get("prestige") else ""
+            url = c.get("apply_url") or c.get("url") or ""
+            name = _he(c.get("name", ""))
+            name_html = (f'<a href="{_he(url)}" target="_blank" rel="noopener">{name}</a>'
+                         if url else name)
+            cert = " · certificate" if (c.get("cert") and kind != "fellowship") else ""
+            fund = c.get("funding")
+            fund_html = f'<div class="fund">💰 {_he(fund)}</div>' if fund else ""
+            rows.append(
+                f'<li><div class="cn">{star}<b>{name_html}</b>'
+                f'<span class="prov"> — {_he(c.get("provider", ""))} · '
+                f'{_he(c.get("cost", ""))}{cert}</span></div>'
+                f'<div class="note">{_he(c.get("note", ""))}</div>'
+                f'{fund_html}'
+                f'<div class="st">{_cred_status_html(c, today_iso)}</div></li>')
+        sections.append(f'<h2>{_he(_KIND_LABEL.get(kind, kind))} ({len(items)})</h2>'
+                        f'<ul class="creds">{"".join(rows)}</ul>')
+
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prestige Credentials, Fellowships &amp; Funding</title>
+<style>
+body{{font-family:system-ui,Arial,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;line-height:1.5;color:#222}}
+a{{color:#1a4fd0}} h1{{margin-bottom:.2rem}} h2{{margin-top:1.8rem;font-size:1.1rem}}
+.sub{{color:#666}} ul.creds{{list-style:none;padding:0}}
+ul.creds li{{border:1px solid #eee;border-radius:8px;padding:.7rem .9rem;margin:.6rem 0}}
+.prov{{color:#666;font-weight:400}} .note{{color:#444;font-size:.92rem;margin-top:.2rem}}
+.fund{{color:#1b7a3d;font-size:.9rem;margin-top:.3rem}}
+.st{{margin-top:.4rem}}
+.badge{{display:inline-block;font-size:.82rem;padding:2px 8px;border-radius:999px;background:#f0f0f4}}
+.badge.open{{background:#e3f6e8;color:#1b7a3d}} .badge.soon{{background:#fdeede;color:#a85b00}}
+.badge.closed{{background:#f6e3e3;color:#a33}}
+</style></head>
+<body>
+<p><a href="/">← back to events</a></p>
+<h1>Prestige Credentials, Fellowships &amp; Funding</h1>
+<p class="sub">A hand-curated shortlist of official courses, certificates, workshops, and
+fellowships from leading AI orgs — earn proof, not just attendance. Each shows how to do
+it free / funded, plus live application status. Confirm details at each link. Generated {_he(today_iso)}.</p>
+{chr(10).join(sections)}
+</body></html>
+"""

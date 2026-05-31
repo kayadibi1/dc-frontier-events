@@ -2,7 +2,7 @@ import json
 
 from selectolax.parser import HTMLParser
 
-from aggregator.emit import write_json, write_map
+from aggregator.emit import _li, write_json, write_map
 from aggregator.models import Event
 
 

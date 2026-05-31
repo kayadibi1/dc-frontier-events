@@ -93,6 +93,51 @@ def test_funding_note_honest_no_fabricated_url_when_blank():
     assert "[funding]()" not in md
 
 
+# --- credentials HTML subpage (events.emersus.ai/credentials.html) ---
+
+from aggregator.credentials import render_credentials_html
+
+
+def test_render_credentials_html_basic():
+    html = render_credentials_html(credentials_dicts(), TODAY)
+    assert "<!DOCTYPE html>" in html
+    assert "Prestige Credentials" in html
+    assert "back to events" in html                 # link home
+    assert "Anthropic Fellows Program" in html      # a known program
+    assert "💰" in html                              # funding surfaced
+    assert "badge" in html                          # status badge present
+
+
+def test_render_credentials_html_open_status_badge():
+    creds = [{"name": "Fellows", "provider": "Anthropic", "kind": "fellowship",
+              "cost": "competitive", "cert": True, "url": "https://x",
+              "topics": ["ai"], "note": "n", "deadline": None,
+              "deadline_note": "cohort-based", "apply_url": "https://x/apply",
+              "app_status": "open", "funding": "Funded", "funding_url": "", "prestige": True}]
+    html = render_credentials_html(creds, TODAY)
+    assert "Applications open now" in html
+    assert 'href="https://x/apply"' in html          # links the apply page
+
+
+def test_render_credentials_html_dated_deadline_badge():
+    creds = [{"name": "Y", "provider": "OpenAI", "kind": "fellowship",
+              "cost": "competitive", "cert": True, "url": "https://y", "topics": ["ai"],
+              "note": "n", "deadline": "2026-08-01", "deadline_note": "", "apply_url": "",
+              "app_status": "", "funding": "", "funding_url": "", "prestige": True}]
+    html = render_credentials_html(creds, "2026-05-30")
+    assert "Apply by 2026-08-01" in html
+
+
+def test_render_credentials_html_escapes_and_no_funding_ok():
+    # no funding -> no 💰 line for that item; renders without error
+    creds = [{"name": "Plain & Co", "provider": "X", "kind": "course", "cost": "free",
+              "cert": False, "url": "https://z", "topics": [], "note": "",
+              "deadline": None, "deadline_note": "anytime", "apply_url": "",
+              "app_status": "", "funding": "", "funding_url": "", "prestige": False}]
+    html = render_credentials_html(creds, TODAY)
+    assert "Plain &amp; Co" in html                  # HTML-escaped
+
+
 # --- deadline tracking ---
 
 def test_no_fabricated_dates_in_live_list():
