@@ -71,6 +71,11 @@ a{{color:#1a4fd0}} h1{{margin-bottom:.2rem}} h2{{margin-top:1.6rem}} .sub{{color
 padding:10px 18px;border-radius:8px;margin:.2rem 0}}
 .gcal-btn:hover{{background:#1559b8}}
 .alt{{display:inline-block;margin-left:.6rem}}
+.signup form{{display:flex;gap:.5rem;flex-wrap:wrap;margin:.2rem 0}}
+.signup input[type=email]{{flex:1;min-width:220px;padding:9px 11px;border:1px solid #cdd9f5;border-radius:8px;font-size:1rem}}
+.signup button{{background:#1a73e8;color:#fff;font-weight:600;border:0;border-radius:8px;padding:9px 18px;font-size:1rem;cursor:pointer}}
+.signup button:hover{{background:#1559b8}}
+.signup .hp{{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}}
 </style></head>
 <body>
 <h1>DC AI &amp; Frontier Tech Events</h1>
@@ -85,6 +90,18 @@ If the button doesn't take (Google can be picky), subscribe manually with
 <i>Other calendars → From URL</i> and this address:<br>
 <code>{sub}</code></p>
 <p class="sub" style="margin:.4rem 0 0">Google re-polls the feed on its own schedule (typically every several hours).</p>
+</div>
+
+<div class="box signup">
+<h2 style="margin-top:0">Prefer email? Get the weekly digest</h2>
+<p class="sub" style="margin:0 0 .7rem">One curated email a week — new &amp; upcoming AI / chip / policy events in DC.
+Confirm your address and we'll send a quick sample right away.</p>
+<form method="post" action="/api/subscribe">
+<input type="email" name="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
+<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<button type="submit">Subscribe</button>
+</form>
+<p class="sub" style="margin:.5rem 0 0">Double opt-in · unsubscribe anytime · the calendar above always has the full list.</p>
 </div>
 
 <h2>Feeds</h2>

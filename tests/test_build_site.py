@@ -51,6 +51,14 @@ def test_render_index_lists_all_feeds():
         assert f"https://x.example/{fn}" in html
 
 
+def test_render_index_has_signup_form():
+    html = render_index("events.emersus.ai", "2026-05-30")
+    assert 'action="/api/subscribe"' in html      # posts to the subscribe endpoint
+    assert 'name="email"' in html
+    assert 'name="website"' in html               # honeypot field present
+    assert "weekly digest" in html.lower()
+
+
 def test_write_site_extras_writes_index(tmp_path):
     d = str(tmp_path / "site")
     write_site_extras(d, "events.emersus.ai", "2026-05-30")
