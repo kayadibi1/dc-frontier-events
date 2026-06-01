@@ -112,5 +112,36 @@ def test_geocode_strips_trailing_room(tmp_path):
     assert n == 1 and ev[0].lat == 38.9
 
 
+def test_nominatim_query_constrains_to_dc(monkeypatch):
+    import json as _json
+
+    import aggregator.geocode as g
+    captured = {}
+
+    class _Resp:
+        def __init__(self, data):
+            self._d = _json.dumps(data).encode()
+
+        def read(self, *a):
+            return self._d
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=None):
+        captured["url"] = req.full_url
+        return _Resp([{"lat": "38.9", "lon": "-77.0"}])
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", fake_urlopen)
+    assert g.nominatim_query("CSIS, Washington DC") == (38.9, -77.0)
+    # constrained to the DC metro so an ambiguous variant can't pin the wrong place
+    assert "countrycodes=us" in captured["url"]
+    assert "bounded=1" in captured["url"]
+    assert "viewbox=" in captured["url"]
+
+
 def test_norm_collapses_whitespace_and_case():
     assert _norm("  CSIS,   1616  Rhode  Island ") == "csis, 1616 rhode island"

@@ -24,6 +24,7 @@ import time
 import urllib.parse
 import urllib.request
 
+from .config import DC_BBOX
 from .models import Event
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
@@ -76,16 +77,25 @@ def _address_variants(address: str) -> list[str]:
 
 
 def nominatim_query(address: str) -> tuple[float, float] | None:
-    """Live OSM Nominatim lookup for one address. Returns (lat, lng), or None when
-    the geocoder genuinely has no match. Network / HTTP errors PROPAGATE so the
-    caller can retry on a later build instead of caching a transient blip as a
-    permanent miss."""
-    qs = urllib.parse.urlencode({"q": address, "format": "json", "limit": 1})
+    """Live OSM Nominatim lookup for one address, CONSTRAINED to the DC metro
+    (countrycodes=us + a bounded viewbox over DC_BBOX). The constraint matters
+    because the trimmed retry variants can be ambiguous -- e.g. an over-trimmed
+    "Washington, DC" or a foreign venue must not resolve to the wrong city/country
+    and get pinned. Returns (lat, lng), or None when there's no in-region match.
+    Network / HTTP errors PROPAGATE so the caller can retry on a later build
+    instead of caching a transient blip as a permanent miss."""
+    qs = urllib.parse.urlencode({
+        "q": address, "format": "json", "limit": 1,
+        "countrycodes": "us",
+        "viewbox": (f"{DC_BBOX['lng_min']},{DC_BBOX['lat_min']},"
+                    f"{DC_BBOX['lng_max']},{DC_BBOX['lat_max']}"),
+        "bounded": 1,   # only return results inside the viewbox
+    })
     req = urllib.request.Request(f"{NOMINATIM_URL}?{qs}", headers={"User-Agent": _UA})
     with urllib.request.urlopen(req, timeout=20) as r:   # network/HTTP error -> propagates
         data = json.load(r)
     if not data:
-        return None                                       # genuine: address not found
+        return None                                       # genuine: no in-region match
     try:
         return float(data[0]["lat"]), float(data[0]["lon"])
     except (KeyError, ValueError, IndexError):
@@ -102,8 +112,8 @@ def load_cache(path: str) -> dict:
 
 def save_cache(path: str, cache: dict) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    tmp = f"{path}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    tmp = f"{path}.{os.getpid()}.tmp"   # per-process temp: overlapping builds don't
+    with open(tmp, "w", encoding="utf-8") as f:   # clobber each other's tmp / replace
         json.dump(cache, f, ensure_ascii=False, indent=0)
     os.replace(tmp, path)   # atomic: never leave a half-written cache
 
@@ -151,5 +161,8 @@ def geocode_events(events: list[Event], cache_path: str = DEFAULT_CACHE,
             ev.lat, ev.lng = float(coords[0]), float(coords[1])
             pinned += 1
     if dirty:
-        save_cache(cache_path, cache)
+        try:
+            save_cache(cache_path, cache)
+        except OSError:
+            pass   # cache is best-effort; a write failure just re-geocodes next build
     return pinned
