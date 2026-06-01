@@ -25,6 +25,7 @@ from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .enrich import default_fetch, enrich_layer2
+from .geocode import geocode_events
 from .fetchers import gather_all
 from .filter import apply_filters
 from .notify import build_message, deliver
@@ -79,6 +80,12 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     emitted = sorted(kept, key=lambda e: e.start or "")
     for e in emitted:
         e.raw["score"] = score_event(e, today)
+    # Geocode addresses -> coordinates for events that lack feed GEO (scraped /
+    # think-tank events), so they get map pins. Cached on disk; only new addresses
+    # hit the network. Best-effort, after filtering so it can't change what's kept.
+    if enrich:
+        n_geo = geocode_events(emitted)
+        print(f"[geocode] added coordinates to {n_geo} event(s)")
     big = [e for e in emitted if e.is_big_name]
     upcoming = filter_upcoming(emitted, today)
     top = top_upcoming(emitted, today, 25)
