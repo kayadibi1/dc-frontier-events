@@ -41,6 +41,16 @@ def _set_reply_to(msg: EmailMessage) -> None:
         msg["Reply-To"] = reply
 
 
+def _set_list_unsubscribe(msg: EmailMessage, url: str | None) -> None:
+    """Add one-click List-Unsubscribe headers (RFC 8058) so Gmail/Apple render a
+    native Unsubscribe control and bulk-sender requirements are met. The URL must
+    accept POST -- the subscribe service handles POST /api/unsubscribe. No-op for
+    the '#' placeholder used in previews."""
+    if url and url != "#":
+        msg["List-Unsubscribe"] = f"<{url}>"
+        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+
+
 def build_weekly_message(events: list, new_events: list, today_iso: str,
                          domain: str, sender: str | None = None,
                          to: str | None = None,
@@ -56,21 +66,26 @@ def build_weekly_message(events: list, new_events: list, today_iso: str,
     msg["From"] = sender or os.environ.get("SMTP_FROM", "dc-frontier-events@localhost")
     msg["To"] = to or os.environ.get("SMTP_TO", "subscriber@localhost")
     _set_reply_to(msg)
+    _set_list_unsubscribe(msg, unsubscribe_url)
     msg.set_content(text)                       # plain-text alternative
     msg.add_alternative(html, subtype="html")   # preferred HTML body
     return msg
 
 
 def send_transactional(to: str, subject: str, html: str, out_dir: str,
-                       slug: str, text: str | None = None) -> tuple[str, str]:
+                       slug: str, text: str | None = None,
+                       list_unsubscribe: str | None = None) -> tuple[str, str]:
     """Send a single transactional email (verify / welcome) to one recipient via
     the shared SMTP-or-dry-run transport. `slug` names the dry-run .eml so signup
-    mails never overwrite the weekly digest. Returns (mode, target)."""
+    mails never overwrite the weekly digest. `list_unsubscribe` adds one-click
+    unsubscribe headers (welcome only; the verify mail has nothing to unsubscribe
+    from yet). Returns (mode, target)."""
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = os.environ.get("SMTP_FROM", "dc-frontier-events@localhost")
     msg["To"] = to
     _set_reply_to(msg)
+    _set_list_unsubscribe(msg, list_unsubscribe)
     msg.set_content(text or "Open this email in an HTML-capable client.")
     msg.add_alternative(html, subtype="html")
     # today_iso is unused here because slug overrides the dry-run filename.

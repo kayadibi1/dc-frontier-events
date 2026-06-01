@@ -128,7 +128,9 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
                      '48 hours). <a href="/">Sign up again</a> to get a fresh one.</p>',
                      status=400)
 
-    if path == "/api/unsubscribe" and method == "GET":
+    if path == "/api/unsubscribe" and method in ("GET", "POST"):
+        # GET = a human clicking the link; POST = RFC 8058 one-click from the mail
+        # client (List-Unsubscribe-Post). Token is in the query either way.
         token = (query.get("token") or "").strip()
         deps.store.unsubscribe(token)   # idempotent; same page either way
         return _page("Unsubscribed", "You&rsquo;re unsubscribed",
@@ -163,8 +165,12 @@ def make_production_deps(db_path: str, events_db: str, out_dir: str) -> Deps:
     def send_verify(email: str, token: str) -> None:
         url = f"{base}/api/verify?token={quote(token)}"
         html = render_verify_email_html(url)
+        text = ("Confirm your subscription to the DC AI & Frontier Tech weekly radar.\n\n"
+                f"Open this link to confirm (expires in 48 hours):\n{url}\n\n"
+                "If you didn't sign up, ignore this email — nothing happens until "
+                "you confirm.")
         send_transactional(email, "Confirm your DC AI events subscription", html,
-                            out_dir, slug=f"verify-{token[:10]}")
+                            out_dir, slug=f"verify-{token[:10]}", text=text)
 
     def send_welcome(email: str, unsub_token: str) -> None:
         from datetime import datetime, timezone
@@ -176,8 +182,13 @@ def make_production_deps(db_path: str, events_db: str, out_dir: str) -> Deps:
             es.close()
         unsub = f"{base}/api/unsubscribe?token={quote(unsub_token)}"
         html = render_welcome_email_html(events, today, unsubscribe_url=unsub)
+        text = ("You're in — the DC AI & Frontier Tech weekly radar.\n\n"
+                f"Add the live calendar (always current): {base}/events-upcoming.ics\n"
+                "Your full weekly digest lands every Monday morning.\n\n"
+                f"Unsubscribe anytime: {unsub}")
         send_transactional(email, "You're in — DC AI & Frontier Tech radar", html,
-                           out_dir, slug=f"welcome-{unsub_token[:10]}")
+                           out_dir, slug=f"welcome-{unsub_token[:10]}", text=text,
+                           list_unsubscribe=unsub)
 
     def send_admin_notify(email: str) -> None:
         """Email the owner (SMTP_TO) when someone confirms their subscription."""
