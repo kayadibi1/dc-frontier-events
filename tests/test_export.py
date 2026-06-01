@@ -47,6 +47,21 @@ def test_write_map_interactive(tmp_path):
     assert "Data Centers" in html and "AI Workshop" in html and "Virtual Talk" in html
 
 
+def test_map_blocks_dangerous_source_url(tmp_path):
+    from aggregator.emit import _safe_url
+    assert _safe_url("https://x.com/a") == "https://x.com/a"
+    assert _safe_url("HTTP://x.com") == "HTTP://x.com"
+    assert _safe_url("javascript:alert(1)") == ""
+    assert _safe_url("data:text/html,x") == ""
+    assert _safe_url(None) == ""
+    # a script-scheme source_url must not surface as an href or data-url in the map
+    p = tmp_path / "m.html"
+    evs = [Event(id="x", title="t", start="2026-06-10", source="DC2",
+                 source_url="javascript:alert(1)", lat=38.9, lng=-77.0, topics=["ai"])]
+    write_map(evs, str(p), "2026-05-01")
+    assert "javascript:alert" not in p.read_text(encoding="utf-8")
+
+
 def test_map_handles_empty(tmp_path):
     p = tmp_path / "m.html"
     assert write_map([], str(p), "2026-05-01") == 0

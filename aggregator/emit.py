@@ -35,6 +35,14 @@ def _h(s: str) -> str:
     return escape(s or "", {'"': "&quot;"})
 
 
+def _safe_url(u: str | None) -> str:
+    """Only http(s) URLs may become links / popup hrefs, blocking javascript:,
+    data:, and other script-bearing schemes from scraped source_urls."""
+    u = (u or "").strip()
+    lo = u.lower()
+    return u if lo.startswith("http://") or lo.startswith("https://") else ""
+
+
 def _parse_dt(iso: str | None):
     if not iso:
         return None
@@ -248,8 +256,16 @@ lis.forEach(function(li){
     var m=L.circleMarker([lat,lng],{radius:7,color:color,fillColor:color,fillOpacity:.85,weight:1});
     var url=li.getAttribute('data-url');
     var nm=li.querySelector('.evname').textContent;
-    var titleHtml=url?('<a href="'+url+'" target="_blank" rel="noopener"><b>'+nm+'</b></a>'):('<b>'+nm+'</b>');
-    m.bindPopup(titleHtml+'<br>'+(li.getAttribute('data-date')||'')+(url?'<br><a href="'+url+'" target="_blank" rel="noopener">Event page →</a>':''));
+    // Build the popup with DOM nodes (textContent / setAttribute), never innerHTML
+    // string concatenation, so event titles/urls can't inject HTML or script.
+    var pop=document.createElement('div');
+    var head=document.createElement(url?'a':'b');
+    if(url){head.setAttribute('href',url);head.setAttribute('target','_blank');head.setAttribute('rel','noopener');var hb=document.createElement('b');hb.textContent=nm;head.appendChild(hb);}else{head.textContent=nm;}
+    pop.appendChild(head);
+    pop.appendChild(document.createElement('br'));
+    pop.appendChild(document.createTextNode(li.getAttribute('data-date')||''));
+    if(url){pop.appendChild(document.createElement('br'));var more=document.createElement('a');more.setAttribute('href',url);more.setAttribute('target','_blank');more.setAttribute('rel','noopener');more.textContent='Event page →';pop.appendChild(more);}
+    m.bindPopup(pop);
     li._m=m;
   }
   // Clicking the event NAME opens its page; don't also fly the map.
@@ -294,12 +310,13 @@ def _li(ev: Event) -> str:
     # The event name links to its source/detail page (new tab). Falls back to
     # bold text when an event has no source_url.
     name = _h(ev.title)
-    title_html = (f'<a class="evname" href="{_h(ev.source_url)}" target="_blank" '
-                  f'rel="noopener">{name}</a>' if ev.source_url
+    surl = _safe_url(ev.source_url)   # http(s) only -> no javascript:/data: links
+    title_html = (f'<a class="evname" href="{_h(surl)}" target="_blank" '
+                  f'rel="noopener">{name}</a>' if surl
                   else f'<b class="evname">{name}</b>')
     return (f'<li class="ev" data-layer="{layer}" data-big="{1 if ev.is_big_name else 0}"'
             f' data-date="{date}"'
-            f' data-url="{_h(ev.source_url)}" data-text="{_h(text)}"{coords}>'
+            f' data-url="{_h(surl)}" data-text="{_h(text)}"{coords}>'
             f'{star}{title_html}<br><small>{meta}</small></li>')
 
 
