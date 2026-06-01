@@ -60,7 +60,7 @@ def build_alerts(new_events: list[Event], new_big: list[Event],
                  deadlines_soon: list | None = None,
                  open_apps: list | None = None,
                  big_in_dc: list[Event] | None = None) -> str:
-    out = ["# DC AI & Semiconductor — Alerts", f"_Generated {today_iso}_", ""]
+    out = ["# DC AI & Frontier Tech — Alerts", f"_Generated {today_iso}_", ""]
     if first_run:
         out += [f"_First run — baseline established ({len(new_events)} events, "
                 f"{len(new_big)} big-name). Future runs itemize only newly-added events._", ""]

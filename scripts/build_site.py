@@ -43,6 +43,17 @@ _FEEDS = [
 _PAGES = [("credentials.html", "Prestige credentials, fellowships &amp; funding"),
           ("map.html", "Interactive map"), ("digest.html", "Weekly digest")]
 
+# Brand favicon: a radar-sweep glyph in the accent blue. Self-contained SVG so the
+# whole site has an icon (the pages reference it via <link rel="icon">), which also
+# stops browsers from probing for a (missing) /favicon.ico.
+FAVICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+    '<rect width="64" height="64" rx="14" fill="#1a4fd0"/>'
+    '<g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round">'
+    '<path d="M19 45 A26 26 0 0 1 45 19"/><path d="M23 45 A18 18 0 0 1 41 27"/></g>'
+    '<circle cx="19" cy="45" r="5" fill="#fff"/></svg>'
+)
+
 
 def render_index(domain: str, today_iso: str) -> str:
     base = f"https://{domain}"
@@ -61,6 +72,7 @@ def render_index(domain: str, today_iso: str) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>DC AI &amp; Frontier Tech Events</title>
 <style>
 body{{font-family:system-ui,Arial,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;line-height:1.55;color:#222}}
@@ -129,6 +141,8 @@ def write_site_extras(site_dir: str, domain: str, today_iso: str) -> None:
     The credentials page is rendered from the credentials.json the pipeline just
     wrote (already merged with fetched deadlines/status); skipped if absent."""
     os.makedirs(site_dir, exist_ok=True)
+    with open(os.path.join(site_dir, "favicon.svg"), "w", encoding="utf-8") as f:
+        f.write(FAVICON_SVG)
     with open(os.path.join(site_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(render_index(domain, today_iso))
     cj = os.path.join(site_dir, "credentials.json")

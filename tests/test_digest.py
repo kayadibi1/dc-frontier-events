@@ -98,7 +98,7 @@ def test_digest_lists_upcoming_ranked_and_excludes_past():
            topics=["ai", "semiconductor"], source="csis"),
     ]
     md = build_digest(evs, TODAY)
-    assert "# DC AI & Semiconductor — Weekly Digest" in md
+    assert "# DC AI & Frontier Tech — Weekly Digest" in md
     assert "Old AI Talk" not in md            # past excluded
     assert "Chip Policy Panel" in md and "Plain AI Meetup" in md
     # higher-scored event appears before the lower one in the ranked list

@@ -363,6 +363,7 @@ def render_credentials_html(creds: list[dict], today_iso: str) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>Prestige Credentials, Fellowships &amp; Funding</title>
 <style>
 body{{font-family:system-ui,Arial,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;line-height:1.5;color:#222}}

@@ -140,7 +140,7 @@ def _rfc822(iso: str | None) -> str:
 
 
 def write_rss(events: list[Event], path: str,
-              title: str = "DC AI & Semiconductor Events") -> int:
+              title: str = "DC AI & Frontier Tech Events") -> int:
     items = []
     for ev in events:
         topics = ", ".join(ev.topics)
@@ -196,7 +196,8 @@ def write_json(events: list[Event], path: str) -> int:
 _MAP_HEAD = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DC AI & Semiconductor Events — Map</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>DC AI & Frontier Tech Events — Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">

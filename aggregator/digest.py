@@ -51,7 +51,7 @@ def build_digest(events: list[Event], today_iso: str, top_n: int = 15) -> str:
     bigs = [e for e in top if e.is_big_name]
 
     out = [
-        "# DC AI & Semiconductor — Weekly Digest",
+        "# DC AI & Frontier Tech — Weekly Digest",
         f"_Generated {today_iso} · {len(upcoming_all)} upcoming event(s) across "
         f"{len({e.source for e in upcoming_all})} source(s)._",
         "",
@@ -101,8 +101,9 @@ def render_html(events: list[Event], today_iso: str, top_n: int = 15) -> str:
         "<li><small>No upcoming events in range.</small></li>"
     return (
         f"<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
-        f"<title>DC AI &amp; Semiconductor — Weekly Digest</title><style>{_HTML_STYLE}</style></head>"
-        f"<body><h1>DC AI &amp; Semiconductor — Weekly Digest</h1>"
+        f"<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\">"
+        f"<title>DC AI &amp; Frontier Tech — Weekly Digest</title><style>{_HTML_STYLE}</style></head>"
+        f"<body><h1>DC AI &amp; Frontier Tech — Weekly Digest</h1>"
         f"<p class=\"meta\">{today_iso} · {len(upcoming)} upcoming event(s) across "
         f"{len({e.source for e in upcoming})} source(s)</p>"
         f"<h2>⭐ Big names ({len(bigs)})</h2><ul>{big_html}</ul>"
