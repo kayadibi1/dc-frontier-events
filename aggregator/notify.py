@@ -37,15 +37,20 @@ def deliver(msg: EmailMessage, out_dir: str, today_iso: str,
     host = os.environ.get("SMTP_HOST")
     user = os.environ.get("SMTP_USER")
     pw = os.environ.get("SMTP_PASS")
-    guard_to = os.environ.get("SMTP_TO")
-    if host and user and pw and guard_to:
+    to = msg.get("To")
+    # Send when SMTP is configured and there's a real recipient. Do NOT gate on
+    # SMTP_TO: that's only the owner-digest fallback address, and gating delivery
+    # on it would silently turn public-signup verify/welcome mails into dry-run
+    # .eml files on any deploy that has SMTP creds but no owner address set.
+    real_to = bool(to) and not str(to).endswith("@localhost")
+    if host and user and pw and real_to:
         try:
             port = int(os.environ.get("SMTP_PORT", "587"))
             with smtplib.SMTP(host, port, timeout=30) as s:
                 s.starttls()
                 s.login(user, pw)
                 s.send_message(msg)
-            return ("sent", msg.get("To") or guard_to)
+            return ("sent", to)
         except Exception as e:  # never block the run on a send failure
             print(f"[notify] SMTP send failed ({e!r}); falling back to dry-run.")
 
