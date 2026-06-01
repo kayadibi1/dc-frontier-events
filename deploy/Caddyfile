@@ -1,19 +1,46 @@
-# Caddy site block for the calendar subdomain.
+# Caddy site block for the calendar subdomain (events.emersus.ai).
 # Append this to /etc/caddy/Caddyfile (or drop in /etc/caddy/Caddyfile.d/ if your
 # setup imports that). Caddy auto-provisions a Let's Encrypt cert for the domain,
 # so the .ics URL is HTTPS — which Google Calendar requires.
 #
-# The web root is whatever SITE_DIR the systemd timer builds into.
+# This mirrors the live config: the signup form posts to /api/*, which Caddy
+# reverse-proxies to the local subscribe service; security headers are applied;
+# the email dry-run dir is hidden. The web root is whatever SITE_DIR the systemd
+# timer builds into.
+
+(security_headers) {
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+		-Server
+		-X-Powered-By
+	}
+}
 
 events.emersus.ai {
+	import security_headers
+
+	# Signup API (double opt-in) -> the local subscribe service on :8810.
+	# Without this, the landing-page signup form 404s.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8810
+	}
+
 	root * /var/www/events.emersus.ai
-	file_server
+	encode gzip
 
 	# Serve .ics as a calendar (some clients are picky about the type).
 	@ics path *.ics
 	header @ics Content-Type "text/calendar; charset=utf-8"
 
-	encode gzip
+	# Don't expose the email dry-run dir (out/email/*.eml).
+	@email path /email /email/*
+	respond @email 404
+
+	file_server
+
 	log {
 		output file /var/log/caddy/events.emersus.ai.log
 	}
