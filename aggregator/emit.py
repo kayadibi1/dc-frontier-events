@@ -230,7 +230,6 @@ body{margin:0;font-family:system-ui,Arial,sans-serif;font-size:14px}
 <label><input type="checkbox" class="flt-layer" value="3" checked><span class="lg" style="background:#2ca02c"></span>L3</label>
 </div><div>
 <label><input type="checkbox" id="flt-big"><span class="lg" style="background:#d62728"></span>Big names</label>
-<label><input type="checkbox" id="flt-up">Upcoming</label>
 </div><div id="count"></div></div>
 <ul id="list">
 """
@@ -261,12 +260,11 @@ lis.forEach(function(li){
 function render(){
   var q=document.getElementById('search').value.toLowerCase().trim();
   var layers=[].slice.call(document.querySelectorAll('.flt-layer:checked')).map(function(c){return c.value;});
-  var big=document.getElementById('flt-big').checked,up=document.getElementById('flt-up').checked;
+  var big=document.getElementById('flt-big').checked;
   cluster.clearLayers();var shown=0;
   lis.forEach(function(li){
     var ok=layers.indexOf(li.getAttribute('data-layer'))>=0
       &&(!big||li.getAttribute('data-big')==='1')
-      &&(!up||li.getAttribute('data-up')==='1')
       &&(!q||li.getAttribute('data-text').indexOf(q)>=0);
     li.style.display=ok?'':'none';
     if(ok){shown++;if(li._m)cluster.addLayer(li._m);}
@@ -274,13 +272,13 @@ function render(){
   document.getElementById('count').textContent=shown+' of '+lis.length+' events';
 }
 document.getElementById('search').addEventListener('input',render);
-[].slice.call(document.querySelectorAll('.flt-layer,#flt-big,#flt-up')).forEach(function(c){c.addEventListener('change',render);});
+[].slice.call(document.querySelectorAll('.flt-layer,#flt-big')).forEach(function(c){c.addEventListener('change',render);});
 render();
 </script></body></html>
 """
 
 
-def _li(ev: Event, today_iso: str) -> str:
+def _li(ev: Event) -> str:
     layer = _LAYER.get(ev.source, 0)
     topics = ", ".join(t for t in ev.topics if not t.startswith("big:"))
     src = _NAME.get(ev.source, ev.source)
@@ -300,17 +298,19 @@ def _li(ev: Event, today_iso: str) -> str:
                   f'rel="noopener">{name}</a>' if ev.source_url
                   else f'<b class="evname">{name}</b>')
     return (f'<li class="ev" data-layer="{layer}" data-big="{1 if ev.is_big_name else 0}"'
-            f' data-up="{1 if date >= today_iso else 0}" data-date="{date}"'
+            f' data-date="{date}"'
             f' data-url="{_h(ev.source_url)}" data-text="{_h(text)}"{coords}>'
             f'{star}{title_html}<br><small>{meta}</small></li>')
 
 
 def write_map(events: list[Event], path: str, today_iso: str) -> int:
     """Self-contained interactive map: filterable, searchable sidebar list synced
-    to a clustered Leaflet map. Returns the number of events with GEO (map pins)."""
-    geo = [e for e in events if e.lat is not None and e.lng is not None]
-    items = sorted(events, key=lambda e: (-(e.raw.get("score") or 0), e.start or ""))
-    lis = "\n".join(_li(e, today_iso) for e in items)
+    to a clustered Leaflet map. Only upcoming events (start >= today) are shown.
+    Returns the number of upcoming events with GEO (map pins)."""
+    upcoming = filter_upcoming(events, today_iso)
+    geo = [e for e in upcoming if e.lat is not None and e.lng is not None]
+    items = sorted(upcoming, key=lambda e: (-(e.raw.get("score") or 0), e.start or ""))
+    lis = "\n".join(_li(e) for e in items)
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(_MAP_HEAD + lis + _MAP_TAIL)
