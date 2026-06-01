@@ -7,17 +7,24 @@ thin shell that parses the request and writes the Response.
 
 Endpoints:
   POST /api/subscribe          form: email (+ honeypot 'website') -> verify email
-  GET  /api/verify?token=...   confirm -> welcome email -> "you're in" page
-  GET  /api/unsubscribe?token= remove from the list
+  GET  /api/verify?token=...   confirmation PAGE (a form); POST performs the verify
+  POST /api/verify             confirm -> welcome email -> "you're in" page
+  GET  /api/unsubscribe?token= confirmation PAGE (a form); POST performs the removal
+  POST /api/unsubscribe?token= remove from the list (also RFC 8058 one-click target)
 
-Hardening: per-IP rate limit, bot honeypot, capped body size, email validation,
-enumeration-safe subscribe response (always "check your inbox"), no reflected
-user input, no open redirects (pages rendered inline).
+State changes happen on POST only: a bare GET to verify/unsubscribe just renders a
+confirmation form, so mail-security scanners and link prefetchers that follow GET
+links cannot confirm or unsubscribe a human without an actual click/submit.
+
+Hardening: per-IP rate limit (locked), bot honeypot, capped/validated body size,
+email validation, enumeration-safe subscribe response (always "check your inbox"),
+no reflected user input, no open redirects (pages rendered inline).
 """
 
 from __future__ import annotations
 
 import os
+import threading
 import time
 from dataclasses import dataclass
 from html import escape
@@ -48,15 +55,17 @@ class RateLimiter:
         self.max_hits = max_hits
         self.window_s = window_s
         self._hits: dict[str, list[float]] = {}
+        self._lock = threading.Lock()   # ThreadingHTTPServer calls this concurrently
 
     def allow(self, key: str, now: float) -> bool:
-        hits = [t for t in self._hits.get(key, []) if now - t < self.window_s]
-        if len(hits) >= self.max_hits:
+        with self._lock:
+            hits = [t for t in self._hits.get(key, []) if now - t < self.window_s]
+            if len(hits) >= self.max_hits:
+                self._hits[key] = hits
+                return False
+            hits.append(now)
             self._hits[key] = hits
-            return False
-        hits.append(now)
-        self._hits[key] = hits
-        return True
+            return True
 
 
 @dataclass
@@ -110,34 +119,67 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
         # send_verify and already_verified return the SAME page (enumeration-safe).
         return _check_inbox_page()
 
-    if path == "/api/verify" and method == "GET":
-        token = (query.get("token") or "").strip()
-        result = deps.store.verify(token)
-        if result.status == "verified":
-            deps.send_welcome(result.email, result.unsub_token)
-            deps.send_admin_notify(result.email)   # owner alert: a real new subscriber
-            return _page("You're in", "You&rsquo;re subscribed ✅",
-                         '<p>Welcome aboard! A confirmation email with a taste of '
-                         'what&rsquo;s coming is on its way.</p>'
-                         '<p class="muted">Your full digest lands every Monday.</p>')
-        if result.status == "already":
-            return _page("Already confirmed", "Already confirmed ✅",
-                         '<p>You&rsquo;re already on the list — nothing more to do.</p>')
-        return _page("Link problem", "This link didn&rsquo;t work",
-                     '<p>The confirmation link is invalid or has expired (they last '
-                     '48 hours). <a href="/">Sign up again</a> to get a fresh one.</p>',
-                     status=400)
+    if path == "/api/verify":
+        token = (query.get("token") or form.get("token") or "").strip()
+        if method == "GET":
+            # A bare GET only renders a form; the verify happens on POST, so a mail
+            # scanner / link prefetcher that follows the link can't confirm a human.
+            return _confirm_form_page(
+                "/api/verify", token, "Confirm your subscription",
+                "Confirm your subscription",
+                '<p>One more step — click below to confirm and start getting the '
+                'weekly DC AI &amp; frontier-tech radar.</p>', "Confirm subscription")
+        if method == "POST":
+            result = deps.store.verify(token)
+            if result.status == "verified":
+                deps.send_welcome(result.email, result.unsub_token)
+                deps.send_admin_notify(result.email)   # owner alert: a real new sub
+                return _page("You're in", "You&rsquo;re subscribed ✅",
+                             '<p>Welcome aboard! A confirmation email with a taste of '
+                             'what&rsquo;s coming is on its way.</p>'
+                             '<p class="muted">Your full digest lands every Monday.</p>')
+            if result.status == "already":
+                return _page("Already confirmed", "Already confirmed ✅",
+                             '<p>You&rsquo;re already on the list — nothing more to do.</p>')
+            return _page("Link problem", "This link didn&rsquo;t work",
+                         '<p>The confirmation link is invalid or has expired (they last '
+                         '48 hours). <a href="/">Sign up again</a> to get a fresh one.</p>',
+                         status=400)
 
-    if path == "/api/unsubscribe" and method in ("GET", "POST"):
-        # GET = a human clicking the link; POST = RFC 8058 one-click from the mail
-        # client (List-Unsubscribe-Post). Token is in the query either way.
-        token = (query.get("token") or "").strip()
-        deps.store.unsubscribe(token)   # idempotent; same page either way
-        return _page("Unsubscribed", "You&rsquo;re unsubscribed",
-                     '<p>You will no longer receive the weekly digest. '
-                     'Changed your mind? <a href="/">Re-subscribe anytime</a>.</p>')
+    if path == "/api/unsubscribe":
+        token = (query.get("token") or form.get("token") or "").strip()
+        if method == "GET":
+            # Bare GET only shows a form; removal is POST (so scanners / prefetchers
+            # can't unsubscribe a human by following the link).
+            return _confirm_form_page(
+                "/api/unsubscribe", token, "Unsubscribe",
+                "Unsubscribe from the weekly digest",
+                '<p>Click below to stop receiving the weekly DC AI &amp; Frontier '
+                'Tech digest.</p>', "Unsubscribe")
+        if method == "POST":
+            # POST = the confirm form OR an RFC 8058 one-click (token in the query).
+            deps.store.unsubscribe(token)   # idempotent; same page either way
+            return _page("Unsubscribed", "You&rsquo;re unsubscribed",
+                         '<p>You will no longer receive the weekly digest. '
+                         'Changed your mind? <a href="/">Re-subscribe anytime</a>.</p>')
 
     return _page("Not found", "Not found", '<p><a href="/">Go home</a></p>', status=404)
+
+
+def _confirm_form_page(action: str, token: str, title: str, heading: str,
+                       intro_html: str, button_label: str) -> Response:
+    """A page whose only action is a POST form carrying the token. Used so the
+    state-changing verify/unsubscribe never fire on a bare GET."""
+    safe = escape(token, quote=True)
+    body = (
+        f'{intro_html}'
+        f'<form method="post" action="{action}" style="margin-top:18px">'
+        f'<input type="hidden" name="token" value="{safe}">'
+        f'<button type="submit" style="background:#1a4fd0;color:#fff;border:0;'
+        f'border-radius:8px;padding:11px 20px;font-size:15px;font-weight:600;'
+        f'cursor:pointer">{escape(button_label)}</button></form>'
+    )
+    return _page(title, heading, body)
 
 
 def _check_inbox_page() -> Response:
@@ -213,8 +255,12 @@ class SubscribeHandler(BaseHTTPRequestHandler):
     deps: Deps | None = None     # injected by serve()
 
     def _client_ip(self) -> str:
+        # Trust the LAST X-Forwarded-For hop -- the one our reverse proxy (Caddy,
+        # the only thing that can reach this localhost port) appends. The leftmost
+        # entries are client-supplied and spoofable, so keying the rate limiter on
+        # them would let an attacker rotate their own limit.
         xff = self.headers.get("X-Forwarded-For")
-        return xff.split(",")[0].strip() if xff else self.client_address[0]
+        return xff.split(",")[-1].strip() if xff else self.client_address[0]
 
     def _dispatch(self, method: str, form: dict) -> None:
         u = urlsplit(self.path)
@@ -235,7 +281,14 @@ class SubscribeHandler(BaseHTTPRequestHandler):
         self._dispatch("GET", {})
 
     def do_POST(self) -> None:
-        length = min(int(self.headers.get("Content-Length") or 0), MAX_BODY)
+        # Clamp to [0, MAX_BODY]: a non-numeric, missing, or negative Content-Length
+        # must never reach rfile.read() (read(-1) would slurp until EOF, bypassing
+        # the cap and tying up a worker thread).
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = 0
+        length = max(0, min(length, MAX_BODY))
         raw = self.rfile.read(length).decode("utf-8", "replace") if length else ""
         form = {k: v[0] for k, v in parse_qs(raw).items()}
         self._dispatch("POST", form)

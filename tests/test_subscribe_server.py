@@ -19,10 +19,10 @@ def _deps(tmp_path):
 def test_verify_notifies_admin_once(tmp_path):
     deps, sent = _deps(tmp_path)
     token = deps.store.subscribe("a@b.co").token
-    route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    route("POST", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
     assert sent["admin"] == ["a@b.co"]           # owner alerted on confirm
     # re-click -> 'already' -> must NOT alert again
-    route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    route("POST", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
     assert sent["admin"] == ["a@b.co"]
     deps.store.close()
 
@@ -92,7 +92,7 @@ def test_rate_limit_blocks_after_max(tmp_path):
 def test_verify_confirms_and_sends_welcome(tmp_path):
     deps, sent = _deps(tmp_path)
     token = deps.store.subscribe("a@b.co").token
-    r = route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    r = route("POST", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
     assert r.status == 200 and "subscribed" in r.body.lower()
     assert len(sent["welcome"]) == 1 and sent["welcome"][0][0] == "a@b.co"
     assert deps.store.status_of("a@b.co") == "verified"
@@ -102,8 +102,8 @@ def test_verify_confirms_and_sends_welcome(tmp_path):
 def test_verify_twice_sends_welcome_once(tmp_path):
     deps, sent = _deps(tmp_path)
     token = deps.store.subscribe("a@b.co").token
-    route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
-    r2 = route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    route("POST", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    r2 = route("POST", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
     assert "already confirmed" in r2.body.lower()
     assert len(sent["welcome"]) == 1            # not re-sent
     deps.store.close()
@@ -111,7 +111,7 @@ def test_verify_twice_sends_welcome_once(tmp_path):
 
 def test_verify_bad_token(tmp_path):
     deps, sent = _deps(tmp_path)
-    r = route("GET", "/api/verify", {"token": "nope"}, {}, "1.1.1.1", deps, 1000.0)
+    r = route("POST", "/api/verify", {"token": "nope"}, {}, "1.1.1.1", deps, 1000.0)
     assert r.status == 400 and "didn" in r.body.lower()
     assert sent["welcome"] == []
     deps.store.close()
@@ -121,12 +121,35 @@ def test_unsubscribe_idempotent_page(tmp_path):
     deps, sent = _deps(tmp_path)
     tok = deps.store.subscribe("a@b.co").token
     v = deps.store.verify(tok)
-    r = route("GET", "/api/unsubscribe", {"token": v.unsub_token}, {}, "1.1.1.1", deps, 1000.0)
+    r = route("POST", "/api/unsubscribe", {"token": v.unsub_token}, {}, "1.1.1.1", deps, 1000.0)
     assert r.status == 200 and "unsubscribed" in r.body.lower()
     assert deps.store.status_of("a@b.co") == "unsubscribed"
     # unknown token still shows the same confirmation (no info leak)
-    r2 = route("GET", "/api/unsubscribe", {"token": "nope"}, {}, "1.1.1.1", deps, 1000.0)
+    r2 = route("POST", "/api/unsubscribe", {"token": "nope"}, {}, "1.1.1.1", deps, 1000.0)
     assert r2.status == 200 and "unsubscribed" in r2.body.lower()
+    deps.store.close()
+
+
+def test_verify_get_is_a_form_with_no_side_effects(tmp_path):
+    # A bare GET (mail scanner / prefetch) must NOT confirm; it only shows a form.
+    deps, sent = _deps(tmp_path)
+    token = deps.store.subscribe("a@b.co").token
+    r = route("GET", "/api/verify", {"token": token}, {}, "1.1.1.1", deps, 1000.0)
+    assert r.status == 200
+    assert "<form" in r.body.lower() and 'method="post"' in r.body.lower()
+    assert token in r.body                                    # token carried in form
+    assert sent["welcome"] == [] and sent["admin"] == []      # nothing happened
+    assert deps.store.status_of("a@b.co") == "pending"
+    deps.store.close()
+
+
+def test_unsubscribe_get_is_a_form_with_no_side_effects(tmp_path):
+    deps, sent = _deps(tmp_path)
+    tok = deps.store.subscribe("a@b.co").token
+    v = deps.store.verify(tok)
+    r = route("GET", "/api/unsubscribe", {"token": v.unsub_token}, {}, "1.1.1.1", deps, 1000.0)
+    assert r.status == 200 and "<form" in r.body.lower()
+    assert deps.store.status_of("a@b.co") == "verified"       # GET did NOT unsubscribe
     deps.store.close()
 
 
