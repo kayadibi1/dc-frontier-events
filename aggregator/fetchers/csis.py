@@ -10,7 +10,7 @@ extracts the AI/chip ones. Parsing is split out for offline tests.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 import httpx
 from selectolax.parser import HTMLParser
@@ -36,6 +36,17 @@ def _clean(text: str) -> str:
     return _WS.sub(" ", text or "").strip()
 
 
+def _us_eastern(d: date) -> tuple[str, str]:
+    """US/Eastern label+offset for a date: EDT (-04:00) during DST (2nd Sunday of
+    March .. 1st Sunday of November), else EST (-05:00). CSIS is always Eastern, so
+    a time with no explicit zone (or a bare "ET") defaults here, not tz-naive."""
+    mar1 = date(d.year, 3, 1).weekday()                      # Mon=0 .. Sun=6
+    dst_start = date(d.year, 3, 1 + ((6 - mar1) % 7) + 7)    # 2nd Sunday of March
+    nov1 = date(d.year, 11, 1).weekday()
+    dst_end = date(d.year, 11, 1 + ((6 - nov1) % 7))         # 1st Sunday of November
+    return ("EDT", "-04:00") if dst_start <= d < dst_end else ("EST", "-05:00")
+
+
 def _parse_when(text: str) -> tuple[str | None, str | None]:
     dm = _MONTH_DATE.search(text)
     if not dm:
@@ -54,7 +65,11 @@ def _parse_when(text: str) -> tuple[str | None, str | None]:
         hh += 12
     if ap == "am" and hh == 12:
         hh = 0
-    return f"{d.isoformat()}T{hh:02d}:{mm:02d}:00{_OFFSET.get(tz, '')}", (tz or None)
+    if tz in _OFFSET:
+        off = _OFFSET[tz]
+    else:                       # bare "ET" or no zone -> CSIS is always Eastern
+        tz, off = _us_eastern(d)
+    return f"{d.isoformat()}T{hh:02d}:{mm:02d}:00{off}", tz
 
 
 def parse_csis_listing(source: Source, html: str) -> list[Event]:

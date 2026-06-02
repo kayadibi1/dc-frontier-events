@@ -53,7 +53,7 @@ CSET_SOURCES = [
     Source("csis", "CSIS", "csis", 2, True, url="https://www.csis.org/events"),
     # Brookings HQ is in DC (1775 Massachusetts Ave NW); httpx-accessible.
     Source("brookings", "Brookings", "brookings", 2, True, url="https://www.brookings.edu/events/"),
-    # CNAS HQ is in DC (1899 Pennsylvania Ave NW); httpx-accessible. Strong AI/chip
+    # CNAS HQ is in DC (1701 Pennsylvania Ave NW); httpx-accessible. Strong AI/chip
     # policy slate (US-China AI competition, Project Maven, Pentagon & Silicon Valley).
     Source("cnas", "CNAS", "cnas", 2, True, url="https://www.cnas.org/events"),
     # Atlantic Council HQ is in DC (1400 L St NW); WAF -> curl_cffi adapter. AI-era
@@ -187,7 +187,7 @@ SOURCE_ORG = {
 SOURCE_HQ = {
     "csis": "CSIS, 1616 Rhode Island Ave NW, Washington, DC 20036",
     "brookings": "Brookings Institution, 1775 Massachusetts Ave NW, Washington, DC 20036",
-    "cnas": "CNAS, 1899 Pennsylvania Ave NW, Washington, DC 20006",
+    "cnas": "CNAS, 1701 Pennsylvania Ave NW, Washington, DC 20006",
     "atlanticcouncil": "Atlantic Council, 1400 L St NW, Washington, DC 20005",
     "cset": "CSET, Georgetown University, Washington, DC",
 }

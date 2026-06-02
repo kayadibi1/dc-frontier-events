@@ -53,6 +53,14 @@ def test_nav_and_pagination_links_excluded():
     assert "Next Up" not in titles
 
 
+def test_cnas_hq_address_is_correct():
+    # CNAS HQ is the map-pin fallback for CNAS events that don't scrape a venue.
+    # Real address per cnas.org/contact is 1701 Pennsylvania Ave NW (1899 was wrong).
+    from aggregator.config import SOURCE_HQ
+    assert "1701 Pennsylvania Ave NW" in SOURCE_HQ["cnas"]
+    assert "1899" not in SOURCE_HQ["cnas"]
+
+
 def test_real_ai_policy_events_present_and_on_topic():
     evs = _events()
     titles = [e.title for e in evs]

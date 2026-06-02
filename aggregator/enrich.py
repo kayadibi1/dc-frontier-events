@@ -64,6 +64,24 @@ def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", text or "").strip()
 
 
+# Site chrome (nav/menu/footer/related-events/sidebar) carries capitalized words
+# the prose speaker-fallback mistakes for names ("About CSIS", "Media Requests")
+# and "related events" blocks that leak another event's speaker. Strip it before
+# reading speaker / virtual-vs-in-person signals from the page.
+_BOILERPLATE = ("script, style, nav, footer, aside, "
+                "[class*='menu'], [class*='navbar'], [class*='breadcrumb'], "
+                "[class*='footer'], [class*='related'], [class*='recommend'], "
+                "[class*='sidebar'], [id*='footer'], [id*='menu'], [id*='nav']")
+
+
+def _main_tree(html: str) -> HTMLParser:
+    """Parse HTML and remove site chrome, leaving the main content."""
+    tree = HTMLParser(html or "")
+    for node in tree.css(_BOILERPLATE):
+        node.decompose()
+    return tree
+
+
 def _looks_like_name(s: str) -> bool:
     s = s.strip()
     if s in _STOP or any(ch.isdigit() for ch in s):
@@ -71,13 +89,17 @@ def _looks_like_name(s: str) -> bool:
     parts = s.split()
     if not (2 <= len(parts) <= 4 and all(p[:1].isupper() for p in parts)):
         return False
+    # Reject all-caps acronym tokens (timezones / org initials: EDT, CSIS, AI) --
+    # real name words are Titlecase, so "EDT Brought" / "About CSIS" are dropped.
+    if any(p.isalpha() and p.isupper() and len(p) >= 2 for p in parts):
+        return False
     # Reject organization / field / affiliation strings (e.g. "Carnegie Mellon
     # University", "Open Government Partnership", "Political Science").
     return not any(p.lower().strip(".,") in _ORG_WORDS for p in parts)
 
 
 def extract_speakers(html: str) -> list[str]:
-    tree = HTMLParser(html)
+    tree = _main_tree(html)
     found: list[str] = []
 
     # 1) structured nodes
@@ -124,6 +146,27 @@ def extract_location(html: str) -> str:
         if _ZIP.search(text) and 8 < len(text) < 160:
             return text
     return ""
+
+
+# Deciding whether to pin a Layer-2 event at the org HQ. A ZIP (a real postal
+# address in the main content, after boilerplate stripping) or an explicit
+# in-person phrase vetoes the virtual classification, so genuine HQ events keep
+# their pin while pure webcasts stay pin-less.
+_VIRTUAL_RE = re.compile(
+    r"\b(webcasts?|virtual (?:event|conversation|discussion|program|panel|forum)|"
+    r"livestream(?:ed|ing)?|watch (?:it )?(?:live|online)|online[- ]only|"
+    r"register to (?:watch|view))\b", re.I)
+_INPERSON_RE = re.compile(r"\b(in[- ]person|doors open|join us at|headquarters)\b", re.I)
+
+
+def _is_virtual_only(html: str) -> bool:
+    """True when the page signals a virtual/webcast-only event with no in-person
+    venue -- so the caller should NOT fall back to pinning it at the org HQ."""
+    tree = _main_tree(html)
+    body = _clean(tree.body.text(separator=" ") if tree.body else (tree.text() or ""))
+    if not _VIRTUAL_RE.search(body):
+        return False
+    return not (_ZIP.search(body) or _INPERSON_RE.search(body))
 
 
 def extract_description(html: str) -> str:
@@ -178,7 +221,11 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
         # (better than "TBD" for these always-DC think tanks).
         added_loc = False
         if not ev.address:
-            ev.address = extract_location(html or "") or SOURCE_HQ.get(ev.source, "")
+            scraped = extract_location(html or "")
+            if scraped:
+                ev.address = scraped
+            elif not _is_virtual_only(html or ""):
+                ev.address = SOURCE_HQ.get(ev.source, "")   # always-DC think tank HQ
             added_loc = bool(ev.address)
         return 1 if (ev.speakers or added_desc or added_loc) else 0
 

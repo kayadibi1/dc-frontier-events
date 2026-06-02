@@ -25,7 +25,7 @@ from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .enrich import default_fetch, enrich_layer2
-from .geocode import geocode_events
+from .geocode import geocode_events, scrub_far_geo
 from .fetchers import gather_all
 from .filter import apply_filters
 from .notify import build_message, deliver
@@ -80,6 +80,11 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     emitted = sorted(kept, key=lambda e: e.start or "")
     for e in emitted:
         e.raw["score"] = score_event(e, today)
+    # A feed can ship a junk GEO (e.g. a virtual event pinned mid-Pacific); drop
+    # any pin outside DC metro before geocoding, so a real DC address can re-pin it.
+    n_scrub = scrub_far_geo(emitted)
+    if n_scrub:
+        print(f"[geocode] scrubbed {n_scrub} out-of-DC pin(s)")
     # Geocode addresses -> coordinates for events that lack feed GEO (scraped /
     # think-tank events), so they get map pins. Cached on disk; only new addresses
     # hit the network. Best-effort, after filtering so it can't change what's kept.

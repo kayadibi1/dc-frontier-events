@@ -166,3 +166,22 @@ def geocode_events(events: list[Event], cache_path: str = DEFAULT_CACHE,
         except OSError:
             pass   # cache is best-effort; a write failure just re-geocodes next build
     return pinned
+
+
+def scrub_far_geo(events: list[Event], bbox: dict = DC_BBOX) -> int:
+    """Null out coordinates that fall outside the DC-metro bbox. A feed can ship a
+    junk GEO (e.g. a virtual event carrying a mid-Pacific coordinate); the geocoder
+    only bbox-constrains addresses IT resolves, so bad feed GEO would otherwise
+    reach events.json / .ics / the map. Runs on the post-filter set, where an
+    out-of-bbox pin is necessarily a virtual event's bogus coordinate (in-person
+    out-of-DC events are already excluded by the filter's GEO rule). Returns the
+    number of events whose pin was scrubbed."""
+    n = 0
+    for ev in events:
+        if ev.lat is None or ev.lng is None:
+            continue
+        if not (bbox["lat_min"] <= ev.lat <= bbox["lat_max"]
+                and bbox["lng_min"] <= ev.lng <= bbox["lng_max"]):
+            ev.lat = ev.lng = None
+            n += 1
+    return n

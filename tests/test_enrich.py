@@ -56,6 +56,29 @@ def test_extract_speakers_rejects_org_affiliations():
     assert "Open Government Partnership" not in names
 
 
+def test_extract_speakers_ignores_nav_and_footer_prose():
+    # No structured speaker nodes -> the prose fallback runs. It must read only the
+    # main content, not the site nav/footer that polluted live CSIS/CSET events
+    # ("About CSIS", "Media Requests", "Events About Menu", ...).
+    html = ('<nav>Explore with About CSIS Leadership Staff Media Requests</nav>'
+            '<article><p>A discussion featuring Matt Pearl and Aalok Mehta.</p></article>'
+            '<footer>Programs Topics Regions Privacy Policy</footer>')
+    names = extract_speakers(html)
+    assert "Matt Pearl" in names
+    assert "Aalok Mehta" in names
+    assert not any(("CSIS" in n) or ("Staff" in n) or ("Programs" in n)
+                   or ("Discussion" in n) or ("Media" in n) for n in names), names
+
+
+def test_extract_speakers_rejects_acronym_tokens():
+    # All-caps acronyms (timezones, org initials) aren't names: "EDT Brought" (from
+    # "...am EDT Brought to you by...") and "About CSIS" must not survive.
+    html = '<article><p>A webcast featuring Arun Gupta and EDT Brought to you.</p></article>'
+    names = extract_speakers(html)
+    assert "Arun Gupta" in names
+    assert not any(("EDT" in n) or ("CSIS" in n) for n in names), names
+
+
 def test_extract_description_prefers_og_over_meta():
     html = ('<meta property="og:description" content="The og blurb is long enough '
             'to count as a real event description.">'
@@ -125,6 +148,32 @@ def test_enrich_layer2_keeps_existing_address():
 
     asyncio.run(enrich_layer2([ev], {"csis": 2}, fake_fetch))
     assert ev.address == "123 Real Venue St, Washington, DC 20001"  # not overwritten
+
+
+def test_enrich_layer2_skips_hq_pin_for_virtual_event():
+    # A webcast / virtual-only event must NOT be pinned at the org HQ (misleading).
+    ev = Event(id="cnas-x", title="The Pentagon and Silicon Valley", start="2026-03-10",
+               source="cnas", source_url="https://www.cnas.org/events/x")
+
+    async def fake_fetch(url, kind):
+        return ('<article><p>Join us for a virtual conversation. This is a webcast; '
+                'watch live online.</p></article>')
+
+    asyncio.run(enrich_layer2([ev], {"cnas": 2}, fake_fetch))
+    assert ev.address == ""          # no physical pin for an online-only event
+
+
+def test_enrich_layer2_keeps_hq_for_inperson_despite_webcast_mention():
+    # "Webcast available" + an in-person signal = hybrid in-person -> HQ fallback stays.
+    ev = Event(id="cnas-y", title="In person panel", start="2026-06-10",
+               source="cnas", source_url="https://www.cnas.org/events/y")
+
+    async def fake_fetch(url, kind):
+        return ('<article><p>Join us in person; doors open at 9. A webcast is also '
+                'available.</p></article>')
+
+    asyncio.run(enrich_layer2([ev], {"cnas": 2}, fake_fetch))
+    assert ev.address == SOURCE_HQ["cnas"]    # in-person -> HQ pin kept
 
 
 def test_enrich_layer2_sets_speakers():

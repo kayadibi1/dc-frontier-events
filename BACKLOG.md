@@ -33,14 +33,17 @@ Implementation plans for these live in `docs/superpowers/plans/`; execution stat
 - ~~ICS enrichment~~ ✅ executed P5 (per-event `COLOR` + 1-day `VALARM` on upcoming).
 - ~~More Layer-2 sources: Brookings~~ ✅ added 2026-05-30 (`fetchers/brookings.py`; `article`-card
   adapter; 14 fetched → 3 on-topic AI kept; json/ics parity 109==109 verified; verify-first).
+- ~~More Layer-2 sources: CNAS~~ ✅ added (`fetchers/cnas.py`; `figure.photo-listing__item` cards;
+  live E2E 2026-06-02: 18 fetched → 4 on-topic AI kept).
+- ~~More Layer-2 sources: Atlantic Council~~ ✅ added (`fetchers/atlanticcouncil.py`; curl_cffi/WAF,
+  `div.gta-event-embed--container`; live E2E 2026-06-02: 4 fetched → 1 on-topic AI kept).
 
 Remaining:
 1. **Even more Layer-2/3 sources** — each a bespoke adapter (probed 2026-05-30):
-   - **CNAS** (`/events`): 19 links but listing uses non-`article` cards → needs the right selector.
    - **Hudson** (`/events`, curl_cffi): truncated "Learn More" link text + current listing is all
      geopolitics (0 AI/chip). Revisit only when Hudson schedules AI events (detail-date adapter was
      prototyped then backed out for 0 yield).
-   - Probed-dead: ITIF (2 links), Atlantic Council (0 event links), RAND (sub-site links);
+   - Probed-dead: ITIF (2 links), RAND (sub-site links);
      university iCal UMD/Georgetown/Howard/American/VT/UMBC (404/403/0/DNS/SSL).
    - LESSON (cost 3 bad commits this/prior session): hand-written fixture tests give FALSE
      confidence. Verify any new adapter against the live page / a saved REAL fixture (≥1 on-topic

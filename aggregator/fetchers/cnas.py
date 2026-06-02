@@ -4,7 +4,7 @@ CNAS is httpx-accessible (no WAF). Its listing has an awkward DOM -- no `article
 cards and the page is full of nav/megamenu `/events/` links -- but the real event
 cards are `figure.photo-listing__item` inside `div.events-landing`. Each card has a
 heading (title), an `a[href*='/events/']` detail link, and a date in abbreviated
-form ("Jun 16, 2026"). CNAS HQ is in DC (1899 Pennsylvania Ave NW) -> dc_curated.
+form ("Jun 16, 2026"). CNAS HQ is in DC (1701 Pennsylvania Ave NW) -> dc_curated.
 Cards with no parseable date are skipped. `parse_cnas_listing` is pure (offline-tested).
 """
 

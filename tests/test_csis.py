@@ -34,10 +34,14 @@ LISTING = """
 
 
 def test_when_parsing():
-    # pm + EDT -> 24h with offset
+    # pm + explicit EDT -> 24h with offset
     assert _parse_when("June 3, 2026 - 3:30 - 4:45 pm EDT") == ("2026-06-03T15:30:00-04:00", "EDT")
-    # am, no tz -> naive
-    assert _parse_when("May 29, 2026 - 9:30 am") == ("2026-05-29T09:30:00", None)
+    # am with no explicit zone -> default to US Eastern (CSIS is always ET); summer -> EDT
+    assert _parse_when("May 29, 2026 - 9:30 am") == ("2026-05-29T09:30:00-04:00", "EDT")
+    # bare "ET" (the AI Policy Podcast format the regex used to drop) -> Eastern, kept
+    assert _parse_when("June 4, 2026 - 11:00 am ET") == ("2026-06-04T11:00:00-04:00", "EDT")
+    # winter date -> EST
+    assert _parse_when("January 14, 2026 - 9:00 am") == ("2026-01-14T09:00:00-05:00", "EST")
     # no date -> nothing
     assert _parse_when("no date here") == (None, None)
 
@@ -64,4 +68,4 @@ def test_offtopic_event_still_parsed_topicless():
     by_id = {e.id: e for e in parse_csis_listing(SRC, LISTING)}
     energy = by_id["csis-energy-shots-running-empty"]
     assert energy.topics == []          # topic filtering happens later in the pipeline
-    assert energy.start == "2026-05-29T09:30:00"
+    assert energy.start == "2026-05-29T09:30:00-04:00"   # default Eastern (EDT in May)

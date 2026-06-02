@@ -145,3 +145,17 @@ def test_nominatim_query_constrains_to_dc(monkeypatch):
 
 def test_norm_collapses_whitespace_and_case():
     assert _norm("  CSIS,   1616  Rhode  Island ") == "csis, 1616 rhode island"
+
+
+def test_scrub_far_geo_nulls_out_of_bbox_pins():
+    from aggregator.geocode import scrub_far_geo
+    evs = [
+        _ev("dc", lat=38.9, lng=-77.04),         # inside DC metro bbox -> kept
+        _ev("pacific", lat=-8.52, lng=179.20),   # junk feed GEO (S. Pacific) -> nulled
+        _ev("none"),                             # no coords at all -> untouched
+    ]
+    n = scrub_far_geo(evs)
+    assert n == 1
+    assert (evs[0].lat, evs[0].lng) == (38.9, -77.04)    # DC pin untouched
+    assert evs[1].lat is None and evs[1].lng is None      # ocean pin scrubbed
+    assert evs[2].lat is None and evs[2].lng is None      # no-coords untouched
