@@ -1,0 +1,17 @@
+# Weekly live ground-truth audit (sub-project 4). Re-fetches think-tank event
+# pages and diffs date/title/location against the store; writes out/audit.md.
+# Read-only -- does not touch feeds. Install on the box manually:
+#   cp deploy/dc-frontier-events-audit.* /etc/systemd/system/
+#   systemctl enable --now dc-frontier-events-audit.timer
+[Unit]
+Description=DC Frontier Events — weekly live audit
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=emersus
+WorkingDirectory=/opt/dc-frontier-events
+EnvironmentFile=/etc/dc-frontier-events.env
+ExecStart=/opt/dc-frontier-events/.venv/bin/python -m aggregator --audit --out /opt/dc-frontier-events/out
+TimeoutStartSec=600

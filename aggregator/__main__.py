@@ -25,6 +25,9 @@ def main() -> None:
     p.add_argument("--email", action="store_true",
                    help="render + deliver the weekly digest email from the existing store "
                         "(dry-run .eml unless SMTP_* is set); does NOT re-fetch")
+    p.add_argument("--audit", action="store_true",
+                   help="live ground-truth audit: re-fetch think-tank event pages and diff "
+                        "date/title/location vs the store (writes out/audit.md); skips the pipeline")
     args = p.parse_args()
     if args.verify:
         from .verify import run_verify
@@ -33,6 +36,10 @@ def main() -> None:
     if args.email:
         from .emailer import send_weekly
         send_weekly(out_dir=args.out, db_path=args.db, today=args.today)
+        return
+    if args.audit:
+        from .audit import run_audit
+        run_audit(today_iso=args.today, out_dir=args.out, db_path=args.db)
         return
     run(out_dir=args.out, db_path=args.db, today=args.today, enrich=not args.no_enrich)
 

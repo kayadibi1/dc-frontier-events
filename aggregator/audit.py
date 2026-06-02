@@ -5,14 +5,18 @@ offline-testable; `run_audit` (below) wires it to the store + default_fetch.
 """
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime, timezone
 from html import unescape
 
 from selectolax.parser import HTMLParser
 
+from .emit import filter_upcoming
+from .enrich import default_fetch
 from .models import Event
 from .provenance import prov_get
+from .storage import open_store
 from .structured import extract_structured
 
 _WS = re.compile(r"\s+")
@@ -80,3 +84,66 @@ async def audit_events(events: list[Event], fetch, today_iso: str) -> list[dict]
                      "status": "read", "date": date_verdict,
                      "title_verdict": title_verdict, "location_note": note})
     return rows
+
+
+AUDIT_SOURCES = {"cset", "csis", "brookings", "cnas", "atlanticcouncil"}
+AUDIT_MAX = int(os.environ.get("AUDIT_MAX", "60"))
+
+_VERDICT_ICON = {"match": "✅", "mismatch": "⚠️", "unverifiable": "❔", "unreadable": "🚫", "": ""}
+
+
+def _cell(s: str) -> str:
+    return (s or "").replace("|", "\\|")
+
+
+def render_audit_md(rows: list[dict], today_iso: str) -> str:
+    n_mis = sum(1 for r in rows if "mismatch" in r["date"] or r["title_verdict"] == "mismatch")
+    n_unread = sum(1 for r in rows if r["status"] == "unreadable")
+    n_unver = sum(1 for r in rows if r["status"] == "read"
+                  and "mismatch" not in r["date"] and r["title_verdict"] != "mismatch"
+                  and "unverifiable" in (r["date"], r["title_verdict"]))
+    out = ["# Live Event Audit",
+           f"_Generated {today_iso}. {len(rows)} event(s) audited; "
+           f"{n_mis} mismatch, {n_unver} unverifiable, {n_unread} unreadable._", "",
+           "| Source | Event | Date | Title | Note |", "|---|---|---|---|---|"]
+    for r in rows:
+        if r["status"] == "unreadable":
+            date_c = title_c = "🚫 unreadable"
+        else:
+            date_c = f"{_VERDICT_ICON.get(r['date'].split(' ')[0], '')} {r['date']}".strip()
+            title_c = f"{_VERDICT_ICON.get(r['title_verdict'], '')} {r['title_verdict']}".strip()
+        out.append(f"| {_cell(r['source'])} | {_cell(r['title'][:50])} | {_cell(date_c)} | "
+                   f"{_cell(title_c)} | {_cell(r['location_note'])} |")
+    return "\n".join(out) + "\n"
+
+
+def run_audit(today_iso: str | None = None, out_dir: str = "out",
+              db_path: str = "data/events.db") -> dict:
+    import asyncio
+    import sys
+    from datetime import date
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+    today = today_iso or date.today().isoformat()
+    store = open_store(db_path)
+    try:
+        active = store.active_events()
+    finally:
+        store.close()
+    eligible = [e for e in filter_upcoming(active, today)
+                if e.source in AUDIT_SOURCES and e.source_url]
+    print(f"\nLive audit — {today}: {len(eligible)} eligible upcoming think-tank event(s)")
+    audited = eligible[:AUDIT_MAX]
+    if len(eligible) > AUDIT_MAX:
+        print(f"  (capped at AUDIT_MAX={AUDIT_MAX}; {len(eligible) - AUDIT_MAX} not audited)")
+    rows = asyncio.run(audit_events(audited, default_fetch, today))
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, "audit.md")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(render_audit_md(rows, today))
+    n_mis = sum(1 for r in rows if "mismatch" in r["date"] or r["title_verdict"] == "mismatch")
+    n_unread = sum(1 for r in rows if r["status"] == "unreadable")
+    print(f"  audited {len(rows)}; {n_mis} mismatch, {n_unread} unreadable -> {path}\n")
+    return {"audited": len(rows), "mismatch": n_mis, "unreadable": n_unread}

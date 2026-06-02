@@ -89,3 +89,18 @@ def test_location_note_venue_only():
             '"location":{"@type":"Place","name":"Real Hall"}}</script>')
     row = _run(ev, html)
     assert "Real Hall" in row["location_note"]
+
+
+def test_render_audit_md_escapes_and_summarizes():
+    from aggregator.audit import render_audit_md
+    rows = [
+        {"id": "1", "source": "csis", "title": "A | B", "status": "read",
+         "date": "match", "title_verdict": "mismatch", "location_note": ""},
+        {"id": "2", "source": "cnas", "title": "C", "status": "unreadable",
+         "date": "", "title_verdict": "", "location_note": ""},
+        {"id": "3", "source": "csis", "title": "D", "status": "read",
+         "date": "unverifiable", "title_verdict": "unverifiable", "location_note": ""},
+    ]
+    md = render_audit_md(rows, "2026-06-02")
+    assert "A \| B" in md
+    assert "1 mismatch" in md and "1 unverifiable" in md and "1 unreadable" in md
