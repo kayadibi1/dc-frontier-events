@@ -60,6 +60,10 @@ CSET_SOURCES = [
     # strategy + AI/bio events ("How the US and allies can win the AI era").
     Source("atlanticcouncil", "Atlantic Council", "atlanticcouncil", 2, True,
            url="https://www.atlanticcouncil.org/events/"),
+    # NIST (Gaithersburg MD = DC metro, but ALSO a Boulder CO campus) -> NOT
+    # dc_curated; kept only via a real DC venue/text so a Boulder event can't slip
+    # in. Detail pages carry schema.org Event JSON-LD (enriched via structured.py).
+    Source("nist", "NIST", "nist", 2, False, url="https://www.nist.gov/news-events/events"),
 ]
 
 # Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic
@@ -68,6 +72,9 @@ CSET_SOURCES = [
 UNIVERSITY_SOURCES = [
     Source("gwu", "George Washington University", "ics", 3, True,
            url="https://calendar.gwu.edu/calendar.ics"),
+    # Howard University (DC, Georgia Ave NW) -> dc_curated; Localist iCal feed.
+    Source("howard", "Howard University", "ics", 3, True,
+           url="https://events.howard.edu/calendar.ics"),
 ]
 
 SOURCES = LUMA_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
@@ -98,7 +105,7 @@ BIG_NAME_PATTERNS = {
     "Anthropic": r"\banthropic\b|\bclaude\b",
     "OpenAI": r"\bopenai\b|\bchatgpt\b",
     "Google DeepMind": r"\bdeepmind\b|google deepmind|google ai|\bgemini\b",
-    "Microsoft": r"\bmicrosoft\b",
+    "Microsoft": r"\bmicrosoft\b(?!\s*(?:365|office|teams|word|excel|outlook|powerpoint|onenote|sharepoint|access|publisher))",
     "Meta AI": r"\bmeta ai\b|\bllama\b",
     "Amazon": r"\bamazon\b|\baws\b",
     "Mistral": r"\bmistral\b",
@@ -177,6 +184,7 @@ SOURCE_ORG = {
     "brookings": "Brookings",
     "cnas": "CNAS",
     "atlanticcouncil": "Atlantic Council",
+    "nist": "NIST",
 }
 
 # Known DC headquarters for the policy sources. Their event detail pages mostly do
@@ -246,7 +254,7 @@ ADMIN_EXCLUDE_PATTERN = (
 # Layer-2 think tanks (CSET/CSIS/Brookings) stay lenient -- their desc-only AI
 # events are real (e.g. CSET "The Talent Map", "How the U.S. Wins the Global
 # Tech Competition"), so a title-OR-description topic match still qualifies there.
-STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington"}
+STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington", "howard"}
 
 # High-volume, low-curation sources: a whole-university calendar (gwu) and a
 # global org feed (aic-washington). For these, a topic mentioned only in the
@@ -255,4 +263,4 @@ STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington"}
 # Layer-2 think tanks (CSET/CSIS/Brookings) stay lenient -- their desc-only AI
 # events are real (e.g. CSET "The Talent Map", "How the U.S. Wins the Global
 # Tech Competition"), so we keep trusting a title-OR-description match there.
-STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington"}
+STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington", "howard"}

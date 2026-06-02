@@ -19,6 +19,7 @@ from .csis import fetch_csis
 from .cset import fetch_cset
 from .ics import fetch_ics
 from .luma import fetch_luma
+from .nist import fetch_nist
 
 ADAPTERS = {
     "luma": fetch_luma,
@@ -28,6 +29,7 @@ ADAPTERS = {
     "brookings": fetch_brookings,
     "cnas": fetch_cnas,
     "atlanticcouncil": fetch_atlanticcouncil,
+    "nist": fetch_nist,
 }
 
 

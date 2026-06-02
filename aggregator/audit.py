@@ -86,7 +86,7 @@ async def audit_events(events: list[Event], fetch, today_iso: str) -> list[dict]
     return rows
 
 
-AUDIT_SOURCES = {"cset", "csis", "brookings", "cnas", "atlanticcouncil"}
+AUDIT_SOURCES = {"cset", "csis", "brookings", "cnas", "atlanticcouncil", "nist"}
 AUDIT_MAX = int(os.environ.get("AUDIT_MAX", "60"))
 
 _VERDICT_ICON = {"match": "✅", "mismatch": "⚠️", "unverifiable": "❔", "unreadable": "🚫", "": ""}
