@@ -10,6 +10,7 @@ from xml.sax.saxutils import escape
 
 from .config import SOURCES
 from .models import Event
+from .provenance import marker
 from .rank import event_kind, score_event, top_upcoming
 
 _NAME = {s.slug: s.name for s in SOURCES}
@@ -20,11 +21,9 @@ def _h(s: str) -> str:
 
 
 def _loc(ev: Event) -> str:
-    if ev.address:
-        return ev.address
-    if ev.raw.get("virtual"):
-        return "virtual"
-    return "TBD"
+    base = ev.address if ev.address else ("virtual" if ev.raw.get("virtual") else "TBD")
+    m = marker(ev)
+    return f"{base} {m}" if (m and ev.address) else base
 
 
 def _real_topics(ev: Event) -> list[str]:

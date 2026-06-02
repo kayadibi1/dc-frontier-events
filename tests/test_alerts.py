@@ -111,3 +111,12 @@ def test_store_existing_ids_round_trip(tmp_path):
     s2 = Store(db)
     assert s2.existing_ids() == {"a", "b"}
     s2.close()
+
+
+def test_alerts_dc_line_shows_approx_marker():
+    from aggregator.alerts import _dc_line
+    from aggregator.provenance import prov_set
+    ev = Event(id="a", title="x", start="2026-06-10", source="csis",
+               venue_name="CSIS", address="CSIS HQ", lat=38.9, lng=-77.04, is_big_name=True)
+    prov_set(ev, "location", "hq")
+    assert "📍approx" in _dc_line(ev)

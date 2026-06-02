@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .config import DC_BBOX, SOURCES
 from .models import Event
+from .provenance import marker
 
 _NAME = {s.slug: s.name for s in SOURCES}
 
@@ -52,7 +53,8 @@ def _dc_line(e: Event) -> str:
     who = _big_tags(e)
     who_s = f" — 🎯 {who}" if who else ""
     venue = f" @ {e.venue_name}" if e.venue_name else ""
-    return f"- **{(e.start or '')[:10]}** · {e.title}{who_s} · {src}{venue}{link}"
+    approx = f" {marker(e)}" if marker(e) else ""
+    return f"- **{(e.start or '')[:10]}** · {e.title}{who_s} · {src}{venue}{approx}{link}"
 
 
 def build_alerts(new_events: list[Event], new_big: list[Event],

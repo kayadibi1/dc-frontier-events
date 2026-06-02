@@ -136,3 +136,14 @@ def test_render_html_ranked_and_parses():
     # big-name event appears in the Big names section (before Top upcoming)
     assert html.index("Fireside with Nvidia") < html.index("Top upcoming")
     assert "<style>" in html                             # self-contained
+
+
+def test_digest_loc_shows_approx_marker():
+    from aggregator.digest import _loc
+    from aggregator.provenance import prov_set
+    ev = Event(id="d", title="x", start="2026-06-10", source="csis", address="CSIS HQ addr")
+    prov_set(ev, "location", "hq")
+    assert "📍approx" in _loc(ev)
+    ev2 = Event(id="d2", title="x", start="2026-06-10", source="brookings", address="Real Venue")
+    prov_set(ev2, "location", "scraped")
+    assert "📍approx" not in _loc(ev2)
