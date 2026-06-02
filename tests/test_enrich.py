@@ -250,6 +250,32 @@ def test_enrich_structured_address_overrides_hq():
     assert ev.address != SOURCE_HQ["brookings"]
 
 
+def test_reconcile_csis_naive_agrees_sets_end():
+    from aggregator.enrich import _reconcile_time
+    ev = Event(id="csis-a", title="A", start="2026-06-04T10:30:00-04:00", tz="EDT",
+               source="csis", end=None)
+    _reconcile_time(ev, {"start": "2026-06-04T14:30:00", "end": "2026-06-04T15:30:00"})
+    assert ev.start == "2026-06-04T10:30:00-04:00"
+    assert ev.end == "2026-06-04T11:30:00-04:00"
+    assert ev.raw.get("start_conflict") is not True
+
+
+def test_reconcile_csis_naive_conflict_downgrades():
+    from aggregator.enrich import _reconcile_time
+    ev = Event(id="csis-b", title="B", start="2026-06-04T10:30:00-04:00", tz="EDT",
+               source="csis", end="2026-06-04T11:30:00-04:00")
+    _reconcile_time(ev, {"start": "2026-06-04T20:00:00"})
+    assert ev.start == "2026-06-04" and ev.end == "2026-06-04" and ev.tz is None
+    assert ev.raw.get("start_conflict") is True
+
+
+def test_reconcile_offset_aware_structured_wins():
+    from aggregator.enrich import _reconcile_time
+    ev = Event(id="x-c", title="C", start="2026-06-10", source="brookings")
+    _reconcile_time(ev, {"start": "2026-06-10T09:00:00-04:00", "end": "2026-06-10T10:00:00-04:00"})
+    assert ev.start == "2026-06-10T09:00:00-04:00" and ev.end == "2026-06-10T10:00:00-04:00"
+
+
 def test_enrich_layer2_tolerates_fetch_failure():
     events = [Event(id="csis-2", title="X", start="2026-06-01", source="csis",
                     source_url="https://www.csis.org/events/x")]

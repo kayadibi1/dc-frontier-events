@@ -200,7 +200,47 @@ async def default_fetch(url: str, source_kind: str) -> str:
 
 
 def _reconcile_time(ev: Event, st: dict) -> None:
-    return None
+    """Apply a structured start/end over the listing's, honoring offset-awareness.
+    Offset-aware structured time wins. A naive structured time is trusted only for
+    CSIS (its JSON-LD emits naive UTC): cross-check the start against the
+    offset-aware listing; on agreement also adopt the structured end (converted to
+    the listing's offset); on conflict downgrade start+end+tz to date-only."""
+    s = st.get("start")
+    if not s:
+        return
+    try:
+        sdt = datetime.fromisoformat(s)
+    except ValueError:
+        return
+    ev.raw["start_structured"] = s
+    if sdt.tzinfo is not None:                        # authoritative
+        ev.start = s
+        if st.get("end"):
+            ev.end = st["end"]
+        return
+    if ev.source != "csis" or not ev.start:
+        return
+    try:
+        listing = datetime.fromisoformat(ev.start)
+    except ValueError:
+        return
+    if listing.tzinfo is None:
+        return
+    struct_utc = sdt.replace(tzinfo=timezone.utc)     # CSIS naive == UTC
+    if struct_utc != listing.astimezone(timezone.utc):
+        ev.raw["start_conflict"] = True
+        ev.start = ev.start[:10]
+        ev.end = ev.end[:10] if ev.end else ev.end
+        ev.tz = None
+        return
+    # agreement: adopt the structured end, expressed in the listing's offset
+    end_s = st.get("end")
+    if end_s:
+        try:
+            edt = datetime.fromisoformat(end_s).replace(tzinfo=timezone.utc)
+            ev.end = edt.astimezone(listing.tzinfo).isoformat()
+        except ValueError:
+            pass
 
 
 async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
