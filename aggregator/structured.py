@@ -83,6 +83,9 @@ def extract_structured(html: str) -> dict:
         v = node.get(prop)
         if isinstance(v, str) and v.strip():
             out[key] = v.strip()
+    name = node.get("name")
+    if isinstance(name, str) and name.strip():
+        out["name"] = name.strip()
     loc = node.get("location")
     has_place = False
     if loc is not None:

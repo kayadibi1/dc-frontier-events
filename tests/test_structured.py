@@ -72,3 +72,9 @@ def test_og_meta_never_sets_event_fields():
     html = ('<meta property="og:title" content="X">'
             '<meta property="article:published_time" content="2020-01-01T00:00:00Z">')
     assert extract_structured(html) == {}
+
+
+def test_extract_structured_returns_name():
+    html = ('<script type="application/ld+json">{"@type":"Event","name":"AI Policy Panel",'
+            '"startDate":"2026-07-01"}</script>')
+    assert extract_structured(html)["name"] == "AI Policy Panel"
