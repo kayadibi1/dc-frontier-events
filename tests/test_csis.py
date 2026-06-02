@@ -64,6 +64,21 @@ def test_ai_event_fields():
     assert "ai" in ev.topics and "compute" in ev.topics
 
 
+def test_provenance_time_assumed_vs_explicit():
+    from aggregator.provenance import prov_get
+    html = """<div class="grid">
+      <article class="ts-card-event-sm"><a href="/events/explicit-t"></a>
+        <h3>Explicit AI</h3><span>June 3, 2026 - 3:30 - 4:45 pm EDT</span>
+        <a href="/programs/x">X</a></article>
+      <article class="ts-card-event-sm"><a href="/events/assumed-t"></a>
+        <h3>Assumed AI</h3><span>June 4, 2026 - 11:00 am ET</span>
+        <a href="/programs/y">Y</a></article>
+    </div>"""
+    by_id = {e.id: e for e in parse_csis_listing(SRC, html)}
+    assert prov_get(by_id["csis-explicit-t"], "time") == "explicit"
+    assert prov_get(by_id["csis-assumed-t"], "time") == "assumed_et"
+
+
 def test_offtopic_event_still_parsed_topicless():
     by_id = {e.id: e for e in parse_csis_listing(SRC, LISTING)}
     energy = by_id["csis-energy-shots-running-empty"]

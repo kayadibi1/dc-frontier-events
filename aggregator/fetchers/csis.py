@@ -18,6 +18,7 @@ from selectolax.parser import HTMLParser
 from ..config import Source
 from ..models import Event
 from ..normalize import detect_topics
+from ..provenance import prov_set
 from .base import SourceResult
 
 BASE = "https://www.csis.org"
@@ -92,7 +93,8 @@ def parse_csis_listing(source: Source, html: str) -> list[Event]:
         if not title:
             continue
 
-        start, tz = _parse_when(_clean(card.text()))
+        text = _clean(card.text())
+        start, tz = _parse_when(text)
         if not start:
             continue
         seen.add(slug)
@@ -100,19 +102,20 @@ def parse_csis_listing(source: Source, html: str) -> list[Event]:
         prog_a = card.css_first("a[href*='/programs/']")
         program = _clean(prog_a.text()) if prog_a else ""
 
-        events.append(
-            Event(
-                id=f"csis-{slug}",
-                title=title,
-                start=start,
-                tz=tz,
-                source=source.slug,
-                source_url=href if href.startswith("http") else BASE + href,
-                organizer=program,
-                topics=detect_topics(f"{title} {program}"),
-                raw={"program": program},
-            )
+        ev = Event(
+            id=f"csis-{slug}",
+            title=title,
+            start=start,
+            tz=tz,
+            source=source.slug,
+            source_url=href if href.startswith("http") else BASE + href,
+            organizer=program,
+            topics=detect_topics(f"{title} {program}"),
+            raw={"program": program},
         )
+        if "T" in start:
+            prov_set(ev, "time", "explicit" if re.search(r"\bE[SD]T\b", text, re.I) else "assumed_et")
+        events.append(ev)
     return events
 
 
