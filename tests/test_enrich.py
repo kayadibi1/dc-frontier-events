@@ -220,6 +220,36 @@ def test_enrich_layer2_keeps_existing_description():
     assert ev.speakers == ["Jane Roe"]                   # speakers still extracted
 
 
+def test_enrich_structured_location_and_virtual_win():
+    ev = Event(id="csis-z", title="AI", start="2026-06-04", source="csis",
+               source_url="https://www.csis.org/events/z")
+
+    async def fake_fetch(url, kind):
+        return ('<script type="application/ld+json">{"@type":"Event",'
+                '"startDate":"2026-06-04T14:30:00","location":{"@type":"VirtualLocation","url":"x"}}'
+                '</script>')
+
+    asyncio.run(enrich_layer2([ev], {"csis": 2}, fake_fetch))
+    assert ev.raw.get("virtual") is True
+    assert ev.address == ""
+
+
+def test_enrich_structured_address_overrides_hq():
+    ev = Event(id="brk-z", title="AI", start="2026-06-10", source="brookings",
+               source_url="https://www.brookings.edu/events/z")
+
+    async def fake_fetch(url, kind):
+        return ('<script type="application/ld+json">{"@type":"Event",'
+                '"location":{"@type":"Place","name":"Saul Auditorium","address":'
+                '{"@type":"PostalAddress","streetAddress":"1775 Massachusetts Ave NW",'
+                '"addressLocality":"Washington","addressRegion":"DC","postalCode":"20036"}}}</script>')
+
+    asyncio.run(enrich_layer2([ev], {"brookings": 2}, fake_fetch))
+    assert "1775 Massachusetts Ave NW" in ev.address
+    assert ev.venue_name == "Saul Auditorium"
+    assert ev.address != SOURCE_HQ["brookings"]
+
+
 def test_enrich_layer2_tolerates_fetch_failure():
     events = [Event(id="csis-2", title="X", start="2026-06-01", source="csis",
                     source_url="https://www.csis.org/events/x")]

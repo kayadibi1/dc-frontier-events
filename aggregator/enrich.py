@@ -16,12 +16,14 @@ from __future__ import annotations
 
 import asyncio
 import re
+from datetime import datetime, timezone
 
 import httpx
 from selectolax.parser import HTMLParser
 
 from .config import SOURCE_HQ
 from .models import Event
+from .structured import extract_structured
 
 # A person name: 2-4 capitalized words (allowing internal hyphen/period/').
 _NAME = re.compile(r"\b([A-Z][a-zA-Z.'-]+(?:\s+[A-Z][a-zA-Z.'-]+){1,3})\b")
@@ -197,6 +199,10 @@ async def default_fetch(url: str, source_kind: str) -> str:
         return r.text if r.status_code == 200 else ""
 
 
+def _reconcile_time(ev: Event, st: dict) -> None:
+    return None
+
+
 async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
                         fetch) -> int:
     """For each Layer-2 event with a source_url, fetch its detail page via
@@ -212,21 +218,43 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
             html = await fetch(ev.source_url, ev.source)
         except Exception:
             return 0
-        ev.speakers = extract_speakers(html or "")
+        st = extract_structured(html or "")
+
+        # Speakers: structured performers (name-filtered) win; else heuristic.
+        sp = [s for s in st.get("speakers", []) if _looks_like_name(s)]
+        ev.speakers = sp or extract_speakers(html or "")
+
         added_desc = False
         if not ev.description:
             ev.description = extract_description(html or "")
             added_desc = bool(ev.description)
-        # Fill location when missing: a scraped venue wins; else the host's HQ
-        # (better than "TBD" for these always-DC think tanks).
+
+        # Virtual: structured VirtualLocation / attendance mode is authoritative;
+        # else the regex fallback (only when structured gave no attendance signal).
+        if st.get("virtual"):
+            virtual = True
+        elif "attendance_mode" in st:        # "mixed" -> not pure virtual
+            virtual = False
+        else:
+            virtual = _is_virtual_only(html or "")
+        if virtual:
+            ev.raw["virtual"] = True
+        if st.get("attendance_mode"):
+            ev.raw["attendance_mode"] = st["attendance_mode"]
+
+        # Location: structured venue/address > scraped venue > HQ (unless virtual).
         added_loc = False
+        if st.get("venue_name") and not ev.venue_name:
+            ev.venue_name = st["venue_name"]
         if not ev.address:
-            scraped = extract_location(html or "")
+            scraped = st.get("address") or extract_location(html or "")
             if scraped:
                 ev.address = scraped
-            elif not _is_virtual_only(html or ""):
-                ev.address = SOURCE_HQ.get(ev.source, "")   # always-DC think tank HQ
+            elif not virtual:
+                ev.address = SOURCE_HQ.get(ev.source, "")
             added_loc = bool(ev.address)
+
+        _reconcile_time(ev, st)
         return 1 if (ev.speakers or added_desc or added_loc) else 0
 
     results = await asyncio.gather(*[one(e) for e in targets])
