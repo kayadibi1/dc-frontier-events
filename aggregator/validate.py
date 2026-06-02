@@ -15,6 +15,7 @@ from .enrich import _looks_like_name
 from .filter import is_dc_relevant
 from .geocode import _address_variants, _norm, load_cache, save_cache
 from .models import Event
+from .provenance import prov_clear
 from .rank import _haversine_km
 
 DATE_WINDOW_YEARS = 3
@@ -61,6 +62,7 @@ def validate_pre_filter(events: list[Event], today_iso: str) -> tuple[list[Event
             if ev.end:
                 ev.end = ev.end[:10]
             ev.tz = None
+            prov_clear(ev, "time")
         if ev.speakers:
             cleaned = [s for s in ev.speakers if _looks_like_name(s)]
             if len(cleaned) > MAX_SPEAKERS:
@@ -69,6 +71,8 @@ def validate_pre_filter(events: list[Event], today_iso: str) -> tuple[list[Event
             elif len(cleaned) != len(ev.speakers):
                 dropped.append((ev.id, "speakers", "junk-removed"))
             ev.speakers = cleaned
+            if not ev.speakers:
+                prov_clear(ev, "speakers")
         # A pure-virtual event must not carry a physical-venue (HQ) fallback.
         # No generic junk-address nulling here -- that would erase valid ZIP-less
         # venues (e.g. "Marvin Center, Washington, DC"); handled, geocode-informed,
@@ -76,6 +80,7 @@ def validate_pre_filter(events: list[Event], today_iso: str) -> tuple[list[Event
         if ev.raw.get("virtual") and ev.address:
             dropped.append((ev.id, "address", "virtual-cleared"))
             ev.address = ""
+            prov_clear(ev, "location")
         clean.append(ev)
     return clean, dropped
 
@@ -137,6 +142,7 @@ def validate_post_geocode(events: list[Event], today_iso: str, query=None,
             dropped.append((ev.id, "address", "unverified"))
             ev.raw.pop("location", None)        # mask stale text for the DC recheck
             ev.address = ""
+            prov_clear(ev, "location")
         if not is_dc_relevant(ev):
             dropped.append((ev.id, "dc", "not-dc-after-validation"))
             continue

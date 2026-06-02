@@ -109,3 +109,34 @@ def test_post_dc_recheck_excludes_nonDC_after_address_nulled(tmp_path):
     clean, dropped = validate_post_geocode([ev], T, query=lambda a: None,
                                            cache_path=str(tmp_path / "gc.json"), sleep=lambda *_: None)
     assert clean == [] and any(d[1] == "dc" for d in dropped)
+
+
+from aggregator.provenance import prov_get, prov_set
+
+
+def test_validate_clears_time_tag_on_downgrade():
+    ev = _ev(start="2026-06-10T11:00:00", tz=None)
+    prov_set(ev, "time", "assumed_et")
+    validate_pre_filter([ev], T)
+    assert prov_get(ev, "time") is None
+
+
+def test_validate_clears_location_tag_on_virtual_clear():
+    ev = _ev(address="CSIS HQ", raw={"virtual": True, "provenance": {"location": "hq"}})
+    validate_pre_filter([ev], T)
+    assert prov_get(ev, "location") is None
+
+
+def test_validate_clears_speakers_tag_when_emptied():
+    ev = _ev(speakers=["EDT Brought"])
+    prov_set(ev, "speakers", "extracted")
+    validate_pre_filter([ev], T)
+    assert ev.speakers == [] and prov_get(ev, "speakers") is None
+
+
+def test_validate_post_clears_location_tag_on_address_null(tmp_path):
+    ev = _ev(source="aic-washington", address="Nowhere Plaza", lat=None, lng=None, title="x")
+    prov_set(ev, "location", "scraped")
+    validate_post_geocode([ev], T, query=lambda a: None,
+                          cache_path=str(tmp_path / "gc.json"), sleep=lambda *_: None)
+    assert ev.address == "" and prov_get(ev, "location") is None
