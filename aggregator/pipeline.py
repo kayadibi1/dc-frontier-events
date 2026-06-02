@@ -25,7 +25,8 @@ from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
 from .enrich import default_fetch, enrich_layer2
-from .geocode import geocode_events, scrub_far_geo
+from .geocode import DEFAULT_CACHE, geocode_events, nominatim_query, scrub_far_geo
+from .validate import validate_pre_filter, validate_post_geocode
 from .fetchers import gather_all
 from .filter import apply_filters
 from .notify import build_message, deliver
@@ -58,39 +59,43 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         layer_by_source = {s.slug: s.layer for s in SOURCES}
         n_enriched = asyncio.run(enrich_layer2(raw_events, layer_by_source, default_fetch))
         print(f"[enrich] enriched {n_enriched} Layer-2 events (descriptions + speakers)")
+    raw_events, pre_dropped = validate_pre_filter(raw_events, today)
+    print(f"[validate] pre-filter: excluded "
+          f"{sum(1 for d in pre_dropped if d[1] == 'date')}, cleaned {len(pre_dropped)} field(s)")
     deduped, removed = dedupe(raw_events)
     kept, fstats = apply_filters(deduped)
 
-    # Persist for the durable archive; emit reflects THIS run's fresh fetch
-    # (we full-refresh every source each run, so `kept` is the current truth;
-    # the store accumulates history). all_events() round-trips through storage.
     store = open_store(db_path)
-    prior_ids = store.existing_ids()          # ids known before this run -> new-event diff
-    store.upsert_many(kept)
-    archived_total = store.mark_archived({e.id for e in kept})  # demote no-longer-seen rows
+    prior_ids = store.existing_ids()          # ids known before this run -> new diff
+    store.close()
+
+    # Scrub junk feed GEO BEFORE geocode so a real DC address can re-pin (B2).
+    scrub_far_geo(kept)
+    if enrich:
+        n_geo = geocode_events(kept)
+        print(f"[geocode] added coordinates to {n_geo} event(s)")
+    clean, post_dropped = validate_post_geocode(
+        kept, today, query=nominatim_query if enrich else None,
+        cache_path=DEFAULT_CACHE if enrich else None)
+    print(f"[validate] post-geocode: dropped {len(post_dropped)} field(s); "
+          f"kept {len(clean)}/{len(kept)}")
+
+    # Persist the VALIDATED active set; the store is the durable archive.
+    store = open_store(db_path)
+    store.upsert_many(clean)
+    archived_total = store.mark_archived({e.id for e in clean})
     # Prune archived events older than ~2 years to bound store growth.
     cutoff = (date.fromisoformat(today) - timedelta(days=730)).isoformat()
     pruned = store.prune(cutoff)
     roundtrip = store.all_events()
     store_total = store.count()
     store.close()
-    assert len(roundtrip) >= len(kept), "storage round-trip lost rows"
-    gone = sorted(set(prior_ids) - {e.id for e in kept})  # in store, not in this run
+    assert len(roundtrip) >= len(clean), "storage round-trip lost rows"
+    gone = sorted(set(prior_ids) - {e.id for e in clean})  # in store, not in this run
 
-    emitted = sorted(kept, key=lambda e: e.start or "")
+    emitted = sorted(clean, key=lambda e: e.start or "")
     for e in emitted:
-        e.raw["score"] = score_event(e, today)
-    # A feed can ship a junk GEO (e.g. a virtual event pinned mid-Pacific); drop
-    # any pin outside DC metro before geocoding, so a real DC address can re-pin it.
-    n_scrub = scrub_far_geo(emitted)
-    if n_scrub:
-        print(f"[geocode] scrubbed {n_scrub} out-of-DC pin(s)")
-    # Geocode addresses -> coordinates for events that lack feed GEO (scraped /
-    # think-tank events), so they get map pins. Cached on disk; only new addresses
-    # hit the network. Best-effort, after filtering so it can't change what's kept.
-    if enrich:
-        n_geo = geocode_events(emitted)
-        print(f"[geocode] added coordinates to {n_geo} event(s)")
+        e.raw["score"] = score_event(e, today)   # ephemeral; AFTER store
     big = [e for e in emitted if e.is_big_name]
     upcoming = filter_upcoming(emitted, today)
     top = top_upcoming(emitted, today, 25)
@@ -163,7 +168,9 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         "raw_events": total_raw,
         "after_dedupe": len(deduped),
         "deduped_removed": removed,
-        "kept_after_filter": len(kept),
+        "kept_after_filter": len(clean),
+        "pre_excluded": sum(1 for d in pre_dropped if d[1] == "date"),
+        "post_excluded": sum(1 for d in post_dropped if d[1] == "dc"),
         "dropped_location": fstats["dropped_location"],
         "dropped_topic": fstats["dropped_topic"],
         "dropped_admin": fstats["dropped_admin"],
@@ -200,6 +207,7 @@ def _print_summary(s: dict) -> None:
     print(f"kept after filter: {s['kept_after_filter']}  "
           f"(dropped {s['dropped_location']} loc, {s['dropped_topic']} topic, "
           f"{s['dropped_admin']} admin)")
+    print(f"validated:         pre-excluded={s['pre_excluded']} post-excluded={s['post_excluded']}")
     print(f"big-name events:   {s['big_name']}")
     print(f"new since last run:{s['new_events']}  (new big-name: {s['new_big_name']})")
     print(f"big names in DC:    {s['big_in_dc']}  (in person, upcoming)")
