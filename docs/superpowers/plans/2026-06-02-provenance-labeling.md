@@ -175,6 +175,23 @@ def test_provenance_speakers_extracted_tag():
 
     asyncio.run(enrich_layer2([ev], {"cset": 2}, fake_fetch))
     assert ev.speakers and prov_get(ev, "speakers") == "extracted"
+
+
+def test_provenance_time_structured_on_offset_win():
+    from aggregator.provenance import prov_get
+    from aggregator.enrich import _reconcile_time
+    ev = Event(id="t1", title="T", start="2026-06-10", source="brookings")
+    _reconcile_time(ev, {"start": "2026-06-10T09:00:00-04:00"})
+    assert prov_get(ev, "time") == "structured"
+
+
+def test_provenance_time_cleared_on_csis_conflict():
+    from aggregator.provenance import prov_get, prov_set
+    from aggregator.enrich import _reconcile_time
+    ev = Event(id="t2", title="T", start="2026-06-04T10:30:00-04:00", tz="EDT", source="csis")
+    prov_set(ev, "time", "assumed_et")
+    _reconcile_time(ev, {"start": "2026-06-04T20:00:00"})   # conflict -> downgrade
+    assert prov_get(ev, "time") is None
 ```
 
 - [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_enrich.py -k provenance -q` → FAIL
@@ -216,12 +233,10 @@ Replace the location block:
 with:
 ```python
         if not ev.address:
-            structured_addr = st.get("address")
-            scraped_addr = extract_location(html or "")
-            if structured_addr:
+            if structured_addr := st.get("address"):          # lazy: scraped only if needed
                 ev.address = structured_addr
                 prov_set(ev, "location", "structured")
-            elif scraped_addr:
+            elif scraped_addr := extract_location(html or ""):
                 ev.address = scraped_addr
                 prov_set(ev, "location", "scraped")
             elif not virtual:
@@ -267,25 +282,35 @@ def test_provenance_time_assumed_vs_explicit():
 
 - [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_csis.py -k provenance -q` → FAIL
 
-- [ ] **Step 3: Edit `csis.py`**
+- [ ] **Step 3: Edit `csis.py`** (apply-clean — current code is inline)
 
-Add import:
+Add import (after the other `..` imports):
 ```python
 from ..provenance import prov_set
 ```
-In `parse_csis_listing`, where the `Event(...)` is built from `start, tz = _parse_when(text)` (the `text` is the cleaned card text already passed to `_parse_when`), after constructing the event and before/after appending, tag the time. Concretely, right after `start, tz = _parse_when(text)` and the `if not start: continue`, compute:
+The current code is `start, tz = _parse_when(_clean(card.text()))` then `events.append(Event(...))` inline. Change the parse line to capture `text`:
 ```python
+        text = _clean(card.text())
+        start, tz = _parse_when(text)
+```
+and change the inline append to build `ev` first, tag it, then append:
+```python
+        ev = Event(
+            id=f"csis-{slug}",
+            title=title,
+            start=start,
+            tz=tz,
+            source=source.slug,
+            source_url=href if href.startswith("http") else BASE + href,
+            organizer=program,
+            topics=detect_topics(f"{title} {program}"),
+            raw={"program": program},
+        )
         if "T" in start:
-            ev_time_tag = "explicit" if re.search(r"E[SD]T", text) else "assumed_et"
-        else:
-            ev_time_tag = None
+            prov_set(ev, "time", "explicit" if re.search(r"\bE[SD]T\b", text, re.I) else "assumed_et")
+        events.append(ev)
 ```
-and after the event is appended (you have the `Event` object — capture it as `ev = Event(...)` then `events.append(ev)`), do:
-```python
-        if ev_time_tag:
-            prov_set(ev, "time", ev_time_tag)
-```
-(`text` here is the `_clean(card.text())` value already computed for `_parse_when`; `re` is already imported in csis.py.)
+(`re` is already imported in csis.py.)
 
 - [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_csis.py -q` → PASS
 
@@ -325,6 +350,14 @@ def test_validate_clears_speakers_tag_when_emptied():
     prov_set(ev, "speakers", "extracted")
     validate_pre_filter([ev], T)
     assert ev.speakers == [] and prov_get(ev, "speakers") is None
+
+
+def test_validate_post_clears_location_tag_on_address_null(tmp_path):
+    ev = _ev(source="aic-washington", address="Nowhere Plaza", lat=None, lng=None, title="x")
+    prov_set(ev, "location", "scraped")
+    validate_post_geocode([ev], T, query=lambda a: None,
+                          cache_path=str(tmp_path / "gc.json"), sleep=lambda *_: None)
+    assert ev.address == "" and prov_get(ev, "location") is None
 ```
 
 - [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_validate.py -k "clears" -q` → FAIL
@@ -355,29 +388,50 @@ git commit -m "feat(validate): clear stale provenance tags when fields are mutat
 - [ ] **Step 1: Failing tests** (append to `tests/test_emit.py`):
 
 ```python
-def test_ics_location_suffix_and_notes_for_hq():
+def test_ics_location_suffix_and_notes_for_hq(tmp_path):
     from icalendar import Calendar
     from aggregator.provenance import prov_set
     ev = Event(id="h", title="Panel", start="2026-06-10", source="csis",
                address="CSIS, 1616 Rhode Island Ave NW, Washington, DC 20036")
     prov_set(ev, "location", "hq")
-    write_ics([ev], "out_test/p.ics", "2026-06-01")
-    cal = Calendar.from_ical(open("out_test/p.ics", "rb").read())
-    ve = next(iter(cal.walk("VEVENT")))
+    p = str(tmp_path / "p.ics")
+    write_ics([ev], p, "2026-06-01")
+    ve = next(iter(Calendar.from_ical(open(p, "rb").read()).walk("VEVENT")))
     assert "approx" in str(ve.get("location"))
     assert "host venue" in str(ve.get("description"))
 
 
-def test_ics_no_suffix_for_scraped():
+def test_ics_no_suffix_for_scraped(tmp_path):
     from icalendar import Calendar
     from aggregator.provenance import prov_set
     ev = Event(id="s", title="Panel", start="2026-06-10", source="brookings",
                address="Saul Auditorium, 1775 Massachusetts Ave NW, Washington, DC 20036")
     prov_set(ev, "location", "scraped")
-    write_ics([ev], "out_test/s.ics", "2026-06-01")
-    cal = Calendar.from_ical(open("out_test/s.ics", "rb").read())
-    ve = next(iter(cal.walk("VEVENT")))
+    p = str(tmp_path / "s.ics")
+    write_ics([ev], p, "2026-06-01")
+    ve = next(iter(Calendar.from_ical(open(p, "rb").read()).walk("VEVENT")))
     assert "approx" not in str(ve.get("location"))
+
+
+def test_li_map_marker_for_hq():
+    from aggregator.emit import _li
+    from aggregator.provenance import prov_set
+    ev = Event(id="m", title="Panel", start="2026-06-10", source="csis",
+               address="CSIS HQ", lat=38.9, lng=-77.04)
+    prov_set(ev, "location", "hq")
+    assert "📍approx" in _li(ev)
+
+
+def test_json_carries_provenance(tmp_path):
+    import json
+    from aggregator.emit import write_json
+    from aggregator.provenance import prov_set
+    ev = Event(id="j", title="x", start="2026-06-10", source="csis", address="HQ")
+    prov_set(ev, "location", "hq")
+    p = str(tmp_path / "e.json")
+    write_json([ev], p)
+    rec = json.load(open(p, encoding="utf-8"))[0]
+    assert rec["raw"]["provenance"]["location"] == "hq"
 ```
 
 - [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_emit.py -k "suffix or notes" -q` → FAIL
