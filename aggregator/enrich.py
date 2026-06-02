@@ -23,6 +23,7 @@ from selectolax.parser import HTMLParser
 
 from .config import SOURCE_HQ
 from .models import Event
+from .provenance import prov_clear, prov_set
 from .structured import extract_structured
 
 # A person name: 2-4 capitalized words (allowing internal hyphen/period/').
@@ -214,6 +215,7 @@ def _reconcile_time(ev: Event, st: dict) -> None:
         return
     ev.raw["start_structured"] = s
     if sdt.tzinfo is not None:                        # authoritative
+        prov_set(ev, "time", "structured")
         ev.start = s
         if st.get("end"):
             ev.end = st["end"]
@@ -229,6 +231,7 @@ def _reconcile_time(ev: Event, st: dict) -> None:
     struct_utc = sdt.replace(tzinfo=timezone.utc)     # CSIS naive == UTC
     if struct_utc != listing.astimezone(timezone.utc):
         ev.raw["start_conflict"] = True
+        prov_clear(ev, "time")
         ev.start = ev.start[:10]
         ev.end = ev.end[:10] if ev.end else ev.end
         ev.tz = None
@@ -261,8 +264,14 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
         st = extract_structured(html or "")
 
         # Speakers: structured performers (name-filtered) win; else heuristic.
-        sp = [s for s in st.get("speakers", []) if _looks_like_name(s)]
-        ev.speakers = sp or extract_speakers(html or "")
+        structured_spk = [s for s in st.get("speakers", []) if _looks_like_name(s)]
+        if structured_spk:
+            ev.speakers = structured_spk
+            prov_set(ev, "speakers", "structured")
+        else:
+            ev.speakers = extract_speakers(html or "")
+            if ev.speakers:
+                prov_set(ev, "speakers", "extracted")
 
         added_desc = False
         if not ev.description:
@@ -287,11 +296,16 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
         if st.get("venue_name") and not ev.venue_name:
             ev.venue_name = st["venue_name"]
         if not ev.address:
-            scraped = st.get("address") or extract_location(html or "")
-            if scraped:
-                ev.address = scraped
+            if structured_addr := st.get("address"):
+                ev.address = structured_addr
+                prov_set(ev, "location", "structured")
+            elif scraped_addr := extract_location(html or ""):
+                ev.address = scraped_addr
+                prov_set(ev, "location", "scraped")
             elif not virtual:
                 ev.address = SOURCE_HQ.get(ev.source, "")
+                if ev.address:
+                    prov_set(ev, "location", "hq")
             added_loc = bool(ev.address)
 
         _reconcile_time(ev, st)

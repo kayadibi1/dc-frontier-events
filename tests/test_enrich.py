@@ -276,6 +276,61 @@ def test_reconcile_offset_aware_structured_wins():
     assert ev.start == "2026-06-10T09:00:00-04:00" and ev.end == "2026-06-10T10:00:00-04:00"
 
 
+def test_provenance_location_hq_tag():
+    from aggregator.provenance import prov_get
+    ev = Event(id="csis-p", title="AI", start="2026-06-04", source="csis",
+               source_url="https://www.csis.org/events/p")
+
+    async def fake_fetch(url, kind):
+        return "<p>nothing structured, no venue</p>"
+
+    asyncio.run(enrich_layer2([ev], {"csis": 2}, fake_fetch))
+    assert ev.address == SOURCE_HQ["csis"] and prov_get(ev, "location") == "hq"
+
+
+def test_provenance_location_structured_tag():
+    from aggregator.provenance import prov_get
+    ev = Event(id="brk-p", title="AI", start="2026-06-10", source="brookings",
+               source_url="https://www.brookings.edu/events/p")
+
+    async def fake_fetch(url, kind):
+        return ('<script type="application/ld+json">{"@type":"Event","location":'
+                '{"@type":"Place","address":{"@type":"PostalAddress","streetAddress":"1 A St",'
+                '"addressLocality":"Washington","addressRegion":"DC","postalCode":"20001"}}}</script>')
+
+    asyncio.run(enrich_layer2([ev], {"brookings": 2}, fake_fetch))
+    assert prov_get(ev, "location") == "structured"
+
+
+def test_provenance_speakers_extracted_tag():
+    from aggregator.provenance import prov_get
+    ev = Event(id="cset-p", title="AI", start="2026-06-10", source="cset",
+               source_url="https://cset.georgetown.edu/event/p")
+
+    async def fake_fetch(url, kind):
+        return "<article><p>A discussion featuring Jane Roe and John Doe.</p></article>"
+
+    asyncio.run(enrich_layer2([ev], {"cset": 2}, fake_fetch))
+    assert ev.speakers and prov_get(ev, "speakers") == "extracted"
+
+
+def test_provenance_time_structured_on_offset_win():
+    from aggregator.provenance import prov_get
+    from aggregator.enrich import _reconcile_time
+    ev = Event(id="t1", title="T", start="2026-06-10", source="brookings")
+    _reconcile_time(ev, {"start": "2026-06-10T09:00:00-04:00"})
+    assert prov_get(ev, "time") == "structured"
+
+
+def test_provenance_time_cleared_on_csis_conflict():
+    from aggregator.provenance import prov_get, prov_set
+    from aggregator.enrich import _reconcile_time
+    ev = Event(id="t2", title="T", start="2026-06-04T10:30:00-04:00", tz="EDT", source="csis")
+    prov_set(ev, "time", "assumed_et")
+    _reconcile_time(ev, {"start": "2026-06-04T20:00:00"})
+    assert prov_get(ev, "time") is None
+
+
 def test_enrich_layer2_tolerates_fetch_failure():
     events = [Event(id="csis-2", title="X", start="2026-06-01", source="csis",
                     source_url="https://www.csis.org/events/x")]
