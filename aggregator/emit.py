@@ -18,6 +18,7 @@ from icalendar import Event as IcsEvent
 
 from .config import SOURCES
 from .models import Event
+from .provenance import marker, notes
 
 PRODID = "-//dc-frontier-events//EN"
 _LAYER = {s.slug: s.layer for s in SOURCES}
@@ -106,7 +107,7 @@ def write_ics(events: list[Event], path: str, today_iso: str | None = None,
         if end is not None:
             ie.add("dtend", _to_utc(end))
         if ev.address:
-            ie.add("location", ev.address)
+            ie.add("location", ev.address + (" (approx · host venue)" if marker(ev) else ""))
         if ev.lat is not None and ev.lng is not None:
             ie.add("geo", (ev.lat, ev.lng))
         if ev.topics:
@@ -119,6 +120,9 @@ def write_ics(events: list[Event], path: str, today_iso: str | None = None,
         if ev.source_url:
             ie.add("url", ev.source_url)
             desc = f"{desc}\n\nSource: {ev.source_url}".strip()
+        prov_notes = notes(ev)
+        if prov_notes:
+            desc = f"{desc}\n\nNotes: {'; '.join(prov_notes)}".strip()
         ie.add("description", desc)
         # A 1-day-before reminder, only for upcoming events.
         if today_iso and (ev.start or "")[:10] >= today_iso:
@@ -305,6 +309,8 @@ def _li(ev: Event) -> str:
               if ev.lat is not None and ev.lng is not None else "")
     star = '<span class="star">★</span> ' if ev.is_big_name else ""
     meta = f"{date} · {_h(src)} · {_h(topics) or '—'}"
+    if marker(ev):
+        meta += f" · {marker(ev)}"
     if score is not None:
         meta += f" · ●{score}"
     # The event name links to its source/detail page (new tab). Falls back to

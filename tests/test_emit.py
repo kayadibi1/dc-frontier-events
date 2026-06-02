@@ -137,3 +137,49 @@ def test_ics_still_parses_with_subscription_headers(tmp_path):
     cal = Calendar.from_ical(p.read_bytes())
     assert n == 2 and len(list(cal.walk("VEVENT"))) == 2
     assert str(cal.get("x-wr-calname"))  # present and non-empty
+
+
+def test_ics_location_suffix_and_notes_for_hq(tmp_path):
+    from icalendar import Calendar
+    from aggregator.provenance import prov_set
+    ev = Event(id="h", title="Panel", start="2026-06-10", source="csis",
+               address="CSIS, 1616 Rhode Island Ave NW, Washington, DC 20036")
+    prov_set(ev, "location", "hq")
+    p = str(tmp_path / "p.ics")
+    write_ics([ev], p, "2026-06-01")
+    ve = next(iter(Calendar.from_ical(open(p, "rb").read()).walk("VEVENT")))
+    assert "approx" in str(ve.get("location"))
+    assert "host venue" in str(ve.get("description"))
+
+
+def test_ics_no_suffix_for_scraped(tmp_path):
+    from icalendar import Calendar
+    from aggregator.provenance import prov_set
+    ev = Event(id="s", title="Panel", start="2026-06-10", source="brookings",
+               address="Saul Auditorium, 1775 Massachusetts Ave NW, Washington, DC 20036")
+    prov_set(ev, "location", "scraped")
+    p = str(tmp_path / "s.ics")
+    write_ics([ev], p, "2026-06-01")
+    ve = next(iter(Calendar.from_ical(open(p, "rb").read()).walk("VEVENT")))
+    assert "approx" not in str(ve.get("location"))
+
+
+def test_li_map_marker_for_hq():
+    from aggregator.emit import _li
+    from aggregator.provenance import prov_set
+    ev = Event(id="m", title="Panel", start="2026-06-10", source="csis",
+               address="CSIS HQ", lat=38.9, lng=-77.04)
+    prov_set(ev, "location", "hq")
+    assert "📍approx" in _li(ev)
+
+
+def test_json_carries_provenance(tmp_path):
+    import json
+    from aggregator.emit import write_json
+    from aggregator.provenance import prov_set
+    ev = Event(id="j", title="x", start="2026-06-10", source="csis", address="HQ")
+    prov_set(ev, "location", "hq")
+    p = str(tmp_path / "e.json")
+    write_json([ev], p)
+    rec = json.load(open(p, encoding="utf-8"))[0]
+    assert rec["raw"]["provenance"]["location"] == "hq"
