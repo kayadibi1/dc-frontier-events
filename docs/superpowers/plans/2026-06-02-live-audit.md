@@ -126,6 +126,21 @@ def test_location_note_for_hq_with_live_venue():
             '"streetAddress":"9 X St","addressLocality":"Washington","addressRegion":"DC","postalCode":"20001"}}}</script>')
     row = _run(ev, html)
     assert "live venue available" in row["location_note"]
+
+
+def test_date_only_live_no_false_mismatch():
+    ev = Event(id="9", title="P", start="2026-06-10T10:00:00-04:00", source="csis", source_url="http://x")
+    row = _run(ev, JSONLD.format(name="P", start="2026-06-10"))   # live is date-only
+    assert row["date"] == "match"
+
+
+def test_location_note_venue_only():
+    ev = Event(id="10", title="P", start="2026-06-10", source="csis", source_url="http://x", address="CSIS HQ")
+    prov_set(ev, "location", "hq")
+    html = ('<script type="application/ld+json">{"@type":"Event","name":"P","startDate":"2026-06-10",'
+            '"location":{"@type":"Place","name":"Real Hall"}}</script>')
+    row = _run(ev, html)
+    assert "Real Hall" in row["location_note"]
 ```
 
 - [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_audit.py -q` → FAIL (no module)
@@ -141,6 +156,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from html import unescape
 
 from selectolax.parser import HTMLParser
 
@@ -156,23 +172,30 @@ _SUFFIX = re.compile(r"\s*[|\-–—]\s*(CSIS|Brookings|CNAS|Atlantic Council|CS
 
 def _og_title(html: str) -> str:
     node = HTMLParser(html or "").css_first('meta[property="og:title"]')
-    return _SUFFIX.sub("", (node.attributes.get("content") or "").strip()) if node else ""
+    if not node:
+        return ""
+    return _SUFFIX.sub("", unescape((node.attributes.get("content") or "")).strip())
 
 
 def _norm_title(s: str) -> str:
     return _WS.sub(" ", _PUNCT.sub(" ", (s or "").casefold())).strip()
 
 
-def _audit_date(stored: str, live: str | None) -> str:
+def _audit_date(ev: Event, live: str | None) -> str:
+    stored = ev.start or ""
     if not live:
         return "unverifiable"
+    if "T" not in live:                      # live date-only -> compare dates directly
+        a, b = stored[:10], live[:10]
+        return "match" if a == b else f"mismatch ({a} -> {b})"
     try:
         sdt = datetime.fromisoformat(stored)
         ldt = datetime.fromisoformat(live)
     except ValueError:
-        a, b = (stored or "")[:10], (live or "")[:10]
+        a, b = stored[:10], live[:10]
         return "match" if a == b else f"mismatch ({a} -> {b})"
-    if ldt.tzinfo is None and sdt.tzinfo is not None:
+    # CSIS emits naive UTC; ONLY then attach UTC and convert to the stored offset.
+    if ev.source == "csis" and ldt.tzinfo is None and sdt.tzinfo is not None:
         ldt = ldt.replace(tzinfo=timezone.utc).astimezone(sdt.tzinfo)
     a, b = sdt.date().isoformat(), ldt.date().isoformat()
     return "match" if a == b else f"mismatch ({a} -> {b})"
@@ -192,7 +215,7 @@ async def audit_events(events: list[Event], fetch, today_iso: str) -> list[dict]
             continue
         st = extract_structured(html)
         # date
-        date_verdict = _audit_date(ev.start or "", st.get("start"))
+        date_verdict = _audit_date(ev, st.get("start"))
         # title
         live_title = st.get("name") or _og_title(html)
         if not live_title:
@@ -203,8 +226,8 @@ async def audit_events(events: list[Event], fetch, today_iso: str) -> list[dict]
             title_verdict = "mismatch"
         # location note
         note = ""
-        if prov_get(ev, "location") == "hq" and st.get("address"):
-            note = f"live venue available: {st.get('venue_name') or st['address']}"
+        if prov_get(ev, "location") == "hq" and (st.get("venue_name") or st.get("address")):
+            note = f"live venue available: {st.get('venue_name') or st.get('address')}"
         rows.append({"id": ev.id, "source": ev.source, "title": ev.title,
                      "status": "read", "date": date_verdict,
                      "title_verdict": title_verdict, "location_note": note})
@@ -234,11 +257,12 @@ def test_render_audit_md_escapes_and_summarizes():
          "date": "match", "title_verdict": "mismatch", "location_note": ""},
         {"id": "2", "source": "cnas", "title": "C", "status": "unreadable",
          "date": "", "title_verdict": "", "location_note": ""},
+        {"id": "3", "source": "csis", "title": "D", "status": "read",
+         "date": "unverifiable", "title_verdict": "unverifiable", "location_note": ""},
     ]
     md = render_audit_md(rows, "2026-06-02")
     assert "A \\| B" in md                  # pipe escaped so the table doesn't break
-    assert "mismatch" in md and "unreadable" in md
-    assert "1 mismatch" in md and "1 unreadable" in md
+    assert "1 mismatch" in md and "1 unverifiable" in md and "1 unreadable" in md
 ```
 
 - [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_audit.py -k render -q` → FAIL
@@ -264,9 +288,12 @@ def _cell(s: str) -> str:
 def render_audit_md(rows: list[dict], today_iso: str) -> str:
     n_mis = sum(1 for r in rows if "mismatch" in r["date"] or r["title_verdict"] == "mismatch")
     n_unread = sum(1 for r in rows if r["status"] == "unreadable")
+    n_unver = sum(1 for r in rows if r["status"] == "read"
+                  and "mismatch" not in r["date"] and r["title_verdict"] != "mismatch"
+                  and "unverifiable" in (r["date"], r["title_verdict"]))
     out = ["# Live Event Audit",
            f"_Generated {today_iso}. {len(rows)} event(s) audited; "
-           f"{n_mis} mismatch, {n_unread} unreadable._", "",
+           f"{n_mis} mismatch, {n_unver} unverifiable, {n_unread} unreadable._", "",
            "| Source | Event | Date | Title | Note |", "|---|---|---|---|---|"]
     for r in rows:
         if r["status"] == "unreadable":
@@ -330,11 +357,15 @@ and after the `if args.email:` block add:
 [Unit]
 Description=DC Frontier Events — weekly live audit
 After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
+User=emersus
 WorkingDirectory=/opt/dc-frontier-events
-ExecStart=/usr/bin/python3 -m aggregator --audit
+EnvironmentFile=/etc/dc-frontier-events.env
+ExecStart=/opt/dc-frontier-events/.venv/bin/python -m aggregator --audit --out /opt/dc-frontier-events/out
+TimeoutStartSec=600
 ```
 **Create `deploy/dc-frontier-events-audit.timer`**
 ```ini
@@ -362,8 +393,8 @@ git commit -m "feat(audit): render_audit_md + run_audit + --audit CLI + weekly t
 ### Task 4: Verify + merge
 
 - [ ] **Step 1: Full suite** — `python -m pytest -q` → all green.
-- [ ] **Step 2: Offline CLI smoke** — `python -m aggregator --audit --out out_e2e --db data/events.db` (uses whatever store exists; if empty, it prints 0 eligible and writes an empty-table audit.md — that's fine). Confirm `out_e2e/audit.md` is written and the pipeline/feeds are untouched.
-- [ ] **Step 3: Clean** — `rm -rf out_e2e`
+- [ ] **Step 2: Offline CLI smoke (empty DB → no network)** — `python -m aggregator --audit --out out_e2e --db data/audit-smoke-empty.db` (empty store → 0 eligible, writes an empty-table audit.md, no fetch). Confirm `out_e2e/audit.md` exists and the pipeline/feeds are untouched.
+- [ ] **Step 3: Clean** — `rm -rf out_e2e data/audit-smoke-empty.db`
 - [ ] **Step 4: Merge** — `git switch master && git merge --ff-only sp4-audit && git push origin master`
 
 ---
