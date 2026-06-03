@@ -42,8 +42,12 @@ def _parse_date(text: str) -> str | None:
     ('June 3, 2026'), same-month range ('June 3 - 4, 2026') and cross-month range
     ('June 30 - July 1, 2026') by taking the FIRST month/day and the year."""
     md = _MONTH_DAY.search(text)
-    yr = _YEAR.search(text)
-    if not md or not yr:
+    if not md:
+        return None
+    # Take the year that FOLLOWS the month/day, not the first 4-digit year in the
+    # card -- a year in the TITLE ("The 2030 Project") must not override the date.
+    yr = _YEAR.search(text, md.end())
+    if not yr:
         return None
     try:
         return datetime.strptime(

@@ -1,7 +1,7 @@
 import os
 
 from aggregator.config import Source
-from aggregator.fetchers.nasem import parse_nasem_listing
+from aggregator.fetchers.nasem import _parse_date, parse_nasem_listing
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures", "nasem_listing.html")
 SRC = Source("nasem", "National Academies", "nasem", 2, False,
@@ -30,6 +30,15 @@ def test_events_well_formed():
 def test_unique_ids():
     evs = _events()
     assert len({e.id for e in evs}) == len(evs)
+
+
+def test_date_year_not_taken_from_title():
+    # a stray year in the title must not override the real (date-li) year
+    assert _parse_date("The 2030 Project Workshop June 5, 2026") == "2026-06-05"
+
+
+def test_date_cross_month_range_uses_first_day():
+    assert _parse_date("June 30 - July 1, 2026") == "2026-06-30"
 
 
 def test_ai_workshop_present_and_on_topic():
