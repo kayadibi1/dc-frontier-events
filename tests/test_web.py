@@ -46,6 +46,20 @@ def test_index_has_signup_form_and_attribution():
     assert "Sidar Aslanoglu" in html              # curator attribution
 
 
+def test_index_has_social_meta_and_jsonld():
+    html = render_index([_ev()], "2026-06-02")
+    assert 'property="og:title"' in html
+    assert 'name="twitter:card"' in html
+    assert 'application/ld+json' in html
+    assert '"ItemList"' in html and '"Event"' in html
+
+
+def test_jsonld_neutralizes_script_breakout():
+    html = render_index([_ev(title="x</script><script>alert(1)//")], "2026-06-02")
+    # the </script> in a title must be escaped so it can't close the JSON-LD block
+    assert "</script><script>alert(1)" not in html
+
+
 def test_gcal_url_allday_and_timed_utc():
     allday = _gcal_url(_ev(start="2026-06-16"))
     # date-only -> all-day range, NOT a fabricated midnight 1-hour event (Codex finding)

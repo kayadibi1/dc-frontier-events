@@ -10,6 +10,7 @@ data (textContent / data-attributes only), matching emit.py's hardening.
 """
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import quote_plus
 from xml.sax.saxutils import escape
@@ -296,6 +297,27 @@ def _card(ev: Event, today: date) -> str:
         f'<div class="meta"><span class="src">{src}</span>{meta}</div>{addrow}</div></article>')
 
 
+def _jsonld(events: list[Event]) -> str:
+    """A schema.org ItemList of upcoming events for SEO / rich results. Built with
+    json.dumps (proper JSON escaping) and `</`-escaped so an event title can never
+    break out of the <script> context."""
+    elems = []
+    for i, ev in enumerate(events[:50], 1):
+        item = {"@type": "Event", "name": ev.title, "startDate": ev.start,
+                "url": _safe_url(ev.source_url) or f"https://{DOMAIN}/"}
+        if ev.address:
+            item["location"] = {"@type": "Place",
+                                "name": ev.venue_name or ev.address.split(",")[0],
+                                "address": ev.address}
+        elif _is_virtual(ev):
+            item["location"] = {"@type": "VirtualLocation", "url": item["url"]}
+        elems.append({"@type": "ListItem", "position": i, "item": item})
+    data = {"@context": "https://schema.org", "@type": "ItemList",
+            "name": "DC AI & Frontier Tech Events", "itemListElement": elems}
+    safe = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    return f'<script type="application/ld+json">{safe}</script>'
+
+
 def render_index(events: list[Event], today_iso: str, summary: dict | None = None) -> str:
     summary = summary or {}
     today = date.fromisoformat(today_iso)
@@ -330,12 +352,27 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
     gcal_all = ("https://calendar.google.com/calendar/r?cid="
                 + quote_plus(f"webcal://{DOMAIN}/events-upcoming.ics"))
 
+    desc = ("A curated, deduplicated, ranked radar of AI, semiconductor and "
+            "frontier-tech events across the Washington DC metro.")
+    social = (
+        f'<meta property="og:title" content="DC AI &amp; Frontier Tech Events">'
+        f'<meta property="og:description" content="{_h(desc)}">'
+        f'<meta property="og:type" content="website">'
+        f'<meta property="og:url" content="https://{DOMAIN}/">'
+        f'<meta property="og:image" content="https://{DOMAIN}/favicon.svg">'
+        f'<meta name="twitter:card" content="summary">'
+        f'<meta name="twitter:title" content="DC AI &amp; Frontier Tech Events">'
+        f'<meta name="twitter:description" content="{_h(desc)}">')
+    jsonld = _jsonld(upcoming)
+
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>DC AI &amp; Frontier Tech Events</title>
 <meta name="description" content="A curated, deduplicated, ranked radar of AI, semiconductor and frontier-tech events across the Washington DC metro — think tanks, universities, and the builder community.">
+{social}
+{jsonld}
 <style>{_CARD_CSS}</style></head>
 <body>
 <div class="hero"><div class="hero-in">
