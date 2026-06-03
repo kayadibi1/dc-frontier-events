@@ -21,10 +21,13 @@ from .csis import fetch_csis
 from .cset import fetch_cset
 from .ics import fetch_ics
 from .itif import fetch_itif
+from .jsrender import fetch_jsrender
 from .luma import fetch_luma
 from .nasem import fetch_nasem
 from .nist import fetch_nist
 from .umdcs import fetch_umdcs
+from .watchlist import fetch_watchlist
+from ..render import close_render
 
 ADAPTERS = {
     "luma": fetch_luma,
@@ -40,6 +43,8 @@ ADAPTERS = {
     "nasem": fetch_nasem,
     "umdcs": fetch_umdcs,
     "congress": fetch_congress,
+    "jsrender": fetch_jsrender,
+    "watchlist": fetch_watchlist,
 }
 
 
@@ -82,4 +87,7 @@ async def gather_all(sources: list[Source]) -> list[SourceResult]:
             return SourceResult(src, [], None, f"no adapter for kind={src.kind!r}")
         return await _fetch_with_retry(src, fn)
 
-    return list(await asyncio.gather(*[one(s) for s in sources]))
+    try:
+        return list(await asyncio.gather(*[one(s) for s in sources]))
+    finally:
+        await close_render()    # close the shared headless browser in this same loop
