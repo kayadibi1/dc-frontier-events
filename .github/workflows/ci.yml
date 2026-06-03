@@ -24,5 +24,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
+      - name: Install headless Chromium (for the render engine test)
+        run: python -m playwright install --with-deps chromium
       - name: Run test suite
         run: python -m pytest -q
