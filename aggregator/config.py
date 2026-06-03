@@ -44,6 +44,16 @@ LUMA_SOURCES = [
     Source("ai", "Global AI (Luma)", "luma", 1, False, cal_id="cal-nyk2WcWIv2CFmq8"),
 ]
 
+# Layer 1 — Meetup groups (per-group public iCal export). DC-specific data/AI
+# communities; geo-authority still drops any stray non-DC event. The .ics carries
+# the venue, so on-topic DC meetups pin on the map.
+MEETUP_SOURCES = [
+    Source("meetup-dsdc", "Data Science DC", "ics", 1, True,
+           url="https://www.meetup.com/data-science-dc/events/ical/"),
+    Source("meetup-dataviz", "Data Visualization DC", "ics", 1, True,
+           url="https://www.meetup.com/data-visualization-dc/events/ical/"),
+]
+
 # Layer 2 — policy / big-name (the high-signal tier). HTML scrape behind a WAF,
 # so the adapter uses curl_cffi (browser TLS impersonation). CSET is a DC
 # institution (125/500 ... NW, Washington DC) -> dc_curated.
@@ -64,6 +74,21 @@ CSET_SOURCES = [
     # dc_curated; kept only via a real DC venue/text so a Boulder event can't slip
     # in. Detail pages carry schema.org Event JSON-LD (enriched via structured.py).
     Source("nist", "NIST", "nist", 2, False, url="https://www.nist.gov/news-events/events"),
+    # ITIF (Information Technology & Innovation Foundation) HQ is in DC (700 K St
+    # NW); WAF -> curl_cffi. A top AI/semiconductor/compute tech-policy shop. Its
+    # events page is a Next.js app -- the full slate is embedded as JSON in
+    # __NEXT_DATA__ (no card-scraping). Detail pages carry og:description.
+    Source("itif", "ITIF", "itif", 2, True, url="https://itif.org/events/"),
+    # CDT (Center for Democracy & Technology) HQ is in DC (1401 K St NW);
+    # httpx-accessible. AI governance / kids-online-safety / privacy policy. Clean
+    # h-event microformat listing (tz-aware dt-start). The topic gate drops its
+    # off-topic / non-DC (e.g. EU/Brussels) items.
+    Source("cdt", "CDT", "cdt", 2, True, url="https://cdt.org/events/"),
+    # National Academies (NASEM): high-signal AI/computing/semiconductor studies &
+    # workshops, often at its DC venues but ALSO Irvine CA -> NOT dc_curated (kept
+    # only via a real DC venue/text). curl_cffi. Listing cards: a[href*='/event/'].
+    Source("nasem", "National Academies", "nasem", 2, False,
+           url="https://www.nationalacademies.org/events"),
 ]
 
 # Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic
@@ -77,7 +102,7 @@ UNIVERSITY_SOURCES = [
            url="https://events.howard.edu/calendar.ics"),
 ]
 
-SOURCES = LUMA_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
+SOURCES = LUMA_SOURCES + MEETUP_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
 
 
 # Topic relevance. Canonical topic -> regex (case-insensitive, word-boundaried
@@ -85,8 +110,9 @@ SOURCES = LUMA_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
 TOPIC_PATTERNS = {
     "ai": r"\bai\b|\bartificial intelligence\b|\ba\.i\.\b",
     "ml": r"\bml\b|\bmachine learning\b",
-    "llm": r"\bllms?\b|large language model|\bgpt\b|generative ai|gen-?ai",
-    "deep-learning": r"deep learning|neural network|\bnlp\b|computer vision|transformer",
+    "llm": (r"\bllms?\b|large language model|\bgpt\b|generative ai|gen-?ai|"
+            r"chatbots?|foundation models?|\bai agents?\b|agentic ai"),
+    "deep-learning": r"deep learning|neural network|\bnlp\b|computer vision|transformer|multimodal",
     "data-science": r"data science|data scientist|\banalytics\b|data engineer|big data|\bdataset\b",
     "semiconductor": r"semiconductor|\bchips?\b|fab(rication)?\b|foundry|\btsmc\b|wafer|\basml\b",
     # NB: bare "accelerat" was removed — it matched "accelerated <degree>" in
@@ -198,6 +224,8 @@ SOURCE_HQ = {
     "cnas": "CNAS, 1701 Pennsylvania Ave NW, Washington, DC 20006",
     "atlanticcouncil": "Atlantic Council, 1400 L St NW, Washington, DC 20005",
     "cset": "CSET, Georgetown University, Washington, DC",
+    "itif": "ITIF, 700 K St NW, Suite 600, Washington, DC 20001",
+    "cdt": "Center for Democracy & Technology, 1401 K St NW, Suite 200, Washington, DC 20005",
 }
 
 # DC-policy-ecosystem org names (the watchlist's institutional tier). These are

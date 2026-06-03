@@ -14,11 +14,14 @@ from ..config import Source
 from .atlanticcouncil import fetch_atlanticcouncil
 from .base import SourceResult
 from .brookings import fetch_brookings
+from .cdt import fetch_cdt
 from .cnas import fetch_cnas
 from .csis import fetch_csis
 from .cset import fetch_cset
 from .ics import fetch_ics
+from .itif import fetch_itif
 from .luma import fetch_luma
+from .nasem import fetch_nasem
 from .nist import fetch_nist
 
 ADAPTERS = {
@@ -30,6 +33,9 @@ ADAPTERS = {
     "cnas": fetch_cnas,
     "atlanticcouncil": fetch_atlanticcouncil,
     "nist": fetch_nist,
+    "itif": fetch_itif,
+    "cdt": fetch_cdt,
+    "nasem": fetch_nasem,
 }
 
 

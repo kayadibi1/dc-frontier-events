@@ -5,6 +5,7 @@ concrete counts at each stage. Returns a summary dict (also used by tests).
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import date, datetime, timedelta, timezone
 
 import json as _json
@@ -24,11 +25,13 @@ from .deadline_fetch import fetch_deadline_info
 from .dedupe import dedupe
 from .digest import build_digest, render_html
 from .emit import filter_upcoming, write_ics, write_json, write_map, write_rss
-from .enrich import default_fetch, enrich_layer2
+from .enrich import default_fetch, enrich_layer2, recompute_topics
 from .geocode import DEFAULT_CACHE, geocode_events, nominatim_query, scrub_far_geo
 from .validate import validate_pre_filter, validate_post_geocode
 from .fetchers import gather_all
 from .filter import apply_filters
+from .health import load_health, render_status_html, update_health, write_health
+from .web import render_index
 from .notify import build_message, deliver
 from .rank import score_event, top_upcoming
 from .storage import open_store
@@ -54,11 +57,27 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
         raw_events.extend(res.events)
         print(f"[fetch] {res.source.slug} (layer {res.source.layer}): {len(res.events)} events")
 
+    # Per-source health + regression detection (enterprise observability): persist
+    # each run's per-source status and flag any source that was healthy last run
+    # and is now broken, so a silently-failing scraper is caught, not just absorbed.
+    health_path = os.path.join(os.path.dirname(db_path) or ".", "source_health.json")
+    prior_health = load_health(health_path)
+    observations = [(r.source.slug, len(r.events), r.error) for r in results]
+    health, regressions = update_health(prior_health, observations, today)
+    write_health(health, health_path)
+    if regressions:
+        print(f"[health] REGRESSIONS (healthy -> broken since last run): {', '.join(regressions)}")
+    healthy = sum(1 for h in health.values() if h["status"] == "ok")
+
     total_raw = len(raw_events)
     if enrich:
         layer_by_source = {s.slug: s.layer for s in SOURCES}
         n_enriched = asyncio.run(enrich_layer2(raw_events, layer_by_source, default_fetch))
         print(f"[enrich] enriched {n_enriched} Layer-2 events (descriptions + speakers)")
+        # Re-derive topics from enriched blurbs for curated Layer-2 policy sources,
+        # so a vague-titled but on-topic event ("A Conversation With...") is kept.
+        curated_l2 = {s.slug for s in SOURCES if s.layer == 2 and s.dc_curated}
+        recompute_topics(raw_events, curated_l2)
     raw_events, pre_dropped = validate_pre_filter(raw_events, today)
     print(f"[validate] pre-filter: excluded "
           f"{sum(1 for d in pre_dropped if d[1] == 'date')}, cleaned {len(pre_dropped)} field(s)")
@@ -111,6 +130,16 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     write_rss(top, f"{out_dir}/feed-top.xml", "DC AI & Frontier Tech -- Top Picks")
     write_json(emitted, f"{out_dir}/events.json")
     mapped = write_map(emitted, f"{out_dir}/map.html", today)
+    # Ops status page + machine-readable health (enterprise observability).
+    src_names = {s.slug: s.name for s in SOURCES}
+    src_layers = {s.slug: s.layer for s in SOURCES}
+    with open(f"{out_dir}/status.html", "w", encoding="utf-8") as f:
+        f.write(render_status_html(health, today, src_names, src_layers))
+    write_health(health, f"{out_dir}/health.json")
+    # Flagship landing page (the primary public surface; the map is secondary).
+    with open(f"{out_dir}/index.html", "w", encoding="utf-8") as f:
+        f.write(render_index(emitted, today,
+                             {"sources_healthy": healthy, "sources_total": len(SOURCES)}))
     archive_n = write_ics(sorted(roundtrip, key=lambda e: e.start or ""),
                           f"{out_dir}/events-archive.ics", today,
                           cal_name="DC AI & Frontier Tech — Archive")
@@ -162,6 +191,8 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     summary = {
         "sources_total": len(SOURCES),
         "sources_live": sum(1 for v in per_source.values() if v > 0),
+        "sources_healthy": healthy,
+        "regressions": regressions,
         "layers_live": sorted(layers_live),
         "per_source": per_source,
         "quarantined": quarantined,

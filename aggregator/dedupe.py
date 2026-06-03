@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import math
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 from difflib import SequenceMatcher
 
 from .models import Event
@@ -30,6 +30,11 @@ FUZZY_THRESHOLD = 0.88
 SERIES_MAX_GAP_DAYS = 2
 TOKEN_THRESHOLD = 0.7
 SEMANTIC_THRESHOLD = 0.80
+# A shared EXACT start instant is itself a strong "same event" signal (the same
+# event cross-posted on Meetup + Luma with different titles/offsets), so the token
+# bar to merge is lower than the same-day paraphrase pass -- but still guarded by
+# token overlap + location so two unrelated talks at the same minute don't merge.
+INSTANT_TOKEN_THRESHOLD = 0.45
 NEAR_KM = 3.0
 
 _STOP = {"the", "a", "an", "of", "on", "in", "for", "to", "and", "with", "at", "by"}
@@ -48,6 +53,42 @@ def _merge_source(canonical: Event, other: Event) -> None:
         also = canonical.raw.setdefault("also_sources", [])
         if other.source not in also:
             also.append(other.source)
+
+
+def _absorb_fields(canonical: Event, other: Event) -> None:
+    """Fill gaps in the surviving duplicate from `other` so it is the most
+    complete copy: a precise same-day time over a date-only start, plus any
+    venue / coords / speakers / richer description the canonical lacks. Never
+    overwrites non-empty canonical data. Topics are unioned (a real topic the
+    other listing's title carried helps the event clear the topic gate)."""
+    c, o = canonical, other
+    if (o.start and len(o.start) > 10 and len(c.start or "") == 10
+            and _day(c.start) == _day(o.start)):
+        c.start = o.start                       # date-only -> precise timed start
+        if o.tz and not c.tz:
+            c.tz = o.tz
+    if not c.end and o.end:
+        c.end = o.end
+    if not c.venue_name and o.venue_name:
+        c.venue_name = o.venue_name
+    if not c.address and o.address:
+        c.address = o.address
+    if c.lat is None and o.lat is not None:
+        c.lat, c.lng = o.lat, o.lng
+    if not c.speakers and o.speakers:
+        c.speakers = list(o.speakers)
+    if len(o.description or "") > len(c.description or ""):
+        c.description = o.description
+    for t in o.topics:
+        if t not in c.topics:
+            c.topics.append(t)
+
+
+def _merge(canonical: Event, other: Event) -> None:
+    """Cross-listing duplicate: record the other source AND absorb its richer
+    fields so the survivor is the most complete copy."""
+    _merge_source(canonical, other)
+    _absorb_fields(canonical, other)
 
 
 def _day_gap(iso_a: str, iso_b: str) -> int:
@@ -169,7 +210,45 @@ def _paraphrase_collapse(events: list[Event]) -> list[Event]:
             by_day.setdefault(day, []).append(ev)
             kept.append(ev)
         else:
-            _merge_source(match, ev)
+            _merge(match, ev)
+    return kept
+
+
+def _utc_instant(iso: str | None) -> str | None:
+    """The event's start as a UTC instant string, or None if it is date-only or
+    offset-naive (we won't compare a naive time across sources)."""
+    try:
+        dt = datetime.fromisoformat(iso or "")
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(dt, datetime) or dt.tzinfo is None:
+        return None
+    return dt.astimezone(timezone.utc).isoformat()
+
+
+def _same_instant_collapse(events: list[Event]) -> list[Event]:
+    """Pass 5: merge events that share the EXACT same start instant (compared in
+    UTC, so different offsets for the same moment match) when their titles share
+    enough tokens and their locations don't contradict. Catches the same event
+    cross-posted to two platforms with reworded titles ('Data Viz' vs 'Data
+    Visualization')."""
+    kept: list[Event] = []
+    by_instant: dict[str, list[Event]] = {}
+    for ev in events:
+        inst = _utc_instant(ev.start)
+        if inst is None:
+            kept.append(ev)
+            continue
+        match = None
+        for other in by_instant.get(inst, []):
+            if _token_set_ratio(ev.title, other.title) >= INSTANT_TOKEN_THRESHOLD and _near(ev, other):
+                match = other
+                break
+        if match is None:
+            by_instant.setdefault(inst, []).append(ev)
+            kept.append(ev)
+        else:
+            _merge(match, ev)
     return kept
 
 
@@ -180,7 +259,7 @@ def dedupe(events: list[Event]) -> tuple[list[Event], int]:
         if ev.id not in by_id:
             by_id[ev.id] = ev
         else:
-            _merge_source(by_id[ev.id], ev)
+            _merge(by_id[ev.id], ev)
     stage1 = list(by_id.values())
 
     # Pass 2: fuzzy title within the same day.
@@ -198,13 +277,16 @@ def dedupe(events: list[Event]) -> tuple[list[Event], int]:
             buckets.setdefault(day, []).append(ev)
             kept.append(ev)
         else:
-            _merge_source(match, ev)
+            _merge(match, ev)
 
     # Pass 3: collapse multi-day series.
     final = _series_collapse(kept)
 
     # Pass 4: collapse same-day paraphrase / reorder dupes (location-guarded).
     final = _paraphrase_collapse(final)
+
+    # Pass 5: collapse exact same-instant cross-posts with reworded titles.
+    final = _same_instant_collapse(final)
 
     removed = len(events) - len(final)
     return final, removed

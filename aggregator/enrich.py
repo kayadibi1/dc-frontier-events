@@ -23,6 +23,7 @@ from selectolax.parser import HTMLParser
 
 from .config import SOURCE_HQ
 from .models import Event
+from .normalize import detect_topics
 from .provenance import prov_clear, prov_set
 from .structured import extract_structured
 
@@ -57,7 +58,7 @@ _DESC_SELECTORS = ('meta[property="og:description"]',
 _MIN_DESC_CHARS = 40
 # Layer-2 sources behind a WAF that 403s plain httpx -- fetch via curl_cffi
 # (Chrome TLS impersonation), like their listing fetchers.
-_WAF_SOURCES = {"cset", "atlanticcouncil", "nist"}
+_WAF_SOURCES = {"cset", "atlanticcouncil", "nist", "itif", "nasem", "cdt"}
 
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -244,6 +245,22 @@ def _reconcile_time(ev: Event, st: dict) -> None:
             ev.end = edt.astimezone(listing.tzinfo).isoformat()
         except ValueError:
             pass
+
+
+def recompute_topics(events: list[Event], slugs: set[str]) -> None:
+    """Re-derive topic tags from each enriched event's title+description for the
+    curated Layer-2 sources in `slugs`. Adapters tag topics from the bare listing
+    title, so a vague-titled but on-topic policy event ("A Conversation With...")
+    whose blurb is about AI/chips is otherwise dropped by the topic gate. These
+    sources are high-signal and DC-curated, so trusting a description match is
+    safe (the firehose sources stay title-strict). Adds only -- never removes
+    existing topics or big: tags. Mutates in place."""
+    for ev in events:
+        if ev.source not in slugs or not ev.description:
+            continue
+        for t in detect_topics(f"{ev.title} {ev.description}"):
+            if t not in ev.topics:
+                ev.topics.append(t)
 
 
 async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
