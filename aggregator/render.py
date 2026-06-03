@@ -28,14 +28,20 @@ _SETTLE_MS = 3000          # let JS render when no wait_for selector is given
 _pw = None
 _browser = None
 _sem: asyncio.Semaphore | None = None
+_launch_lock: asyncio.Lock | None = None
 
 
 async def _ensure_browser():
-    global _pw, _browser
-    if _browser is None:
-        from playwright.async_api import async_playwright
-        _pw = await async_playwright().start()
-        _browser = await _pw.chromium.launch(headless=True)
+    global _pw, _browser, _launch_lock
+    if _browser is not None:
+        return _browser
+    if _launch_lock is None:
+        _launch_lock = asyncio.Lock()
+    async with _launch_lock:                 # serialize the first launch (no double-launch race)
+        if _browser is None:
+            from playwright.async_api import async_playwright
+            _pw = await async_playwright().start()
+            _browser = await _pw.chromium.launch(headless=True)
     return _browser
 
 
@@ -74,7 +80,7 @@ async def render(url: str, wait_for: str | None = None, timeout_ms: int = 15000)
 async def close_render() -> None:
     """Close the shared browser. No-op if never launched. Resets module state so the
     next render() re-launches cleanly (in whatever loop is then running)."""
-    global _pw, _browser, _sem
+    global _pw, _browser, _sem, _launch_lock
     try:
         if _browser is not None:
             await _browser.close()
@@ -86,3 +92,4 @@ async def close_render() -> None:
         _browser = None
         _pw = None
         _sem = None
+        _launch_lock = None
