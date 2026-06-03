@@ -136,6 +136,11 @@ WATCHLIST_EVENTS: list[dict] = [
      "date": "2026-06-24", "venue": "Falls Church Marriott Fairview Park, Falls Church, VA",
      "url": "https://future-bridge.us/semiconductor-fab-design-construction-summit-2026/",
      "topics": ["semiconductor"]},
+    {"name": "USA Artificial Intelligence Summit 2026", "date": "2026-06-17",
+     "venue": "Washington, DC", "url": "https://us-aisummit.com/", "topics": ["ai"]},
+    {"name": "Government & AI Summit 2026", "date": "2026-09-15",
+     "venue": "JW Marriott, 1331 Pennsylvania Ave NW, Washington, DC",
+     "url": "https://events.govexec.com/government-ai-summit-2026/home/", "topics": ["ai"]},
 ]
 
 
