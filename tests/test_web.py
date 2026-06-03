@@ -13,7 +13,9 @@ def test_renders_upcoming_events_and_subscribe_ctas():
     assert "AI Policy Forum" in html
     assert "Add to Google Calendar" in html
     assert "events-upcoming.ics" in html
+    assert "webcal://events.emersus.ai/events-upcoming.ics" in html   # Apple/Outlook subscribe
     assert "map.html" in html and "status.html" in html
+    assert "spamnote" in html                                         # deliverability nudge
 
 
 def test_escapes_malicious_title():
