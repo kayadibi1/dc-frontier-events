@@ -23,6 +23,7 @@ from .itif import fetch_itif
 from .luma import fetch_luma
 from .nasem import fetch_nasem
 from .nist import fetch_nist
+from .umdcs import fetch_umdcs
 
 ADAPTERS = {
     "luma": fetch_luma,
@@ -36,6 +37,7 @@ ADAPTERS = {
     "itif": fetch_itif,
     "cdt": fetch_cdt,
     "nasem": fetch_nasem,
+    "umdcs": fetch_umdcs,
 }
 
 

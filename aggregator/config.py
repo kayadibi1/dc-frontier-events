@@ -100,6 +100,11 @@ UNIVERSITY_SOURCES = [
     # Howard University (DC, Georgia Ave NW) -> dc_curated; Localist iCal feed.
     Source("howard", "Howard University", "ics", 3, True,
            url="https://events.howard.edu/calendar.ics"),
+    # UMD Computer Science (College Park, in the DC bbox) -> dc_curated. Strong
+    # AI/ML/robotics/NLP dept; Drupal events listing with an authoritative dc:date
+    # start. Seasonal: quiet summer, full fall. Bespoke `umdcs` adapter.
+    Source("umdcs", "University of Maryland (CS)", "umdcs", 3, True,
+           url="https://www.cs.umd.edu/events"),
 ]
 
 SOURCES = LUMA_SOURCES + MEETUP_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
@@ -120,7 +125,7 @@ TOPIC_PATTERNS = {
     # senses: hardware accelerators + "accelerated computing".
     "compute": r"\bgpus?\b|datacenter|data center|\bcompute\b|\bcuda\b|\baccelerators?\b|accelerated comput|\bhpc\b",
     "policy": r"export control|chips act|ai policy|ai safety|ai governance|frontier model|ai regulation",
-    "robotics": r"robotic|autonomous vehicle|self-driving",
+    "robotics": r"\brobots?\b|robotic|autonomous vehicle|self-driving",
 }
 
 # Big-name watchlist — orgs and people. A match sets is_big_name.
@@ -143,7 +148,9 @@ BIG_NAME_PATTERNS = {
     # More frontier labs. Patterns are deliberately specific to dodge landmines:
     # "inflection ai" not bare "inflection" (inflection point), "stability ai"
     # not "stability", "perplexity ai" not bare "perplexity" (the NLP metric).
-    "xAI": r"\bxai\b|\bgrok\b",
+    # "grok" only: bare "xai" collides with eXplainable AI (XAI), common in ML/
+    # academic titles, so it must NOT flag the event as the Elon xAI company.
+    "xAI": r"\bgrok\b",
     "Inflection AI": r"\binflection ai\b",
     "Stability AI": r"\bstability ai\b",
     "Together AI": r"\btogether ai\b",
@@ -282,7 +289,7 @@ ADMIN_EXCLUDE_PATTERN = (
 # Layer-2 think tanks (CSET/CSIS/Brookings) stay lenient -- their desc-only AI
 # events are real (e.g. CSET "The Talent Map", "How the U.S. Wins the Global
 # Tech Competition"), so a title-OR-description topic match still qualifies there.
-STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington", "howard"}
+STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington", "howard", "umdcs"}
 
 # High-volume, low-curation sources: a whole-university calendar (gwu) and a
 # global org feed (aic-washington). For these, a topic mentioned only in the
@@ -291,4 +298,4 @@ STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington", "howard"}
 # Layer-2 think tanks (CSET/CSIS/Brookings) stay lenient -- their desc-only AI
 # events are real (e.g. CSET "The Talent Map", "How the U.S. Wins the Global
 # Tech Competition"), so we keep trusting a title-OR-description match there.
-STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington", "howard"}
+STRICT_TITLE_TOPIC_SOURCES = {"gwu", "aic-washington", "howard", "umdcs"}
