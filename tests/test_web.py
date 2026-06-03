@@ -60,6 +60,13 @@ def test_jsonld_neutralizes_script_breakout():
     assert "</script><script>alert(1)" not in html
 
 
+def test_filter_chips_are_keyboard_accessible():
+    html = render_index([_ev(topics=["ai"])], "2026-06-02")
+    assert 'role="button"' in html and 'tabindex="0"' in html
+    assert 'aria-pressed' in html
+    assert "keydown" in html                       # Enter/Space activates a chip
+
+
 def test_gcal_url_allday_and_timed_utc():
     allday = _gcal_url(_ev(start="2026-06-16"))
     # date-only -> all-day range, NOT a fabricated midnight 1-hour event (Codex finding)

@@ -152,6 +152,8 @@ background:#fff}
 padding:5px 12px;font-size:12.5px;cursor:pointer;user-select:none}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .chip.topic.on{background:var(--accent2);border-color:var(--accent2)}
+.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#q:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
 #count{color:var(--muted);font-size:12.5px;margin-top:9px}
 .daygroup{margin-top:22px}
@@ -251,7 +253,11 @@ q.addEventListener('input',apply);
       if(layers.has(l)){layers.delete(l);ch.classList.remove('on');}else{layers.add(l);ch.classList.add('on');}}
     else if(ch.classList.contains('flt')){var f=ch.getAttribute('data-flt');
       if(flts.has(f)){flts.delete(f);ch.classList.remove('on');}else{flts.add(f);ch.classList.add('on');}}
+    ch.setAttribute('aria-pressed', ch.classList.contains('on')?'true':'false');
     apply();
+  });
+  ch.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();ch.click();}
   });
 });
 apply();
@@ -343,7 +349,8 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
     body = "".join(body_parts) or '<div class="empty">No upcoming events match — try clearing filters.</div>'
 
     topic_chips = "".join(
-        f'<span class="chip topic" data-topic="{_h(t)}">{_h(t)}</span>' for t in all_topics)
+        f'<span class="chip topic" data-topic="{_h(t)}" role="button" tabindex="0" '
+        f'aria-pressed="false">{_h(t)}</span>' for t in all_topics)
     healthy = summary.get("sources_healthy", n_src)
     total_src = summary.get("sources_total", len(SOURCES))
 
@@ -399,13 +406,13 @@ think tanks, universities, and the builder community, deduplicated and ranked.</
 {_SIGNUP_HTML}
 <div class="controls">
 <input id="q" type="text" placeholder="Search events, speakers, venues…" autocomplete="off">
-<div class="filters">
-<span class="chip flt" data-flt="big">★ Big names</span>
-<span class="chip flt" data-flt="person">In&#8209;person</span>
+<div class="filters" role="group" aria-label="Filter events">
+<span class="chip flt" data-flt="big" role="button" tabindex="0" aria-pressed="false">★ Big names</span>
+<span class="chip flt" data-flt="person" role="button" tabindex="0" aria-pressed="false">In&#8209;person</span>
 <span class="sep"></span>
-<span class="chip lyr on" data-layer="2">Policy</span>
-<span class="chip lyr on" data-layer="3">University</span>
-<span class="chip lyr on" data-layer="1">Community</span>
+<span class="chip lyr on" data-layer="2" role="button" tabindex="0" aria-pressed="true">Policy</span>
+<span class="chip lyr on" data-layer="3" role="button" tabindex="0" aria-pressed="true">University</span>
+<span class="chip lyr on" data-layer="1" role="button" tabindex="0" aria-pressed="true">Community</span>
 <span class="sep"></span>
 {topic_chips}
 </div>
