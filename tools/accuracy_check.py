@@ -59,8 +59,11 @@ async def check(ev: dict) -> dict:
     # date: stored date appears on the page in some human form, OR structured start matches
     forms = _date_forms(ev["start"])
     date_on_page = any(f in page for f in forms)
+    # also accept a machine-readable ISO start in the raw HTML (e.g. a dc:date /
+    # datetime content attr), which .text() strips out.
+    iso_on_page = len(ev.get("start", "")) >= 16 and ev["start"][:16] in html
     struct_date_ok = (st.get("start", "")[:10] == ev["start"][:10]) if st.get("start") else None
-    date_ok = date_on_page or struct_date_ok is True
+    date_ok = date_on_page or iso_on_page or struct_date_ok is True
     return {**ev, "title_overlap": round(overlap, 2), "title_ok": title_ok,
             "date_on_page": date_on_page, "struct_date": struct_date_ok,
             "date_ok": date_ok, "verdict": "ok" if (title_ok and date_ok) else "REVIEW"}
