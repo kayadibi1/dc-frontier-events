@@ -89,6 +89,11 @@ CSET_SOURCES = [
     # only via a real DC venue/text). curl_cffi. Listing cards: a[href*='/event/'].
     Source("nasem", "National Academies", "nasem", 2, False,
            url="https://www.nationalacademies.org/events"),
+    # U.S. Congress committee hearings (congress.gov API) -- the highest-signal DC
+    # policy source, year-round. All on Capitol Hill -> dc_curated. Needs
+    # CONGRESS_API_KEY in the env; skipped (quarantined) without it.
+    Source("congress", "U.S. Congress", "congress", 2, True,
+           url="https://api.congress.gov/v3/committee-meeting"),
 ]
 
 # Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic

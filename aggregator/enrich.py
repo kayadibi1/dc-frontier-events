@@ -286,8 +286,9 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
             ev.speakers = structured_spk
             prov_set(ev, "speakers", "structured")
         else:
-            ev.speakers = extract_speakers(html or "")
-            if ev.speakers:
+            scraped = extract_speakers(html or "")
+            if scraped:                       # keep adapter-set speakers (e.g. congress
+                ev.speakers = scraped         # witnesses) when the page scrape finds none
                 prov_set(ev, "speakers", "extracted")
 
         added_desc = False

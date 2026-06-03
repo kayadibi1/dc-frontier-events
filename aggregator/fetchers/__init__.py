@@ -16,6 +16,7 @@ from .base import SourceResult
 from .brookings import fetch_brookings
 from .cdt import fetch_cdt
 from .cnas import fetch_cnas
+from .congress import fetch_congress
 from .csis import fetch_csis
 from .cset import fetch_cset
 from .ics import fetch_ics
@@ -38,6 +39,7 @@ ADAPTERS = {
     "cdt": fetch_cdt,
     "nasem": fetch_nasem,
     "umdcs": fetch_umdcs,
+    "congress": fetch_congress,
 }
 
 
