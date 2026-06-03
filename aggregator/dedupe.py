@@ -36,6 +36,14 @@ SEMANTIC_THRESHOLD = 0.80
 # token overlap + location so two unrelated talks at the same minute don't merge.
 INSTANT_TOKEN_THRESHOLD = 0.45
 NEAR_KM = 3.0
+# Domain-generic title words. Two DIFFERENT events can start at the same minute and
+# share only these (e.g. "AI Policy Forum" vs "AI Policy Summit"), so the same-instant
+# pass additionally requires a DISTINCTIVE shared token beyond this set before merging.
+_GENERIC_TOKENS = {
+    "ai", "ml", "policy", "forum", "webinar", "workshop", "summit", "discussion",
+    "conversation", "event", "panel", "talk", "series", "annual", "virtual",
+    "online", "dc", "washington", "tech", "meeting", "session", "keynote",
+}
 
 _STOP = {"the", "a", "an", "of", "on", "in", "for", "to", "and", "with", "at", "by"}
 
@@ -241,7 +249,12 @@ def _same_instant_collapse(events: list[Event]) -> list[Event]:
             continue
         match = None
         for other in by_instant.get(inst, []):
-            if _token_set_ratio(ev.title, other.title) >= INSTANT_TOKEN_THRESHOLD and _near(ev, other):
+            # A distinctive (non-generic) shared token guards against merging two
+            # different same-minute events that only share words like "AI"/"policy".
+            distinctive = (_tokens(ev.title) & _tokens(other.title)) - _GENERIC_TOKENS
+            if (distinctive
+                    and _token_set_ratio(ev.title, other.title) >= INSTANT_TOKEN_THRESHOLD
+                    and _near(ev, other)):
                 match = other
                 break
         if match is None:

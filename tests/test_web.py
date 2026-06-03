@@ -47,6 +47,9 @@ def test_index_has_signup_form_and_attribution():
 
 
 def test_gcal_url_allday_and_timed_utc():
-    assert "/render?" in _gcal_url(_ev(start="2026-06-16"))
+    allday = _gcal_url(_ev(start="2026-06-16"))
+    # date-only -> all-day range, NOT a fabricated midnight 1-hour event (Codex finding)
+    assert "20260616%2F20260617" in allday
+    assert "T000000Z" not in allday
     timed = _gcal_url(_ev(start="2026-06-16T12:00:00-04:00"))
     assert "20260616T160000Z" in timed          # 12:00 EDT -> 16:00 UTC

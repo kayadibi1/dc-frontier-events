@@ -39,14 +39,43 @@ ADAPTERS = {
 }
 
 
+# Transient HTTP statuses worth retrying; a 4xx (404/403) or a real empty 200 is not.
+TRANSIENT_STATUS = {429, 500, 502, 503, 504}
+MAX_FETCH_TRIES = 3
+RETRY_BACKOFF = 0.5   # seconds, doubles each retry (0.5s, 1s)
+
+
+def _is_transient(res: SourceResult) -> bool:
+    """A failure worth retrying: a raised exception (status is None) or a 5xx/429.
+    A permanent 4xx or a genuinely empty 200 result is left as-is."""
+    return res.status is None or res.status in TRANSIENT_STATUS
+
+
+async def _fetch_with_retry(src: Source, fn, tries: int = MAX_FETCH_TRIES,
+                            sleep=asyncio.sleep, backoff: float = RETRY_BACKOFF) -> SourceResult:
+    """Run an adapter, retrying only TRANSIENT failures with exponential backoff so
+    a momentary network blip doesn't drop a source for the whole 12h cycle. A
+    success or a permanent failure returns immediately. Adapter crashes are caught
+    (a single source must never kill the run)."""
+    last: SourceResult | None = None
+    for attempt in range(tries):
+        try:
+            res = await fn(src)
+        except Exception as e:  # adapter crash must not kill the run
+            res = SourceResult(src, [], None, repr(e))
+        if res.ok or not _is_transient(res):
+            return res
+        last = res
+        if attempt < tries - 1:
+            await sleep(backoff * (2 ** attempt))
+    return last
+
+
 async def gather_all(sources: list[Source]) -> list[SourceResult]:
     async def one(src: Source) -> SourceResult:
         fn = ADAPTERS.get(src.kind)
         if fn is None:
             return SourceResult(src, [], None, f"no adapter for kind={src.kind!r}")
-        try:
-            return await fn(src)
-        except Exception as e:  # adapter crash must not kill the run
-            return SourceResult(src, [], None, repr(e))
+        return await _fetch_with_retry(src, fn)
 
     return list(await asyncio.gather(*[one(s) for s in sources]))

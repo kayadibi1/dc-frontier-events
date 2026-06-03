@@ -217,24 +217,39 @@ _MAP_HEAD = """<!DOCTYPE html>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,Arial,sans-serif;font-size:14px}
-#app{display:flex;height:100vh}
-#sidebar{width:340px;min-width:300px;display:flex;flex-direction:column;border-right:1px solid #ddd}
-#controls{padding:10px;border-bottom:1px solid #eee}
-#controls input[type=text]{width:100%;padding:6px;margin-bottom:6px}
-#controls label{display:inline-block;margin-right:10px;font-size:12px;white-space:nowrap}
-#count{margin-top:6px;color:#666;font-size:12px}
+:root{--ink:#171a2b;--muted:#6b7280;--accent:#2348d6;--bg:#f5f6fb;--line:#e8e9f2}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;color:var(--ink)}
+.topbar{display:flex;align-items:center;gap:12px;height:52px;padding:0 16px;
+background:linear-gradient(120deg,#1b2a6b,#2348d6 68%,#7c3aed);color:#fff}
+.topbar a{color:#fff;text-decoration:none}
+.topbar .home{font-weight:700;font-size:15px}
+.topbar .spacer{flex:1}
+.topbar .nav{font-size:13px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);
+padding:6px 12px;border-radius:8px}
+.topbar .nav:hover{background:rgba(255,255,255,.25)}
+#app{display:flex;height:calc(100vh - 52px)}
+#sidebar{width:360px;min-width:300px;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+#controls{padding:12px;border-bottom:1px solid var(--line)}
+#controls input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:8px}
+#controls label{display:inline-block;margin-right:10px;font-size:12px;white-space:nowrap;cursor:pointer}
+#count{margin-top:8px;color:var(--muted);font-size:12px}
 #list{flex:1;overflow:auto;margin:0;padding:0;list-style:none}
-#list li{padding:8px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+#list li{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
 #list li:hover{background:#f6f6ff}
-#list li small{color:#666}
+#list li small{color:var(--muted)}
 #map{flex:1}
 .star{color:#d62728}
-.evname{color:#1a4fd0;text-decoration:none;font-weight:700}
+.evname{color:var(--accent);text-decoration:none;font-weight:650}
 #list li:hover .evname{text-decoration:underline}
 .lg{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle}
+.badge{border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:700;margin-left:5px}
+.b-virtual{background:#e8f0ff;color:#1a55d6}.b-person{background:#e8f7ee;color:#137a3a}
 </style></head>
-<body><div id="app"><div id="sidebar"><div id="controls">
+<body>
+<header class="topbar"><a class="home" href="index.html">← DC AI &amp; Frontier Tech</a>
+<span class="spacer"></span><a class="nav" href="index.html">☰ List view</a>
+<a class="nav" href="events-upcoming.ics">📅 Subscribe</a></header>
+<div id="app"><div id="sidebar"><div id="controls">
 <input type="text" id="search" placeholder="Search events…">
 <div>
 <label><input type="checkbox" class="flt-layer" value="1" checked><span class="lg" style="background:#1f77b4"></span>L1</label>
@@ -313,6 +328,9 @@ def _li(ev: Event) -> str:
         meta += f" · {marker(ev)}"
     if score is not None:
         meta += f" · ●{score}"
+    virtual = bool(ev.raw.get("virtual")) and not ev.address
+    badge = ('<span class="badge b-virtual">virtual</span>' if virtual
+             else '<span class="badge b-person">in&#8209;person</span>' if ev.address else "")
     # The event name links to its source/detail page (new tab). Falls back to
     # bold text when an event has no source_url.
     name = _h(ev.title)
@@ -323,7 +341,7 @@ def _li(ev: Event) -> str:
     return (f'<li class="ev" data-layer="{layer}" data-big="{1 if ev.is_big_name else 0}"'
             f' data-date="{date}"'
             f' data-url="{_h(surl)}" data-text="{_h(text)}"{coords}>'
-            f'{star}{title_html}<br><small>{meta}</small></li>')
+            f'{star}{title_html}{badge}<br><small>{meta}</small></li>')
 
 
 def write_map(events: list[Event], path: str, today_iso: str) -> int:

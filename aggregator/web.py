@@ -74,28 +74,37 @@ def _group_header(d: date, today: date) -> str:
 
 def _gcal_dates(ev: Event) -> str:
     s = ev.start or ""
-    try:
-        dt = datetime.fromisoformat(s)
-        if dt.tzinfo:
-            dt = dt.astimezone(timezone.utc)
-        else:
-            dt = dt.replace(tzinfo=timezone.utc)
-        start = dt.strftime("%Y%m%dT%H%M%SZ")
-        end_dt = None
-        if ev.end:
-            try:
-                e = datetime.fromisoformat(ev.end)
-                end_dt = e.astimezone(timezone.utc) if e.tzinfo else e.replace(tzinfo=timezone.utc)
-            except ValueError:
-                end_dt = None
-        end_dt = end_dt or dt + timedelta(hours=1)
-        return f"{start}/{end_dt.strftime('%Y%m%dT%H%M%SZ')}"
-    except ValueError:
+    # Date-only -> all-day range. MUST be handled before datetime.fromisoformat,
+    # which (Py 3.11+) happily parses "2026-06-16" as midnight and would otherwise
+    # emit a bogus 1-hour midnight event. Google all-day end is exclusive (+1 day).
+    if len(s) <= 10 or "T" not in s:
         try:
             d = date.fromisoformat(s[:10])
         except ValueError:
             return ""
-        return f"{d.strftime('%Y%m%d')}/{(d + timedelta(days=1)).strftime('%Y%m%d')}"
+        end = None
+        if ev.end:
+            try:
+                end = date.fromisoformat(ev.end[:10])
+            except ValueError:
+                end = None
+        end = (end + timedelta(days=1)) if end else (d + timedelta(days=1))
+        return f"{d.strftime('%Y%m%d')}/{end.strftime('%Y%m%d')}"
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        return ""
+    dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    start = dt.strftime("%Y%m%dT%H%M%SZ")
+    end_dt = None
+    if ev.end:
+        try:
+            e = datetime.fromisoformat(ev.end)
+            end_dt = e.astimezone(timezone.utc) if e.tzinfo else e.replace(tzinfo=timezone.utc)
+        except ValueError:
+            end_dt = None
+    end_dt = end_dt or dt + timedelta(hours=1)
+    return f"{start}/{end_dt.strftime('%Y%m%dT%H%M%SZ')}"
 
 
 def _gcal_url(ev: Event) -> str:

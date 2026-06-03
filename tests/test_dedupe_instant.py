@@ -20,6 +20,18 @@ def test_same_instant_cross_offset_abbrev_titles_merge():
     assert "also_sources" in out[0].raw
 
 
+def test_same_instant_generic_tokens_only_not_merged():
+    # Two DIFFERENT events at the exact same minute whose only shared tokens are
+    # generic (ai/policy/forum/summit) must NOT collapse, even though the raw token
+    # ratio clears 0.45. (Codex review finding — distinctive shared token required.)
+    a = _ev(id="csis-1", title="AI Policy Forum", source="csis",
+            start="2026-06-10T14:00:00-04:00")
+    b = _ev(id="brk-1", title="AI Policy Summit", source="brookings",
+            start="2026-06-10T14:00:00-04:00")
+    out, removed = dedupe([a, b])
+    assert removed == 0
+
+
 def test_same_instant_but_unrelated_titles_not_merged():
     # Same start minute but clearly different events -> low token overlap -> keep both.
     a = _ev(id="a", title="Maritime Security in the Indo-Pacific", source="csis",
