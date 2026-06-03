@@ -125,7 +125,7 @@ def _gcal_url(ev: Event) -> str:
 
 _CARD_CSS = """
 *{box-sizing:border-box}
-:root{--ink:#171a2b;--muted:#6b7280;--accent:#2348d6;--accent2:#7c3aed;
+:root{--ink:#171a2b;--muted:#565d6b;--accent:#2348d6;--accent2:#7c3aed;
 --bg:#f5f6fb;--card:#fff;--line:#e8e9f2;--chip:#eef1fb;--big:#d62728}
 body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
 background:var(--bg);color:var(--ink);line-height:1.45}
@@ -174,7 +174,7 @@ letter-spacing:.04em;padding-bottom:7px;border-bottom:2px solid var(--line);marg
 .badge{border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700}
 .b-virtual{background:#e8f0ff;color:#1a55d6}.b-person{background:#e8f7ee;color:#137a3a}
 .b-big{background:#ffe9e9;color:#c11}
-.src{font-size:11.5px;color:#8a8fa3}
+.src{font-size:11.5px;color:#646b78}
 .addrow{margin-top:7px}
 .addrow a{font-size:12px;color:var(--accent);text-decoration:none;font-weight:600}
 .empty{padding:40px 0;text-align:center;color:var(--muted)}
@@ -402,7 +402,7 @@ think tanks, universities, and the builder community, deduplicated and ranked.</
 </div>
 </div></div>
 
-<div class="wrap">
+<main class="wrap">
 {_SIGNUP_HTML}
 <div class="controls">
 <input id="q" type="text" placeholder="Search events, speakers, venues…" autocomplete="off">
@@ -419,7 +419,7 @@ think tanks, universities, and the builder community, deduplicated and ranked.</
 <div id="count"></div>
 </div>
 <div id="list">{body}</div>
-</div>
+</main>
 
 <footer>
 Aggregated from {total_src} sources across three layers · updated {_h(today_iso)} ·

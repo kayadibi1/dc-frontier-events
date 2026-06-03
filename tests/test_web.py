@@ -67,6 +67,7 @@ def test_filter_chips_are_keyboard_accessible():
     assert 'role="button"' in html and 'tabindex="0"' in html
     assert 'aria-pressed' in html
     assert "keydown" in html                       # Enter/Space activates a chip
+    assert "<main" in html                         # one main landmark (a11y)
 
 
 def test_gcal_url_allday_and_timed_utc():
