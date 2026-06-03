@@ -94,6 +94,10 @@ CSET_SOURCES = [
     # CONGRESS_API_KEY in the env; skipped (quarantined) without it.
     Source("congress", "U.S. Congress", "congress", 2, True,
            url="https://api.congress.gov/v3/committee-meeting"),
+    # Curated marquee company / semiconductor events (the watchlist adapter reads
+    # WATCHLIST_EVENTS, not a URL) -- for high-prestige orgs that publish no feed.
+    # All DC-metro, hand-verified; self-pruning. dc_curated.
+    Source("watchlist", "Curated marquee (DC)", "watchlist", 2, True),
 ]
 
 # Layer 3 — universities. Localist exposes a campus-wide iCal feed; the topic
@@ -121,9 +125,18 @@ SOURCES = LUMA_SOURCES + MEETUP_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
 JSRENDER_HINTS: dict[str, dict] = {}
 
 # Curated marquee events for orgs that publish no event feed at all (watchlist
-# adapter). Each entry: {"name","date","venue","url","topics":[...]}. The adapter
-# self-prunes -- past-dated or dead-link entries are dropped each run.
-WATCHLIST_EVENTS: list[dict] = []
+# adapter). Each entry: {"name","date","venue"(full DC-metro address),"url","topics"}.
+# The adapter self-prunes -- past-dated or dead-link entries are dropped each run.
+# Add a NEW edition's date when announced (these recur). All hand-verified live.
+WATCHLIST_EVENTS: list[dict] = [
+    {"name": "AWS Summit Washington, D.C. 2026", "date": "2026-06-30",
+     "venue": "Walter E. Washington Convention Center, 801 Allen Y. Lew Place NW, Washington, DC 20001",
+     "url": "https://aws.amazon.com/events/summits/washington-dc/", "topics": ["ai", "compute"]},
+    {"name": "Semiconductor Fab Design, Engineering & Construction Summit USA 2026",
+     "date": "2026-06-24", "venue": "Falls Church Marriott Fairview Park, Falls Church, VA",
+     "url": "https://future-bridge.us/semiconductor-fab-design-construction-summit-2026/",
+     "topics": ["semiconductor"]},
+]
 
 
 # Topic relevance. Canonical topic -> regex (case-insensitive, word-boundaried

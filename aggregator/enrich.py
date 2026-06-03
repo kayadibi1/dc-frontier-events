@@ -270,8 +270,12 @@ async def enrich_layer2(events: list[Event], layer_by_source: dict[str, int],
     and ev.address (scraped venue, else the source's HQ). Best-effort: a failed
     fetch leaves them empty. `fetch` is async and returns HTML (or '' on failure).
     Returns the number of events enriched (speakers, description, or location)."""
+    # Watchlist events arrive complete (hand-curated venue/date/topics); their URLs
+    # are marketing pages, so detail-scraping only invents junk speakers. Skip them.
+    _NO_ENRICH = {"watchlist"}
     targets = [e for e in events
-               if layer_by_source.get(e.source, 0) == 2 and e.source_url]
+               if layer_by_source.get(e.source, 0) == 2 and e.source_url
+               and e.source not in _NO_ENRICH]
 
     async def one(ev: Event) -> int:
         try:

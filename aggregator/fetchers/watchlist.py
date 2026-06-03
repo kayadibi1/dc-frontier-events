@@ -48,10 +48,11 @@ async def fetch_watchlist(source: Source, link_ok=None, today: str | None = None
             continue
         if url and not await link_ok(url):               # drop dead links
             continue
+        # The entry's venue is the FULL DC-metro address (events may sit in VA/MD
+        # suburbs, not literally "Washington, DC") -- used verbatim, no suffix.
         venue = (ent.get("venue") or "").strip()
-        address = ", ".join(p for p in (venue, "Washington, DC") if p)
         topics = list(dict.fromkeys(detect_topics(name) + list(ent.get("topics", []))))
         out.append(Event(id=f"watchlist-{_slug(name)}", title=name, start=date,
-                         source=source.slug, source_url=url, address=address,
-                         venue_name=venue, topics=topics))
+                         source=source.slug, source_url=url, address=venue,
+                         venue_name=venue.split(",")[0].strip(), topics=topics))
     return SourceResult(source, out, 200, None)

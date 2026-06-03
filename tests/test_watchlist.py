@@ -10,7 +10,7 @@ SRC = Source("watchlist", "Curated (marquee)", "watchlist", 2, True)
 def test_watchlist_keeps_only_future_live_entries(monkeypatch):
     monkeypatch.setattr(config, "WATCHLIST_EVENTS", [
         {"name": "OpenAI Workshop: Building with GPT", "date": "2026-07-01",
-         "venue": "901 F St NW", "url": "https://live/1", "topics": ["ai"]},
+         "venue": "901 F St NW, Washington, DC", "url": "https://live/1", "topics": ["ai"]},
         {"name": "Old AI Event", "date": "2020-01-01", "venue": "X", "url": "https://live/2"},
         {"name": "Dead Link AI Event", "date": "2026-07-02", "venue": "Y", "url": "https://dead/3"},
     ])
