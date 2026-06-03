@@ -114,6 +114,17 @@ UNIVERSITY_SOURCES = [
 
 SOURCES = LUMA_SOURCES + MEETUP_SOURCES + CSET_SOURCES + UNIVERSITY_SOURCES
 
+# Per-source hints for the headless jsrender adapter (extract.py). Optional CSS
+# selectors / strategy per source slug; a missing entry uses the generic layered
+# extractor (JSON-LD -> __NEXT_DATA__ -> heuristic cards). Keys: wait_for, card,
+# title, date, link, location.
+JSRENDER_HINTS: dict[str, dict] = {}
+
+# Curated marquee events for orgs that publish no event feed at all (watchlist
+# adapter). Each entry: {"name","date","venue","url","topics":[...]}. The adapter
+# self-prunes -- past-dated or dead-link entries are dropped each run.
+WATCHLIST_EVENTS: list[dict] = []
+
 
 # Topic relevance. Canonical topic -> regex (case-insensitive, word-boundaried
 # for short/ambiguous tokens so "ai" does not match "email" / "html").

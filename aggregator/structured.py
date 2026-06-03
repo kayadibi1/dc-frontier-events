@@ -73,11 +73,7 @@ def _parse_location(loc) -> dict:
     return out
 
 
-def extract_structured(html: str) -> dict:
-    tree = HTMLParser(html or "")
-    node = next((n for n in _iter_jsonld(tree) if "Event" in _types(n)), None)
-    if node is None:
-        return {}
+def _event_fields(node: dict) -> dict:
     out: dict = {}
     for key, prop in (("start", "startDate"), ("end", "endDate")):
         v = node.get(prop)
@@ -110,3 +106,25 @@ def extract_structured(html: str) -> dict:
         if names:
             out["speakers"] = names
     return out
+
+
+def extract_structured(html: str) -> dict:
+    """The FIRST schema.org Event's authoritative fields, or {} if none."""
+    tree = HTMLParser(html or "")
+    node = next((n for n in _iter_jsonld(tree) if "Event" in _types(n)), None)
+    return _event_fields(node) if node is not None else {}
+
+
+def extract_all_events(html: str) -> list[dict]:
+    """Every schema.org Event on the page (for listing pages that embed many),
+    each with its `url` when present. Used by the jsrender extractor."""
+    tree = HTMLParser(html or "")
+    events = []
+    for n in _iter_jsonld(tree):
+        if "Event" in _types(n):
+            fields = _event_fields(n)
+            u = n.get("url")
+            if isinstance(u, str) and u.strip():
+                fields["url"] = u.strip()
+            events.append(fields)
+    return events
