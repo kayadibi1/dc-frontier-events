@@ -72,12 +72,12 @@ def test_render_index_has_spam_note():
     assert "spam" in html.lower() and "Not junk" in html
 
 
-def test_write_site_extras_writes_index(tmp_path):
+def test_write_site_extras_writes_favicon(tmp_path):
+    # index.html is now written by the pipeline (aggregator.web.render_index);
+    # write_site_extras owns the favicon (+ credentials when present).
     d = str(tmp_path / "site")
     write_site_extras(d, "events.emersus.ai", "2026-05-30")
-    assert os.path.exists(os.path.join(d, "index.html"))
-    with open(os.path.join(d, "index.html"), encoding="utf-8") as f:
-        assert "events-upcoming.ics" in f.read()
+    assert os.path.exists(os.path.join(d, "favicon.svg"))
 
 
 def test_heartbeat_noop_without_url(monkeypatch):

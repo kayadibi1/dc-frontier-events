@@ -38,6 +38,14 @@ def test_non_http_source_url_is_not_linked():
     assert "javascript:alert(1)" not in html
 
 
+def test_index_has_signup_form_and_attribution():
+    html = render_index([_ev()], "2026-06-02")
+    assert 'action="/api/subscribe"' in html      # email double-opt-in form
+    assert 'name="website"' in html               # honeypot field preserved
+    assert "weekly digest" in html.lower()
+    assert "Sidar Aslanoglu" in html              # curator attribution
+
+
 def test_gcal_url_allday_and_timed_utc():
     assert "/render?" in _gcal_url(_ev(start="2026-06-16"))
     timed = _gcal_url(_ev(start="2026-06-16T12:00:00-04:00"))

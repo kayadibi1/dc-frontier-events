@@ -169,8 +169,37 @@ letter-spacing:.04em;padding-bottom:7px;border-bottom:2px solid var(--line);marg
 footer{max-width:920px;margin:0 auto;padding:24px 20px 50px;color:var(--muted);font-size:12.5px;
 border-top:1px solid var(--line)}
 footer a{color:var(--muted)}
+.signup{background:var(--card);border:1px solid var(--line);border-radius:12px;
+padding:15px 18px;margin:16px 0 2px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.signup h2{margin:0 0 3px;font-size:15.5px}
+.signup .sub{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.signup form{display:flex;gap:8px;flex-wrap:wrap}
+.signup input[type=email]{flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--line);
+border-radius:9px;font-size:15px}
+.signup button{background:var(--accent);color:#fff;font-weight:600;border:0;border-radius:9px;
+padding:10px 20px;font-size:14px;cursor:pointer}
+.signup button:hover{opacity:.93}
+.signup .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.spamnote{background:#fff6e5;border:1px solid #f3d9a4;border-radius:8px;padding:8px 10px;
+margin:10px 0 0;font-size:12px;color:#5a4a2a;line-height:1.45}
 @media(max-width:560px){.when{flex-basis:50px}.hero h1{font-size:21px}}
 """
+
+# Email signup (double opt-in) -- posts to the subscribe server via Caddy. Plain
+# string (literal braces). Includes the honeypot field the server checks for bots.
+_SIGNUP_HTML = """
+<div class="signup">
+<h2>Prefer email? Get the weekly digest</h2>
+<p class="sub">One curated email a week — new &amp; upcoming AI / chip / policy events in DC.
+Confirm your address and we send a quick sample right away.</p>
+<form method="post" action="/api/subscribe">
+<input type="email" name="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
+<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<button type="submit">Subscribe</button>
+</form>
+<p class="spamnote">📬 <b>Check your spam/junk folder</b> for the confirmation email — if it landed there,
+mark it <b>Not junk</b> so future digests reach your inbox.</p>
+</div>"""
 
 
 # Client filtering. A plain string (NOT an f-string) so its JS braces stay literal;
@@ -321,6 +350,7 @@ think tanks, universities, and the builder community, deduplicated and ranked.</
 </div></div>
 
 <div class="wrap">
+{_SIGNUP_HTML}
 <div class="controls">
 <input id="q" type="text" placeholder="Search events, speakers, venues…" autocomplete="off">
 <div class="filters">
@@ -342,9 +372,10 @@ think tanks, universities, and the builder community, deduplicated and ranked.</
 Aggregated from {total_src} sources across three layers · updated {_h(today_iso)} ·
 data is deduplicated, ranked, and location-verified.<br>
 Feeds: <a href="events.ics">all .ics</a> · <a href="events-big-names.ics">big-names .ics</a> ·
-<a href="feed.xml">RSS</a> · <a href="events.json">JSON</a> · <a href="status.html">source health</a> ·
-<a href="https://github.com" target="_blank" rel="noopener">source</a><br>
-📍approx = pinned at the host venue when an exact address wasn't published.
+<a href="feed.xml">RSS</a> · <a href="events.json">JSON</a> · <a href="status.html">source health</a><br>
+📍approx = pinned at the host venue when an exact address wasn't published.<br>
+Curated by <a href="https://www.linkedin.com/in/sidar-aslanoglu/" target="_blank" rel="noopener">Sidar Aslanoglu</a>
+· <a href="mailto:radar@emersus.ai">suggest an event</a>
 </footer>
 {_INDEX_JS}
 </body></html>"""

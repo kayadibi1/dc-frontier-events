@@ -143,8 +143,10 @@ def write_site_extras(site_dir: str, domain: str, today_iso: str) -> None:
     os.makedirs(site_dir, exist_ok=True)
     with open(os.path.join(site_dir, "favicon.svg"), "w", encoding="utf-8") as f:
         f.write(FAVICON_SVG)
-    with open(os.path.join(site_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(render_index(domain, today_iso))
+    # index.html is now written by the pipeline (aggregator.web.render_index) -- a
+    # rich, filterable, date-grouped event list with the email signup baked in -- so
+    # we no longer overwrite it here. (render_index below remains the legacy static
+    # landing page; kept for reference/tests, no longer wired into the build.)
     cj = os.path.join(site_dir, "credentials.json")
     if os.path.exists(cj):
         with open(cj, encoding="utf-8") as f:
