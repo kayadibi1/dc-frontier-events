@@ -210,6 +210,8 @@ _MAP_HEAD = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>DC AI & Frontier Tech Events — Map</title>
+<meta name="description" content="Interactive map of upcoming AI, semiconductor and frontier-tech events across the Washington DC metro.">
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
@@ -249,7 +251,7 @@ padding:6px 12px;border-radius:8px}
 <header class="topbar"><a class="home" href="index.html">← DC AI &amp; Frontier Tech</a>
 <span class="spacer"></span><a class="nav" href="index.html">☰ List view</a>
 <a class="nav" href="events-upcoming.ics">📅 Subscribe</a></header>
-<div id="app"><div id="sidebar"><div id="controls">
+<main id="app"><div id="sidebar"><div id="controls">
 <input type="text" id="search" placeholder="Search events…">
 <div>
 <label><input type="checkbox" class="flt-layer" value="1" checked><span class="lg" style="background:#1f77b4"></span>L1</label>
@@ -261,7 +263,7 @@ padding:6px 12px;border-radius:8px}
 <ul id="list">
 """
 
-_MAP_TAIL = """</ul></div><div id="map"></div></div>
+_MAP_TAIL = """</ul></div><div id="map"></div></main>
 <script>
 var map=L.map('map').setView([38.9,-77.03],11);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
