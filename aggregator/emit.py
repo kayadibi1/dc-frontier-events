@@ -217,7 +217,7 @@ _MAP_HEAD = """<!DOCTYPE html>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
 *{box-sizing:border-box}
-:root{--ink:#171a2b;--muted:#6b7280;--accent:#2348d6;--bg:#f5f6fb;--line:#e8e9f2}
+:root{--ink:#171a2b;--muted:#565d6b;--accent:#2348d6;--bg:#f5f6fb;--line:#e8e9f2}
 body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;color:var(--ink)}
 .topbar{display:flex;align-items:center;gap:12px;height:52px;padding:0 16px;
 background:linear-gradient(120deg,#1b2a6b,#2348d6 68%,#7c3aed);color:#fff}

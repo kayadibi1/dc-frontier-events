@@ -113,7 +113,7 @@ h1{{font-size:20px;margin:0 0 4px}}
 table{{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;
 box-shadow:0 1px 4px rgba(0,0,0,.08)}}
 th,td{{padding:10px 12px;text-align:left;border-bottom:1px solid #eee;font-size:14px}}
-th{{background:#fafafe;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#888}}
+th{{background:#fafafe;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5b606c}}
 tr:last-child td{{border-bottom:none}}
 .pill{{display:inline-block;padding:3px 10px;border-radius:999px;background:#e8f5e9;color:#137333;font-weight:600;font-size:13px}}
 </style></head>
