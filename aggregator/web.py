@@ -312,7 +312,16 @@ def _jsonld(events: list[Event]) -> str:
     elems = []
     for i, ev in enumerate(events[:50], 1):
         item = {"@type": "Event", "name": ev.title, "startDate": ev.start,
+                "eventStatus": "https://schema.org/EventScheduled",
                 "url": _safe_url(ev.source_url) or f"https://{DOMAIN}/"}
+        if ev.end:
+            item["endDate"] = ev.end
+        if _is_virtual(ev):
+            item["eventAttendanceMode"] = "https://schema.org/OnlineEventAttendanceMode"
+        elif ev.address:
+            item["eventAttendanceMode"] = "https://schema.org/OfflineEventAttendanceMode"
+        if ev.organizer:
+            item["organizer"] = {"@type": "Organization", "name": ev.organizer}
         if ev.address:
             item["location"] = {"@type": "Place",
                                 "name": ev.venue_name or ev.address.split(",")[0],
@@ -378,7 +387,8 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<title>DC AI &amp; Frontier Tech Events</title>
+<link rel="canonical" href="https://events.emersus.ai/">
+<title>DC AI &amp; Frontier Tech Events · Washington DC</title>
 <meta name="description" content="A curated, deduplicated, ranked radar of AI, semiconductor and frontier-tech events across the Washington DC metro: think tanks, universities, and the builder community.">
 {social}
 {jsonld}

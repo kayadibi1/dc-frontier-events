@@ -46,3 +46,9 @@ def test_ok_to_empty_is_quiet_not_regression():
     health, regressions = update_health(prior, [("dctech", 0, None)], "2026-06-09")
     assert regressions == []
     assert health["dctech"]["status"] == "empty"
+
+
+def test_status_page_is_noindex():
+    from aggregator.health import render_status_html
+    html = render_status_html({}, "2026-06-09")
+    assert '<meta name="robots" content="noindex">' in html

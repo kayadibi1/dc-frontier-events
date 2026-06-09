@@ -102,6 +102,7 @@ def render_html(events: list[Event], today_iso: str, top_n: int = 15) -> str:
     return (
         f"<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         f"<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\">"
+        f"<link rel=\"canonical\" href=\"https://events.emersus.ai/digest.html\">"
         f"<title>DC AI &amp; Frontier Tech · Weekly Digest</title><style>{_HTML_STYLE}</style></head>"
         f"<body><h1>DC AI &amp; Frontier Tech · Weekly Digest</h1>"
         f"<p class=\"meta\">{today_iso} · {len(upcoming)} upcoming event(s) across "

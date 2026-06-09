@@ -167,3 +167,8 @@ def test_email_buttons_survive_css_stripping():
     assert 'bgcolor="#2997ff"' in html
     v = render_verify_email_html("https://x/api/verify?token=t")
     assert 'bgcolor="#2997ff"' in v
+
+
+def test_web_digest_has_canonical():
+    html = render_html([], "2026-06-09")
+    assert '<link rel="canonical" href="https://events.emersus.ai/digest.html">' in html

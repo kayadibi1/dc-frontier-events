@@ -190,3 +190,8 @@ def test_map_is_pro_dark():
     assert "basemaps.cartocdn.com/dark_all" in emit._MAP_TAIL   # dark tiles
     assert "#1d1d1f" in emit._MAP_HEAD                          # dark surfaces
     assert "linear-gradient" not in emit._MAP_HEAD              # gradient nav gone
+
+
+def test_map_has_canonical():
+    from aggregator import emit
+    assert '<link rel="canonical" href="https://events.emersus.ai/map.html">' in emit._MAP_HEAD

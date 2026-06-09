@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from aggregator.credentials import render_credentials_html
 from aggregator.pipeline import run
+from aggregator.seo import ROBOTS_TXT, render_sitemap
 
 DOMAIN = os.environ.get("CAL_DOMAIN", "events.emersus.ai")
 
@@ -46,13 +47,17 @@ FAVICON_SVG = (
 
 
 def write_site_extras(site_dir: str, today_iso: str) -> None:
-    """Add the favicon + the credentials subpage to a freshly-built site dir. The
-    landing index.html and all feeds are written by the pipeline run; the
-    credentials page is rendered from the credentials.json it wrote (skipped if
-    absent)."""
+    """Add the favicon, crawler files (robots/sitemap), and the credentials
+    subpage to a freshly-built site dir. The landing index.html and all feeds
+    are written by the pipeline run; the credentials page is rendered from the
+    credentials.json it wrote (skipped if absent)."""
     os.makedirs(site_dir, exist_ok=True)
     with open(os.path.join(site_dir, "favicon.svg"), "w", encoding="utf-8") as f:
         f.write(FAVICON_SVG)
+    with open(os.path.join(site_dir, "robots.txt"), "w", encoding="utf-8") as f:
+        f.write(ROBOTS_TXT)
+    with open(os.path.join(site_dir, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write(render_sitemap(today_iso))
     cj = os.path.join(site_dir, "credentials.json")
     if os.path.exists(cj):
         with open(cj, encoding="utf-8") as f:

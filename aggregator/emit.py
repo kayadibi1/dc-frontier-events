@@ -209,6 +209,7 @@ _MAP_HEAD = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://events.emersus.ai/map.html">
 <title>DC AI & Frontier Tech Events · Map</title>
 <meta name="description" content="Interactive map of upcoming AI, semiconductor and frontier-tech events across the Washington DC metro.">
 

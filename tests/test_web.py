@@ -84,3 +84,22 @@ def test_index_is_pro_dark():
     assert "AI events in DC." in html              # new hero tagline
     assert "linear-gradient(135deg" not in html    # gradient hero is gone
     assert "--bg:#000" in html                     # dark canvas token
+
+
+def test_index_has_canonical_and_geo_title():
+    html = render_index([_ev()], "2026-06-02")
+    assert '<link rel="canonical" href="https://events.emersus.ai/">' in html
+    assert "<title>DC AI &amp; Frontier Tech Events · Washington DC</title>" in html
+
+
+def test_jsonld_has_rich_result_fields():
+    ev = _ev(end="2026-06-16T15:00:00-04:00", organizer="CSET",
+             address="1701 Pennsylvania Ave NW, Washington, DC")
+    html = render_index([ev], "2026-06-02")
+    assert '"endDate": "2026-06-16T15:00:00-04:00"' in html
+    assert '"eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode"' in html
+    assert '"organizer": {"@type": "Organization", "name": "CSET"}' in html
+    assert '"eventStatus": "https://schema.org/EventScheduled"' in html
+    virt = _ev(raw={"virtual": True})
+    html2 = render_index([virt], "2026-06-02")
+    assert '"eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode"' in html2
