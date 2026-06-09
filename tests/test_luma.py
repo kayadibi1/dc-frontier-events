@@ -123,3 +123,17 @@ def test_fetch_discover_hits_place_endpoint():
     assert res.ok and len(res.events) == 1
     assert "discover/get-paginated-events" in calls[0]
     assert "discover_place_api_id=discplace-AANPgOymN6bqFn8" in calls[0]
+
+
+def test_luma_dc_discover_source_registered():
+    from aggregator.config import SOURCES
+    from aggregator.fetchers import ADAPTERS
+    dc = next(s for s in SOURCES if s.slug == "luma-dc")
+    assert dc.kind == "luma-discover"
+    assert dc.cal_id == "discplace-AANPgOymN6bqFn8"
+    assert dc.dc_curated is False                  # strict filter applies
+    assert ADAPTERS["luma-discover"] is fetch_luma_discover
+
+
+def test_ics_url_property_is_gone():
+    assert not hasattr(SRC, "ics_url")

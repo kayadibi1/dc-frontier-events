@@ -22,7 +22,7 @@ from .cset import fetch_cset
 from .ics import fetch_ics
 from .itif import fetch_itif
 from .jsrender import fetch_jsrender
-from .luma import fetch_luma
+from .luma import fetch_luma, fetch_luma_discover
 from .nasem import fetch_nasem
 from .nist import fetch_nist
 from .umdcs import fetch_umdcs
@@ -31,6 +31,7 @@ from ..render import close_render
 
 ADAPTERS = {
     "luma": fetch_luma,
+    "luma-discover": fetch_luma_discover,
     "ics": fetch_ics,
     "cset": fetch_cset,
     "csis": fetch_csis,

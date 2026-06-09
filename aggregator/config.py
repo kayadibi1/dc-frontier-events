@@ -18,16 +18,12 @@ class Source:
     kind: str          # adapter kind: "luma" | "cset"
     layer: int         # 1=builder/community, 2=policy, 3=university
     dc_curated: bool   # True if the source is itself DC-scoped (trusted location)
-    cal_id: str = ""   # luma calendar id, e.g. "cal-eCuIBRbS1atJOa6"
+    cal_id: str = ""   # luma calendar id ("cal-…") or discover place id ("discplace-…")
     url: str = ""      # listing page for HTML scrapers
 
-    @property
-    def ics_url(self) -> str:
-        return f"https://api.lu.ma/ics/get?entity=calendar&id={self.cal_id}"
 
-
-# Layer 1 — Luma builder/community calendars (native iCal subscription).
-# cal_ids resolved live from each lu.ma/<slug> page.
+# Layer 1 — Luma calendars + the DC city discover feed (api.lu.ma JSON;
+# migrated off per-calendar ICS 2026-06-09, see docs/superpowers/specs/).
 LUMA_SOURCES = [
     Source("DC2", "DC Data & AI Events", "luma", 1, True, cal_id="cal-eCuIBRbS1atJOa6"),
     Source("DCtechevents", "Washington DC Tech Events", "luma", 1, True, cal_id="cal-0TDb3WUDzBp2DYy"),
@@ -41,6 +37,10 @@ LUMA_SOURCES = [
     Source("aic-washington", "AI Collective DC", "luma", 1, False, cal_id="cal-E74MDlDKBaeAwXK"),
     # REMOVED 2026-06-09: "ai" (Global AI, cal-nyk2WcWIv2CFmq8) — Luma turned it
     # into a discover calendar (disccal-…), which has no ICS export (404s).
+    # City-wide net: every public DC-area Luma event, whatever the calendar.
+    # NOT dc_curated -- the strict topic/geo filter keeps only on-topic events.
+    Source("luma-dc", "Luma DC (city-wide)", "luma-discover", 1, False,
+           cal_id="discplace-AANPgOymN6bqFn8"),
 ]
 
 # Layer 1 — Meetup groups (per-group public iCal export). DC-specific data/AI
