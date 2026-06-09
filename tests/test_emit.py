@@ -183,3 +183,10 @@ def test_json_carries_provenance(tmp_path):
     write_json([ev], p)
     rec = json.load(open(p, encoding="utf-8"))[0]
     assert rec["raw"]["provenance"]["location"] == "hq"
+
+
+def test_map_is_pro_dark():
+    from aggregator import emit
+    assert "basemaps.cartocdn.com/dark_all" in emit._MAP_TAIL   # dark tiles
+    assert "#1d1d1f" in emit._MAP_HEAD                          # dark surfaces
+    assert "linear-gradient" not in emit._MAP_HEAD              # gradient nav gone

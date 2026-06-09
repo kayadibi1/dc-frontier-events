@@ -213,7 +213,7 @@ _MAP_HEAD = """<!DOCTYPE html>
 <meta name="description" content="Interactive map of upcoming AI, semiconductor and frontier-tech events across the Washington DC metro.">
 
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
-<link rel="preconnect" href="https://a.tile.openstreetmap.org">
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
@@ -221,33 +221,43 @@ _MAP_HEAD = """<!DOCTYPE html>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
 *{box-sizing:border-box}
-:root{--ink:#171a2b;--muted:#565d6b;--accent:#2348d6;--bg:#f5f6fb;--line:#e8e9f2}
-body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;color:var(--ink)}
+:root{--ink:#f5f5f7;--muted:#a1a1a6;--accent:#2997ff;--bg:#000;--card:#1d1d1f;--line:#424245}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;
+background:var(--bg);color:var(--ink)}
 .topbar{display:flex;align-items:center;gap:12px;height:52px;padding:0 16px;
-background:linear-gradient(120deg,#1b2a6b,#2348d6 68%,#7c3aed);color:#fff}
-.topbar a{color:#fff;text-decoration:none}
-.topbar .home{font-weight:700;font-size:15px}
+background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+border-bottom:1px solid var(--line);color:#f5f5f7}
+.topbar a{color:#f5f5f7;text-decoration:none}
+.topbar .home{font-weight:700;font-size:15px;letter-spacing:-.01em}
 .topbar .spacer{flex:1}
-.topbar .nav{font-size:13px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);
-padding:6px 12px;border-radius:8px}
-.topbar .nav:hover{background:rgba(255,255,255,.25)}
+.topbar .nav{font-size:13px;background:var(--card);border:1px solid var(--line);
+padding:6px 14px;border-radius:980px}
+.topbar .nav:hover{border-color:#5a5a5e}
 #app{display:flex;height:calc(100vh - 52px)}
-#sidebar{width:360px;min-width:300px;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+#sidebar{width:360px;min-width:300px;display:flex;flex-direction:column;border-right:1px solid var(--line);
+background:var(--bg)}
 #controls{padding:12px;border-bottom:1px solid var(--line)}
-#controls input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:8px}
+#controls input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:12px;
+font-size:14px;margin-bottom:8px;background:var(--card);color:var(--ink)}
+#controls input[type=text]::placeholder{color:#86868b}
 #controls label{display:inline-block;margin-right:10px;font-size:12px;white-space:nowrap;cursor:pointer}
-#count{margin-top:8px;color:var(--muted);font-size:12px}
+#count{margin-top:8px;color:#86868b;font-size:12px}
 #list{flex:1;overflow:auto;margin:0;padding:0;list-style:none}
-#list li{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
-#list li:hover{background:#f6f6ff}
+#list li{padding:10px 12px;border-bottom:1px solid #2c2c2e;cursor:pointer}
+#list li:hover{background:var(--card)}
 #list li small{color:var(--muted)}
-#map{flex:1}
-.star{color:#d62728}
+#map{flex:1;background:#000}
+.star{color:#ff453a}
 .evname{color:var(--accent);text-decoration:none;font-weight:650}
 #list li:hover .evname{text-decoration:underline}
 .lg{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle}
-.badge{border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:700;margin-left:5px}
-.b-virtual{background:#e8f0ff;color:#1a55d6}.b-person{background:#e8f7ee;color:#137a3a}
+.badge{border-radius:980px;padding:0 8px;font-size:10.5px;font-weight:700;margin-left:5px}
+.b-virtual{background:rgba(41,151,255,.16);color:#6db4ff}.b-person{background:rgba(48,209,88,.16);color:#30d158}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1d1d1f;color:#f5f5f7;
+box-shadow:0 2px 14px rgba(0,0,0,.6)}
+.leaflet-popup-content a{color:#2997ff}
+.leaflet-container .leaflet-control-attribution{background:rgba(0,0,0,.6);color:#86868b}
+.leaflet-control-attribution a{color:#a1a1a6}
 </style></head>
 <body>
 <header class="topbar"><a class="home" href="index.html">← DC AI &amp; Frontier Tech</a>
@@ -256,11 +266,11 @@ padding:6px 12px;border-radius:8px}
 <main id="app"><div id="sidebar"><div id="controls">
 <input type="text" id="search" placeholder="Search events…">
 <div>
-<label><input type="checkbox" class="flt-layer" value="1" checked><span class="lg" style="background:#1f77b4"></span>L1</label>
-<label><input type="checkbox" class="flt-layer" value="2" checked><span class="lg" style="background:#9467bd"></span>L2</label>
-<label><input type="checkbox" class="flt-layer" value="3" checked><span class="lg" style="background:#2ca02c"></span>L3</label>
+<label><input type="checkbox" class="flt-layer" value="1" checked><span class="lg" style="background:#2997ff"></span>L1</label>
+<label><input type="checkbox" class="flt-layer" value="2" checked><span class="lg" style="background:#bf5af2"></span>L2</label>
+<label><input type="checkbox" class="flt-layer" value="3" checked><span class="lg" style="background:#30d158"></span>L3</label>
 </div><div>
-<label><input type="checkbox" id="flt-big"><span class="lg" style="background:#d62728"></span>Big names</label>
+<label><input type="checkbox" id="flt-big"><span class="lg" style="background:#ff453a"></span>Big names</label>
 </div><div id="count"></div></div>
 <ul id="list">
 """
@@ -268,14 +278,14 @@ padding:6px 12px;border-radius:8px}
 _MAP_TAIL = """</ul></div><div id="map"></div></main>
 <script>
 var map=L.map('map').setView([38.9,-77.03],11);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors © CARTO'}).addTo(map);
 var cluster=L.markerClusterGroup();map.addLayer(cluster);
 var lis=[].slice.call(document.querySelectorAll('#list li.ev'));
 lis.forEach(function(li){
   var lat=parseFloat(li.getAttribute('data-lat')),lng=parseFloat(li.getAttribute('data-lng'));
   if(!isNaN(lat)&&!isNaN(lng)){
     var ly=li.getAttribute('data-layer');
-    var color=li.getAttribute('data-big')==='1'?'#d62728':(ly==='2'?'#9467bd':(ly==='3'?'#2ca02c':'#1f77b4'));
+    var color=li.getAttribute('data-big')==='1'?'#ff453a':(ly==='2'?'#bf5af2':(ly==='3'?'#30d158':'#2997ff'));
     var m=L.circleMarker([lat,lng],{radius:7,color:color,fillColor:color,fillOpacity:.85,weight:1});
     var url=li.getAttribute('data-url');
     var nm=li.querySelector('.evname').textContent;
