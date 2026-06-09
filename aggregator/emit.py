@@ -221,7 +221,7 @@ _MAP_HEAD = """<!DOCTYPE html>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
 *{box-sizing:border-box}
-:root{--ink:#f5f5f7;--muted:#a1a1a6;--accent:#2997ff;--bg:#000;--card:#1d1d1f;--line:#424245}
+:root{--ink:#f5f5f7;--muted:#86868b;--muted2:#a1a1a6;--accent:#2997ff;--bg:#000;--card:#1d1d1f;--line:#424245}
 body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;
 background:var(--bg);color:var(--ink)}
 .topbar{display:flex;align-items:center;gap:12px;height:52px;padding:0 16px;
@@ -239,13 +239,13 @@ background:var(--bg)}
 #controls{padding:12px;border-bottom:1px solid var(--line)}
 #controls input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:12px;
 font-size:14px;margin-bottom:8px;background:var(--card);color:var(--ink)}
-#controls input[type=text]::placeholder{color:#86868b}
+#controls input[type=text]::placeholder{color:var(--muted)}
 #controls label{display:inline-block;margin-right:10px;font-size:12px;white-space:nowrap;cursor:pointer}
-#count{margin-top:8px;color:#86868b;font-size:12px}
+#count{margin-top:8px;color:var(--muted);font-size:12px}
 #list{flex:1;overflow:auto;margin:0;padding:0;list-style:none}
 #list li{padding:10px 12px;border-bottom:1px solid #2c2c2e;cursor:pointer}
 #list li:hover{background:var(--card)}
-#list li small{color:var(--muted)}
+#list li small{color:var(--muted2)}
 #map{flex:1;background:#000}
 .star{color:#ff453a}
 .evname{color:var(--accent);text-decoration:none;font-weight:650}

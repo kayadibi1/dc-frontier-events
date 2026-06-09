@@ -37,6 +37,15 @@ from .rank import score_event, top_upcoming
 from .storage import open_store
 
 
+def same_day_actives(active, clean_ids, today: str) -> list:
+    """Future-only sources (Luma JSON) stop reporting an event the moment it
+    starts; keep already-started same-day events active and visible until the
+    day ends instead of archiving them mid-day. (They roll off naturally on
+    the first build after their date.)"""
+    return [e for e in active
+            if (e.start or "")[:10] == today and e.id not in clean_ids]
+
+
 def run(out_dir: str = "out", db_path: str = "data/events.db",
         today: str | None = None, enrich: bool = True) -> dict:
     today = today or datetime.now(timezone.utc).date().isoformat()
@@ -102,7 +111,9 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     # Persist the VALIDATED active set; the store is the durable archive.
     store = open_store(db_path)
     store.upsert_many(clean)
-    archived_total = store.mark_archived({e.id for e in clean})
+    clean_ids = {e.id for e in clean}
+    keep_today = same_day_actives(store.active_events(), clean_ids, today)
+    archived_total = store.mark_archived(clean_ids | {e.id for e in keep_today})
     # Prune archived events older than ~2 years to bound store growth.
     cutoff = (date.fromisoformat(today) - timedelta(days=730)).isoformat()
     pruned = store.prune(cutoff)
@@ -112,7 +123,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     assert len(roundtrip) >= len(clean), "storage round-trip lost rows"
     gone = sorted(set(prior_ids) - {e.id for e in clean})  # in store, not in this run
 
-    emitted = sorted(clean, key=lambda e: e.start or "")
+    emitted = sorted(clean + keep_today, key=lambda e: e.start or "")
     for e in emitted:
         e.raw["score"] = score_event(e, today)   # ephemeral; AFTER store
     big = [e for e in emitted if e.is_big_name]

@@ -156,3 +156,14 @@ def test_email_is_dark_scheme():
     assert 'name="color-scheme" content="dark"' in html
     assert 'bgcolor="#000000"' in html      # Outlook-safe dark canvas
     assert "#1d1d1f" in html                # dark card surface
+
+
+def test_email_buttons_survive_css_stripping():
+    # Outlook's Word renderer drops CSS background on <a> but honors the
+    # bgcolor attribute on table cells -> buttons must carry bgcolor.
+    evs = [Event(id="a", title="AI panel", start="2026-06-20", source="cset",
+                 topics=["ai"])]
+    html = render_email_html(evs, "2026-06-09")
+    assert 'bgcolor="#2997ff"' in html
+    v = render_verify_email_html("https://x/api/verify?token=t")
+    assert 'bgcolor="#2997ff"' in v

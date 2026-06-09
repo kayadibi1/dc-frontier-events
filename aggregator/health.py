@@ -30,8 +30,10 @@ def update_health(prior: dict, observations: list[tuple[str, int, str | None]],
 
     `observations` is a list of (slug, count, error_or_None). Returns the new
     health map and a list of REGRESSED slugs -- sources that were `ok` last run
-    and are now `empty`/`error` (a newly-broken source, worth alerting on). A
-    source that was already failing is not a new regression.
+    and now `error` (a newly-broken fetch, worth alerting on). An `ok -> empty`
+    transition is NOT a regression: future-only feeds (Luma) legitimately go
+    quiet, and the status page still shows them as empty. A source that was
+    already failing is not a new regression.
     """
     health: dict = {}
     regressions: list[str] = []
@@ -46,7 +48,7 @@ def update_health(prior: dict, observations: list[tuple[str, int, str | None]],
                             "last_success": prev.get("last_success"),
                             "fail_streak": int(prev.get("fail_streak", 0)) + 1,
                             "reason": error or "0 events"}
-            if prev.get("status") == "ok":
+            if prev.get("status") == "ok" and st == "error":
                 regressions.append(slug)
     return health, regressions
 

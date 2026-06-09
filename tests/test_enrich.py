@@ -340,3 +340,18 @@ def test_enrich_layer2_tolerates_fetch_failure():
 
     n = asyncio.run(enrich_layer2(events, {"csis": 2}, boom))
     assert n == 0 and events[0].speakers == []   # best-effort, no crash
+
+
+def test_waf_fetch_returns_empty_on_challenge(monkeypatch):
+    # A Cloudflare challenge page must never be parsed as the detail page.
+    from aggregator import enrich
+    monkeypatch.setattr(enrich, "curl_get", lambda url: (403, "Just a moment..."))
+    html = asyncio.run(enrich.default_fetch("https://cdt.org/event/x/", "cdt"))
+    assert html == ""
+
+
+def test_waf_fetch_returns_body_on_200(monkeypatch):
+    from aggregator import enrich
+    monkeypatch.setattr(enrich, "curl_get", lambda url: (200, "<html>real</html>"))
+    html = asyncio.run(enrich.default_fetch("https://cdt.org/event/x/", "cdt"))
+    assert html == "<html>real</html>"

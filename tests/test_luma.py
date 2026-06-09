@@ -135,5 +135,21 @@ def test_luma_dc_discover_source_registered():
     assert ADAPTERS["luma-discover"] is fetch_luma_discover
 
 
-def test_ics_url_property_is_gone():
-    assert not hasattr(SRC, "ics_url")
+def test_malformed_start_skipped_not_fatal():
+    bad = json.loads(json.dumps(ENTRY))
+    bad["event"]["start_at"] = "not-a-date"
+    assert event_from_json(SRC, bad) is None       # skip the entry, not the source
+
+
+def test_malformed_timezone_falls_back_to_utc():
+    odd = json.loads(json.dumps(ENTRY))
+    odd["event"]["timezone"] = "America/../New_York"   # ZoneInfo raises ValueError
+    ev = event_from_json(SRC, odd)
+    assert ev is not None
+    assert ev.start == "2026-06-10T22:00:00+00:00"     # kept, in UTC
+
+
+def test_fetch_discover_requests_future_only():
+    get_json, calls = _pages([(200, {"entries": [], "has_more": False})])
+    asyncio.run(fetch_luma_discover(DISC, get_json=get_json))
+    assert "period=future" in calls[0]

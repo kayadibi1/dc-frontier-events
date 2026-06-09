@@ -55,8 +55,9 @@ def _clean_uid(uid: str, fallback: str) -> str:
     uid = (uid or "").strip()
     if not uid:
         return fallback
-    # 'evt-XXX@events.lu.ma' -> 'evt-XXX' so the same event on multiple
-    # calendars shares one id and collapses in dedupe/upsert.
+    # Strip the host part of feed UIDs ('event_123@meetup.com' -> 'event_123')
+    # so ids stay stable if a platform changes its UID domain. (Originally for
+    # Luma's 'evt-X@events.lu.ma'; Luma now arrives via JSON with bare ids.)
     return uid.split("@", 1)[0]
 
 

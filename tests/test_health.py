@@ -36,3 +36,13 @@ def test_brand_new_failing_source_is_not_a_regression():
     health, regressions = update_health({}, [("new", 0, "HTTP 500")], "2026-06-02")
     assert regressions == []
     assert health["new"]["fail_streak"] == 1
+
+
+def test_ok_to_empty_is_quiet_not_regression():
+    # A community calendar with a legitimately empty upcoming slate is not a
+    # newly-broken source; only ok->error alerts.
+    prior = {"dctech": {"status": "ok", "count": 24,
+                        "last_success": "2026-06-08", "fail_streak": 0}}
+    health, regressions = update_health(prior, [("dctech", 0, None)], "2026-06-09")
+    assert regressions == []
+    assert health["dctech"]["status"] == "empty"

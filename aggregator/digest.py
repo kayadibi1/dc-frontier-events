@@ -231,9 +231,13 @@ def render_email_html(events: list[Event], today_iso: str,
         f'<tr><td style="font-size:13px;color:{_E_MUTED};padding:14px 0 0">'
         f'{today_iso} · {len(upcoming)} upcoming · {len(new_up)} new this week</td></tr>'
         f'<tr><td style="padding:14px 0 2px">'
-        f'<a href="{gcal}" style="display:inline-block;background:{_E_ACCENT};color:#000000;'
-        f'font-weight:600;font-size:14px;text-decoration:none;padding:10px 18px;'
-        f'border-radius:980px">📅 Add to Google Calendar</a></td></tr>'
+        # Button fill via td bgcolor: Outlook's Word renderer drops CSS
+        # background on <a> but honors the attribute (black-on-black otherwise).
+        f'<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+        f'<td bgcolor="{_E_ACCENT}" style="background:{_E_ACCENT};border-radius:980px">'
+        f'<a href="{gcal}" style="display:inline-block;color:#000000;'
+        f'font-weight:600;font-size:14px;text-decoration:none;padding:10px 18px">'
+        f'📅 Add to Google Calendar</a></td></tr></table></td></tr>'
         f'{inner}'
         f'</table></td></tr>'
         # footer
@@ -282,9 +286,11 @@ def _email_shell(heading: str, body_html: str, footer_html: str,
 def _gcal_button(domain: str) -> str:
     gcal = ("https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2F"
             + domain + "%2Fevents-upcoming.ics")
-    return (f'<a href="{gcal}" style="display:inline-block;background:{_E_ACCENT};color:#000000;'
-            f'font-weight:600;font-size:14px;text-decoration:none;padding:11px 20px;'
-            f'border-radius:980px">📅 Add to Google Calendar</a>')
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+            f'<td bgcolor="{_E_ACCENT}" style="background:{_E_ACCENT};border-radius:980px">'
+            f'<a href="{gcal}" style="display:inline-block;color:#000000;'
+            f'font-weight:600;font-size:14px;text-decoration:none;padding:11px 20px">'
+            f'📅 Add to Google Calendar</a></td></tr></table>')
 
 
 def render_verify_email_html(verify_url: str,
@@ -295,10 +301,11 @@ def render_verify_email_html(verify_url: str,
         f'<p style="font-size:15px;color:{_E_INK};line-height:1.5;margin:6px 0 4px">'
         f'Almost there — please confirm your email to start getting the weekly '
         f'DC AI &amp; frontier-tech radar.</p>'
-        f'<p style="margin:20px 0">'
-        f'<a href="{_h(verify_url)}" style="display:inline-block;background:{_E_ACCENT};'
-        f'color:#000000;font-weight:600;font-size:15px;text-decoration:none;padding:12px 22px;'
-        f'border-radius:980px">Confirm my subscription</a></p>'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0"><tr>'
+        f'<td bgcolor="{_E_ACCENT}" style="background:{_E_ACCENT};border-radius:980px">'
+        f'<a href="{_h(verify_url)}" style="display:inline-block;'
+        f'color:#000000;font-weight:600;font-size:15px;text-decoration:none;padding:12px 22px">'
+        f'Confirm my subscription</a></td></tr></table>'
         f'<p style="font-size:13px;color:{_E_MUTED};line-height:1.5;margin:4px 0">'
         f'This link expires in 48 hours. If the button does not work, copy this URL '
         f'into your browser:<br><span style="color:{_E_ACCENT};word-break:break-all">'

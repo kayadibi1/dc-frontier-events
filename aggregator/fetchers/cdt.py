@@ -22,7 +22,6 @@ from ..normalize import detect_topics
 from .base import SourceResult
 
 BASE = "https://cdt.org"
-TIMEOUT = 30.0
 _WS = re.compile(r"\s+")
 _SLUG = re.compile(r"/event/([^/?#]+)/?")
 
@@ -68,21 +67,9 @@ def parse_cdt_listing(source: Source, html: str) -> list[Event]:
     return events
 
 
-# Cloudflare scores TLS fingerprints per IP: the chrome profile started getting
-# challenged from the box (2026-06) while safari/firefox passed 4/4 -> try
-# profiles in order, first 200 wins.
-_TLS_PROFILES = ("safari", "firefox", "chrome")
-
-
-def _curl_get(url: str) -> tuple[int, str]:
-    from curl_cffi import requests as creq
-    code, text = 0, ""
-    for prof in _TLS_PROFILES:
-        r = creq.Session(impersonate=prof).get(url, timeout=TIMEOUT)
-        code, text = r.status_code, (r.text or "")
-        if code == 200:
-            break
-    return code, text
+# Cloudflare challenges TLS fingerprints per site+IP -> shared profile-fallback
+# helper (exception-tolerant per profile, first 200 wins).
+from .waf import curl_get as _curl_get  # noqa: E402
 
 
 async def fetch_cdt(source: Source) -> SourceResult:

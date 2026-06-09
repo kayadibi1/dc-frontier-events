@@ -323,3 +323,14 @@ def test_curated_source_keeps_desc_only_topic():
             topics=["ai"], lat=38.9, lng=-77.03)
     kept, _ = apply_filters([ev])
     assert len(kept) == 1
+
+
+def test_structured_virtual_flag_respected():
+    # Luma JSON signals online via raw["virtual"] with no text marker; an online
+    # event with out-of-town coords must take the virtual path, not geo-authority.
+    ev = mk(title="AI fireside (streamed)", topics=["ai"], lat=37.77, lng=-122.42,
+            raw={"virtual": True})
+    assert is_dc_relevant(ev)                     # DC2 is dc_curated -> trusted
+    ev2 = mk(source="aic-washington", title="AI fireside (streamed)",
+             topics=["ai"], lat=37.77, lng=-122.42, raw={"virtual": True})
+    assert not is_dc_relevant(ev2)                # non-curated, no DC text -> still out

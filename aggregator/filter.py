@@ -97,7 +97,9 @@ def is_dc_relevant(ev: Event) -> bool:
     if _geo_in_dc(ev):
         return True
     blob = _text_blob(ev)
-    virtual = bool(_VIRTUAL.search(blob))
+    # Structured virtual flag (Luma JSON location_type) OR a text marker: the
+    # JSON path carries no 'Zoom'/'online' prose for the regex to find.
+    virtual = bool(ev.raw.get("virtual")) or bool(_VIRTUAL.search(blob))
     has_geo = ev.lat is not None and ev.lng is not None
     # An in-person event with real coordinates outside DC is not a DC event,
     # regardless of incidental text (e.g. a Hampton Roads, VA address matching

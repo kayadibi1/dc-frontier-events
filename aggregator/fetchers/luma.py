@@ -31,15 +31,20 @@ MAX_PAGES = 10      # safety valve; both DC feeds are 1-2 pages today
 
 
 def _local_iso(utc_iso, tzname):
-    """'2026-06-10T22:00:00.000Z' + IANA tz -> tz-aware local ISO (or None)."""
+    """'2026-06-10T22:00:00.000Z' + IANA tz -> tz-aware local ISO (or None).
+    Per-entry tolerant: one bad date/tz from the city-wide discover firehose
+    must degrade that entry, never crash (and quarantine) the whole source."""
     if not utc_iso:
         return None
-    dt = datetime.fromisoformat(utc_iso.replace("Z", "+00:00"))
+    try:
+        dt = datetime.fromisoformat(str(utc_iso).replace("Z", "+00:00"))
+    except ValueError:
+        return None
     if tzname:
         try:
             dt = dt.astimezone(ZoneInfo(tzname))
-        except KeyError:
-            pass     # unknown tz -> keep UTC rather than drop the event
+        except (KeyError, ValueError):
+            pass     # unknown/malformed tz -> keep UTC rather than drop the event
     return dt.isoformat()
 
 
@@ -116,5 +121,5 @@ async def fetch_luma(source: Source, get_json=_get_json) -> SourceResult:
 
 async def fetch_luma_discover(source: Source, get_json=_get_json) -> SourceResult:
     url = (f"{API}/discover/get-paginated-events?discover_place_api_id={source.cal_id}"
-           f"&pagination_limit={PAGE_LIMIT}")
+           f"&period=future&pagination_limit={PAGE_LIMIT}")
     return await _fetch_pages(source, url, get_json)

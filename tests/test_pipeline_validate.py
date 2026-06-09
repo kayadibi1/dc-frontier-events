@@ -23,3 +23,16 @@ def test_pipeline_excludes_garbage_date_end_to_end(tmp_path, monkeypatch):
     ids = {r["id"] for r in recs}
     assert "g" in ids and "b" not in ids          # garbage date excluded end-to-end
     assert all(r.get("lat") is None or -77.6 <= r["lng"] <= -76.8 for r in recs)  # no ocean pins
+
+
+def test_same_day_actives_kept_visible():
+    # Future-only sources (Luma JSON) stop reporting an event once it starts;
+    # already-started same-day events stay visible until the day ends.
+    from aggregator.models import Event
+    from aggregator.pipeline import same_day_actives
+    a = Event(id="t1", title="Started this morning",
+              start="2026-06-09T09:00:00-04:00", source="DC2")
+    b = Event(id="t2", title="Future", start="2026-06-12", source="DC2")
+    c = Event(id="t3", title="Refetched", start="2026-06-09T19:00:00-04:00", source="DC2")
+    out = same_day_actives([a, b, c], {"t3"}, "2026-06-09")
+    assert [e.id for e in out] == ["t1"]

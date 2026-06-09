@@ -1,8 +1,7 @@
 """Generic iCal adapter (async httpx + icalendar).
 
-Fetches any iCal URL and normalizes via parse_ics. Used directly by `kind="ics"`
-sources (Meetup per-group, university Localist/Trumba feeds, Google calendars)
-and reused by the Luma adapter, which only differs in how its URL is built.
+Fetches any iCal URL and normalizes via parse_ics. Used by `kind="ics"` sources
+(Meetup per-group, university Localist/Trumba feeds, Google calendars).
 """
 
 from __future__ import annotations

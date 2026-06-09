@@ -49,6 +49,12 @@ def _fake_session(attempts: list[str], responses: dict[str, _FakeResp]):
             attempts.append(impersonate)
             self._prof = impersonate
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
         def get(self, url, timeout=None):
             return responses[self._prof]
 

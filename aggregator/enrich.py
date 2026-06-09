@@ -22,6 +22,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 from .config import SOURCE_HQ
+from .fetchers.waf import curl_get
 from .models import Event
 from .normalize import detect_topics
 from .provenance import prov_clear, prov_set
@@ -188,13 +189,13 @@ def extract_description(html: str) -> str:
 
 
 async def default_fetch(url: str, source_kind: str) -> str:
-    """Fetch a detail page: curl_cffi (browser TLS) for WAF-fronted sources
-    (CSET, Atlantic Council), httpx for the rest."""
+    """Fetch a detail page: curl_cffi (browser TLS, profile fallback) for
+    WAF-fronted sources (CSET, Atlantic Council, CDT), httpx for the rest.
+    A non-200 (e.g. a Cloudflare challenge page) yields "" so the enricher
+    skips the event instead of parsing challenge HTML."""
     if source_kind in _WAF_SOURCES:
-        def _go():
-            from curl_cffi import requests as creq
-            return creq.Session(impersonate="chrome").get(url, timeout=30).text
-        return await asyncio.to_thread(_go)
+        code, text = await asyncio.to_thread(curl_get, url)
+        return text if code == 200 else ""
     async with httpx.AsyncClient(headers={"User-Agent": _UA}, timeout=30,
                                  follow_redirects=True) as c:
         r = await c.get(url)
