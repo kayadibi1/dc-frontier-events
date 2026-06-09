@@ -75,8 +75,8 @@ def _days_since(iso: str | None, today: str) -> str:
     return "today" if d == 0 else f"{d}d ago"
 
 
-_BADGE = {"ok": ("#137333", "● healthy"), "empty": ("#b06000", "○ empty"),
-          "error": ("#c5221f", "✕ error")}
+_BADGE = {"ok": ("#30d158", "● healthy"), "empty": ("#ffd60a", "○ empty"),
+          "error": ("#ff453a", "✕ error")}
 
 
 def render_status_html(health: dict, today: str, names: dict | None = None,
@@ -106,16 +106,17 @@ def render_status_html(health: dict, today: str, names: dict | None = None,
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Source Health — DC AI &amp; Frontier Tech Events</title>
 <style>
-body{{font-family:system-ui,Arial,sans-serif;margin:0;background:#f7f7fb;color:#1a1a2e}}
+body{{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#000;color:#f5f5f7}}
 .wrap{{max-width:780px;margin:0 auto;padding:24px}}
-h1{{font-size:20px;margin:0 0 4px}}
-.sub{{color:#666;font-size:13px;margin-bottom:18px}}
-table{{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;
-box-shadow:0 1px 4px rgba(0,0,0,.08)}}
-th,td{{padding:10px 12px;text-align:left;border-bottom:1px solid #eee;font-size:14px}}
-th{{background:#fafafe;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5b606c}}
+h1{{font-size:20px;margin:0 0 4px;letter-spacing:-.02em}}
+.sub{{color:#a1a1a6;font-size:13px;margin-bottom:18px}}
+table{{width:100%;border-collapse:collapse;background:#1d1d1f;border:1px solid #424245;
+border-radius:16px;overflow:hidden}}
+th,td{{padding:10px 12px;text-align:left;border-bottom:1px solid #2c2c2e;font-size:14px}}
+th{{background:#000;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#86868b}}
 tr:last-child td{{border-bottom:none}}
-.pill{{display:inline-block;padding:3px 10px;border-radius:999px;background:#e8f5e9;color:#137333;font-weight:600;font-size:13px}}
+small{{color:#86868b}}
+.pill{{display:inline-block;padding:3px 10px;border-radius:980px;background:rgba(48,209,88,.16);color:#30d158;font-weight:600;font-size:13px}}
 </style></head>
 <body><div class="wrap">
 <h1>Source health</h1>

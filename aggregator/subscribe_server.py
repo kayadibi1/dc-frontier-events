@@ -80,11 +80,12 @@ class Deps:
 
 
 _PAGE_CSS = (
-    "body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6fb;"
-    "color:#1f2533;margin:0;padding:0}.card{max-width:460px;margin:8vh auto;background:#fff;"
-    "border-radius:14px;padding:32px 30px;box-shadow:0 1px 4px rgba(0,0,0,.06)}"
-    "h1{font-size:20px;margin:0 0 8px}p{font-size:15px;line-height:1.55;color:#444}"
-    "a{color:#1a4fd0}.muted{color:#6b7280;font-size:13px}"
+    "body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#000;"
+    "color:#f5f5f7;margin:0;padding:0}.card{max-width:460px;margin:8vh auto;background:#1d1d1f;"
+    "border:1px solid #424245;border-radius:16px;padding:32px 30px}"
+    "h1{font-size:20px;margin:0 0 8px;letter-spacing:-.02em}"
+    "p{font-size:15px;line-height:1.55;color:#a1a1a6}"
+    "a{color:#2997ff}.muted{color:#86868b;font-size:13px}"
 )
 
 
@@ -175,8 +176,8 @@ def _confirm_form_page(action: str, token: str, title: str, heading: str,
         f'{intro_html}'
         f'<form method="post" action="{action}" style="margin-top:18px">'
         f'<input type="hidden" name="token" value="{safe}">'
-        f'<button type="submit" style="background:#1a4fd0;color:#fff;border:0;'
-        f'border-radius:8px;padding:11px 20px;font-size:15px;font-weight:600;'
+        f'<button type="submit" style="background:#2997ff;color:#000;border:0;'
+        f'border-radius:980px;padding:11px 20px;font-size:15px;font-weight:600;'
         f'cursor:pointer">{escape(button_label)}</button></form>'
     )
     return _page(title, heading, body)
