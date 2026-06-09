@@ -125,44 +125,46 @@ def _gcal_url(ev: Event) -> str:
 
 _CARD_CSS = """
 *{box-sizing:border-box}
-:root{--ink:#171a2b;--muted:#565d6b;--accent:#2348d6;--accent2:#7c3aed;
---bg:#f5f6fb;--card:#fff;--line:#e8e9f2;--chip:#eef1fb;--big:#d62728}
+:root{--ink:#f5f5f7;--muted:#86868b;--muted2:#a1a1a6;--accent:#2997ff;
+--bg:#000;--card:#1d1d1f;--line:#424245;--chip:#2c2c2e;--big:#ff453a}
 body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
 background:var(--bg);color:var(--ink);line-height:1.45}
 a{color:var(--accent)}
-.hero{background:linear-gradient(135deg,#1b2a6b 0%,#2348d6 55%,#7c3aed 130%);color:#fff;
-padding:30px 20px 26px}
+.hero{background:#000;color:#f5f5f7;padding:52px 20px 34px}
 .hero-in{max-width:920px;margin:0 auto}
-.hero h1{font-size:25px;margin:0 0 4px;letter-spacing:-.01em}
-.hero p{margin:0;color:#d7e0ff;font-size:14.5px;max-width:640px}
-.stats{margin-top:14px;display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#eaf0ff}
-.stats b{font-size:18px;color:#fff;display:block;line-height:1}
-.cta{margin-top:18px;display:flex;gap:9px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1b2a6b;font-weight:600;
-font-size:13.5px;text-decoration:none;padding:9px 14px;border-radius:9px;border:0;cursor:pointer}
-.btn.ghost{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.35)}
-.btn:hover{opacity:.93}
+.hero h1{font-size:40px;margin:0;letter-spacing:-.02em;font-weight:700;line-height:1.08}
+.hero h1 .dim{color:var(--muted)}
+.hero p{margin:10px 0 0;color:var(--muted2);font-size:15px;max-width:640px}
+.stats{margin-top:18px;display:flex;gap:22px;flex-wrap:wrap;font-size:13px;color:var(--muted2)}
+.stats b{font-size:19px;color:#fff;display:block;line-height:1;font-weight:700}
+.cta{margin-top:22px;display:flex;gap:9px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#000;font-weight:600;
+font-size:13.5px;text-decoration:none;padding:9px 16px;border-radius:980px;border:0;cursor:pointer}
+.btn.ghost{background:var(--card);color:#f5f5f7;border:1px solid var(--line)}
+.btn:hover{opacity:.88}
 .wrap{max-width:920px;margin:0 auto;padding:18px 20px 60px}
-.controls{position:sticky;top:0;background:var(--bg);padding:14px 0 10px;z-index:5;
-border-bottom:1px solid var(--line)}
-#q{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px;
-background:#fff}
+.controls{position:sticky;top:0;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(12px);
+backdrop-filter:blur(12px);padding:14px 0 10px;z-index:5;border-bottom:1px solid var(--line)}
+#q{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;font-size:15px;
+background:var(--card);color:var(--ink)}
+#q::placeholder{color:var(--muted)}
 .filters{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
-.chip{border:1px solid var(--line);background:var(--card);color:#444;border-radius:999px;
+.chip{border:1px solid var(--line);background:var(--card);color:var(--muted2);border-radius:980px;
 padding:5px 12px;font-size:12.5px;cursor:pointer;user-select:none}
-.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.chip.topic.on{background:var(--accent2);border-color:var(--accent2)}
+.chip.on{background:#f5f5f7;border-color:#f5f5f7;color:#1d1d1f}
+.chip.topic.on{background:var(--accent);border-color:var(--accent);color:#000}
 .chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #q:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
 #count{color:var(--muted);font-size:12.5px;margin-top:9px}
 .daygroup{margin-top:22px}
 .dayhead{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;
-letter-spacing:.04em;padding-bottom:7px;border-bottom:2px solid var(--line);margin-bottom:4px}
-.card{display:flex;gap:14px;padding:14px 4px;border-bottom:1px solid var(--line)}
-.card:hover{background:#fbfbff}
+letter-spacing:.06em;padding-bottom:7px;margin-bottom:8px}
+.card{display:flex;gap:14px;padding:16px;border:1px solid var(--line);background:var(--card);
+border-radius:16px;margin-bottom:10px}
+.card:hover{border-color:#5a5a5e}
 .when{flex:0 0 64px;text-align:center}
-.when .d{font-size:21px;font-weight:800;line-height:1;color:var(--ink)}
+.when .d{font-size:22px;font-weight:700;line-height:1;color:#fff}
 .when .mo{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent)}
 .when .t{font-size:11px;color:var(--muted);margin-top:3px}
 .body{flex:1;min-width:0}
@@ -170,31 +172,31 @@ letter-spacing:.04em;padding-bottom:7px;border-bottom:2px solid var(--line);marg
 .title:hover{text-decoration:underline}
 .title .star{color:var(--big)}
 .meta{font-size:12.5px;color:var(--muted);display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-.tag{background:var(--chip);color:#3a44a8;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600}
-.badge{border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700}
-.b-virtual{background:#e8f0ff;color:#1a55d6}.b-person{background:#e8f7ee;color:#137a3a}
-.b-big{background:#ffe9e9;color:#c11}
-.src{font-size:11.5px;color:#646b78}
+.tag{background:var(--chip);color:var(--muted2);border-radius:980px;padding:2px 9px;font-size:11px;font-weight:600}
+.badge{border-radius:980px;padding:2px 9px;font-size:11px;font-weight:700}
+.b-virtual{background:rgba(41,151,255,.16);color:#6db4ff}.b-person{background:rgba(48,209,88,.16);color:#30d158}
+.b-big{background:rgba(255,69,58,.16);color:#ff6961}
+.src{font-size:11.5px;color:var(--muted)}
 .addrow{margin-top:7px}
 .addrow a{font-size:12px;color:var(--accent);text-decoration:none;font-weight:600}
 .empty{padding:40px 0;text-align:center;color:var(--muted)}
 footer{max-width:920px;margin:0 auto;padding:24px 20px 50px;color:var(--muted);font-size:12.5px;
 border-top:1px solid var(--line)}
-footer a{color:var(--muted)}
-.signup{background:var(--card);border:1px solid var(--line);border-radius:12px;
-padding:15px 18px;margin:16px 0 2px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+footer a{color:var(--muted2)}
+.signup{background:var(--card);border:1px solid var(--line);border-radius:16px;
+padding:15px 18px;margin:16px 0 2px}
 .signup h2{margin:0 0 3px;font-size:15.5px}
-.signup .sub{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.signup .sub{margin:0 0 10px;font-size:13px;color:var(--muted2)}
 .signup form{display:flex;gap:8px;flex-wrap:wrap}
 .signup input[type=email]{flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--line);
-border-radius:9px;font-size:15px}
-.signup button{background:var(--accent);color:#fff;font-weight:600;border:0;border-radius:9px;
+border-radius:12px;font-size:15px;background:#2c2c2e;color:var(--ink)}
+.signup button{background:var(--accent);color:#000;font-weight:600;border:0;border-radius:980px;
 padding:10px 20px;font-size:14px;cursor:pointer}
-.signup button:hover{opacity:.93}
+.signup button:hover{opacity:.88}
 .signup .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-.spamnote{background:#fff6e5;border:1px solid #f3d9a4;border-radius:8px;padding:8px 10px;
-margin:10px 0 0;font-size:12px;color:#5a4a2a;line-height:1.45}
-@media(max-width:560px){.when{flex-basis:50px}.hero h1{font-size:21px}}
+.spamnote{background:rgba(255,214,10,.1);border:1px solid rgba(255,214,10,.3);border-radius:12px;
+padding:8px 10px;margin:10px 0 0;font-size:12px;color:#ffd60a;line-height:1.45}
+@media(max-width:560px){.when{flex-basis:50px}.hero h1{font-size:28px}}
 """
 
 # Email signup (double opt-in) -- posts to the subscribe server via Caddy. Plain
@@ -383,8 +385,8 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
 <style>{_CARD_CSS}</style></head>
 <body>
 <div class="hero"><div class="hero-in">
-<h1>DC AI &amp; Frontier Tech Events</h1>
-<p>A curated radar of AI, semiconductor, and frontier-tech events across the DC metro —
+<h1>AI events in DC.<br><span class="dim">Tracked. Verified. Ranked.</span></h1>
+<p>AI, semiconductor, and frontier-tech events across the DC metro —
 think tanks, universities, and the builder community, deduplicated and ranked.</p>
 <div class="stats">
 <div><b>{len(upcoming)}</b> upcoming</div>

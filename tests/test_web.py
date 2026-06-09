@@ -77,3 +77,10 @@ def test_gcal_url_allday_and_timed_utc():
     assert "T000000Z" not in allday
     timed = _gcal_url(_ev(start="2026-06-16T12:00:00-04:00"))
     assert "20260616T160000Z" in timed          # 12:00 EDT -> 16:00 UTC
+
+
+def test_index_is_pro_dark():
+    html = render_index([_ev()], "2026-06-02")
+    assert "AI events in DC." in html              # new hero tagline
+    assert "linear-gradient(135deg" not in html    # gradient hero is gone
+    assert "--bg:#000" in html                     # dark canvas token
