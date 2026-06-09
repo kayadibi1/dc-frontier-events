@@ -7,6 +7,8 @@ venues where those names actually appear in DC.
 
 See [`GOAL.md`](GOAL.md) for the mission and [`PROGRESS.md`](PROGRESS.md) for the latest verified run.
 
+![Live site at events.emersus.ai](docs/img/live-site.png)
+
 ## Why three layers
 The marquee AI/chip events in DC mostly do **not** live on community calendars. The aggregator
 ingests all three layers so it doesn't miss the events that matter most:
