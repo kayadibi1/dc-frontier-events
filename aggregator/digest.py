@@ -35,12 +35,12 @@ _KIND_TAG = {"handson": "🔧 hands-on", "policy": "🏛️ policy",
 
 
 def _line(ev: Event, today_iso: str) -> str:
-    topics = ", ".join(_real_topics(ev)) or "—"
+    topics = ", ".join(_real_topics(ev)) or "-"
     src = _NAME.get(ev.source, ev.source)
     link = f" · [details]({ev.source_url})" if ev.source_url else ""
     star = "⭐ " if ev.is_big_name else ""
     kind = _KIND_TAG.get(event_kind(ev), "")
-    return (f"**{(ev.start or '')[:10]}** — {star}{ev.title}  \n"
+    return (f"**{(ev.start or '')[:10]}** · {star}{ev.title}  \n"
             f"  {src} · {kind} · {_loc(ev)} · {topics} · score {score_event(ev, today_iso)}{link}")
 
 
@@ -50,7 +50,7 @@ def build_digest(events: list[Event], today_iso: str, top_n: int = 15) -> str:
     bigs = [e for e in top if e.is_big_name]
 
     out = [
-        "# DC AI & Frontier Tech — Weekly Digest",
+        "# DC AI & Frontier Tech · Weekly Digest",
         f"_Generated {today_iso} · {len(upcoming_all)} upcoming event(s) across "
         f"{len({e.source for e in upcoming_all})} source(s)._",
         "",
@@ -59,7 +59,7 @@ def build_digest(events: list[Event], today_iso: str, top_n: int = 15) -> str:
     if bigs:
         out += [f"- {_line(e, today_iso)}" for e in bigs]
     else:
-        out.append("_None scheduled in range — DC big names cluster at Layer-2 "
+        out.append("_None scheduled in range. DC big names cluster at Layer-2 "
                    "venues (CSET/CSIS); watch this section._")
 
     out += ["", f"## Top upcoming (ranked, showing {len(top)})"]
@@ -82,10 +82,10 @@ _HTML_STYLE = (
 
 
 def _html_item(ev: Event, today_iso: str) -> str:
-    topics = ", ".join(_real_topics(ev)) or "—"
+    topics = ", ".join(_real_topics(ev)) or "-"
     star = '<span class="star">★</span> ' if ev.is_big_name else ""
     link = f' · <a href="{_h(ev.source_url)}">details</a>' if ev.source_url else ""
-    return (f"<li><b>{(ev.start or '')[:10]}</b> — {star}{_h(ev.title)}<br>"
+    return (f"<li><b>{(ev.start or '')[:10]}</b> · {star}{_h(ev.title)}<br>"
             f"<small>{_h(_NAME.get(ev.source, ev.source))} · {_h(_loc(ev))} · "
             f"{_h(topics)} · score {score_event(ev, today_iso)}{link}</small></li>")
 
@@ -96,14 +96,14 @@ def render_html(events: list[Event], today_iso: str, top_n: int = 15) -> str:
     top = top_upcoming(events, today_iso, n=top_n)
     bigs = [e for e in top if e.is_big_name]
     big_html = "".join(_html_item(e, today_iso) for e in bigs) or \
-        "<li><small>None scheduled in range — DC big names cluster at CSET/CSIS.</small></li>"
+        "<li><small>None scheduled in range. DC big names cluster at CSET/CSIS.</small></li>"
     top_html = "".join(_html_item(e, today_iso) for e in top) or \
         "<li><small>No upcoming events in range.</small></li>"
     return (
         f"<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         f"<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\">"
-        f"<title>DC AI &amp; Frontier Tech — Weekly Digest</title><style>{_HTML_STYLE}</style></head>"
-        f"<body><h1>DC AI &amp; Frontier Tech — Weekly Digest</h1>"
+        f"<title>DC AI &amp; Frontier Tech · Weekly Digest</title><style>{_HTML_STYLE}</style></head>"
+        f"<body><h1>DC AI &amp; Frontier Tech · Weekly Digest</h1>"
         f"<p class=\"meta\">{today_iso} · {len(upcoming)} upcoming event(s) across "
         f"{len({e.source for e in upcoming})} source(s)</p>"
         f"<h2>⭐ Big names ({len(bigs)})</h2><ul>{big_html}</ul>"
@@ -146,7 +146,7 @@ def _email_row(ev: Event, today_iso: str) -> str:
         title = (f'<a href="{_h(ev.source_url)}" style="color:{_E_INK};'
                  f'text-decoration:none">{title}</a>')
     star = '<span style="color:#ff453a">★</span> ' if ev.is_big_name else ""
-    topics = ", ".join(_real_topics(ev)) or "—"
+    topics = ", ".join(_real_topics(ev)) or "-"
     meta = f"{_h(_NAME.get(ev.source, ev.source))} &middot; {_h(_loc(ev))} &middot; {_h(topics)}"
     return (
         f'<tr><td style="padding:10px 0;border-bottom:1px solid {_E_LINE}">'
@@ -200,7 +200,7 @@ def render_email_html(events: list[Event], today_iso: str,
 
     inner = (
         _email_section(f"🆕 New this week ({len(new_up)})", new_up,
-                       "Nothing new since last week — the calendar is current.", today_iso)
+                       "Nothing new since last week. The calendar is current.", today_iso)
         + _email_section(f"⭐ Big names ({len(bigs)})", bigs,
                          "No marquee-org events in range right now.", today_iso)
         + _email_section(f"Top upcoming ({len(top)})", top,
@@ -211,7 +211,7 @@ def render_email_html(events: list[Event], today_iso: str,
         f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
         f'{_E_META}'
-        f'<title>DC AI &amp; Frontier Tech — Weekly</title></head>'
+        f'<title>DC AI &amp; Frontier Tech · Weekly</title></head>'
         f'<body style="margin:0;padding:0;background:{_E_BG};">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         f'bgcolor="#000000" style="background:{_E_BG};padding:24px 12px"><tr><td align="center">'
@@ -299,7 +299,7 @@ def render_verify_email_html(verify_url: str,
     content -- it exists only to prove the address is real (double opt-in)."""
     body = (
         f'<p style="font-size:15px;color:{_E_INK};line-height:1.5;margin:6px 0 4px">'
-        f'Almost there — please confirm your email to start getting the weekly '
+        f'Almost there. Please confirm your email to start getting the weekly '
         f'DC AI &amp; frontier-tech radar.</p>'
         f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0"><tr>'
         f'<td bgcolor="{_E_ACCENT}" style="background:{_E_ACCENT};border-radius:980px">'
@@ -311,7 +311,7 @@ def render_verify_email_html(verify_url: str,
         f'into your browser:<br><span style="color:{_E_ACCENT};word-break:break-all">'
         f'{_h(verify_url)}</span></p>'
     )
-    footer = ("If you did not sign up, just ignore this email — no subscription is "
+    footer = ("If you did not sign up, just ignore this email. No subscription is "
               "created until you click the button above.")
     return _email_shell("Confirm your subscription", body, footer)
 
@@ -335,7 +335,7 @@ def render_welcome_email_html(events: list[Event], today_iso: str,
             f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
             f'{rows}</table>'
             f'<p style="font-size:13px;color:{_E_MUTED};margin:14px 0 0">'
-            f'Your full weekly digest — with everything new — lands Monday morning.</p>'
+            f'Your full weekly digest, with everything new, lands Monday morning.</p>'
         )
     else:
         taste_block = (
@@ -346,7 +346,7 @@ def render_welcome_email_html(events: list[Event], today_iso: str,
         f'<p style="font-size:17px;font-weight:700;color:{_E_INK};margin:4px 0 2px">'
         f'You&rsquo;re in. ✅</p>'
         f'<p style="font-size:14px;color:{_E_MUTED};line-height:1.5;margin:0 0 16px">'
-        f'Add the calendar below for the full live list of events — it always stays '
+        f'Add the calendar below for the full live list of events. It always stays '
         f'current. The email is just the highlights.</p>'
         f'<p style="margin:0 0 18px">{_gcal_button(domain)}</p>'
         f'{taste_block}'

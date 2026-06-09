@@ -128,7 +128,7 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
             return _confirm_form_page(
                 "/api/verify", token, "Confirm your subscription",
                 "Confirm your subscription",
-                '<p>One more step — click below to confirm and start getting the '
+                '<p>One more step: click below to confirm and start getting the '
                 'weekly DC AI &amp; frontier-tech radar.</p>', "Confirm subscription")
         if method == "POST":
             result = deps.store.verify(token)
@@ -141,7 +141,7 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
                              '<p class="muted">Your full digest lands every Monday.</p>')
             if result.status == "already":
                 return _page("Already confirmed", "Already confirmed ✅",
-                             '<p>You&rsquo;re already on the list — nothing more to do.</p>')
+                             '<p>You&rsquo;re already on the list. Nothing more to do.</p>')
             return _page("Link problem", "This link didn&rsquo;t work",
                          '<p>The confirmation link is invalid or has expired (they last '
                          '48 hours). <a href="/">Sign up again</a> to get a fresh one.</p>',
@@ -184,7 +184,7 @@ def _confirm_form_page(action: str, token: str, title: str, heading: str,
 
 
 def _check_inbox_page() -> Response:
-    return _page("Check your inbox", "Almost there — check your inbox",
+    return _page("Check your inbox", "Almost there: check your inbox",
                  '<p>We sent you a confirmation link. Click it to start getting the '
                  'weekly DC AI &amp; frontier-tech radar.</p>'
                  '<p class="muted">No email after a few minutes? Check spam, or '
@@ -210,7 +210,7 @@ def make_production_deps(db_path: str, events_db: str, out_dir: str) -> Deps:
         html = render_verify_email_html(url)
         text = ("Confirm your subscription to the DC AI & Frontier Tech weekly radar.\n\n"
                 f"Open this link to confirm (expires in 48 hours):\n{url}\n\n"
-                "If you didn't sign up, ignore this email — nothing happens until "
+                "If you didn't sign up, ignore this email. Nothing happens until "
                 "you confirm.")
         send_transactional(email, "Confirm your DC AI events subscription", html,
                             out_dir, slug=f"verify-{token[:10]}", text=text)
@@ -225,11 +225,11 @@ def make_production_deps(db_path: str, events_db: str, out_dir: str) -> Deps:
             es.close()
         unsub = f"{base}/api/unsubscribe?token={quote(unsub_token)}"
         html = render_welcome_email_html(events, today, unsubscribe_url=unsub)
-        text = ("You're in — the DC AI & Frontier Tech weekly radar.\n\n"
+        text = ("You're in: the DC AI & Frontier Tech weekly radar.\n\n"
                 f"Add the live calendar (always current): {base}/events-upcoming.ics\n"
                 "Your full weekly digest lands every Monday morning.\n\n"
                 f"Unsubscribe anytime: {unsub}")
-        send_transactional(email, "You're in — DC AI & Frontier Tech radar", html,
+        send_transactional(email, "You're in: DC AI & Frontier Tech radar", html,
                            out_dir, slug=f"welcome-{unsub_token[:10]}", text=text,
                            list_unsubscribe=unsub)
 

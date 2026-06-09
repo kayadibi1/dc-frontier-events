@@ -19,7 +19,7 @@ def build_message(html_body: str, text_body: str, today_iso: str,
                   upcoming: int, new_big: int,
                   sender: str | None = None, to: str | None = None) -> EmailMessage:
     msg = EmailMessage()
-    msg["Subject"] = (f"DC AI & Frontier Tech — {today_iso} "
+    msg["Subject"] = (f"DC AI & Frontier Tech · {today_iso} "
                       f"({upcoming} upcoming, {new_big} new big-name)")
     msg["From"] = sender or os.environ.get("SMTP_FROM", "dc-frontier-events@localhost")
     msg["To"] = to or os.environ.get("SMTP_TO", "subscriber@localhost")

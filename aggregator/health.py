@@ -106,7 +106,7 @@ def render_status_html(health: dict, today: str, names: dict | None = None,
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Source Health — DC AI &amp; Frontier Tech Events</title>
+<title>Source Health · DC AI &amp; Frontier Tech Events</title>
 <style>
 body{{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#000;color:#f5f5f7}}
 .wrap{{max-width:780px;margin:0 auto;padding:24px}}

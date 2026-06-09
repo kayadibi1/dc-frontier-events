@@ -82,17 +82,17 @@ CREDENTIALS = [
                "https://www.anthropic.com/learn", ("ai", "llm"),
                "Anthropic's own courses incl. AI Fluency (certificate).",
                deadline_note="enroll anytime (self-paced)",
-               funding="Free — no cost to complete or to earn the certificate."),
+               funding="Free. No cost to complete or to earn the certificate."),
     Credential("OpenAI Academy", "OpenAI", "course", "free", True,
                "https://academy.openai.com/", ("ai", "llm"),
                "Free courses from OpenAI; certificates rolling out.",
                deadline_note="enroll anytime (self-paced)",
-               funding="Free — no cost."),
+               funding="Free. No cost."),
     Credential("Hugging Face Courses (LLM, Agents, NLP)", "Hugging Face", "course", "free", True,
                "https://huggingface.co/learn", ("ai", "llm", "ml"),
                "Free, hands-on, certificate on completion.",
                deadline_note="enroll anytime (self-paced)",
-               funding="Free — no cost; the certificate is free too."),
+               funding="Free. No cost; the certificate is free too."),
     Credential("NVIDIA Deep Learning Institute", "NVIDIA", "workshop", "paid", True,
                "https://www.nvidia.com/en-us/training/", ("ai", "ml", "compute"),
                "Instructor-led + self-paced; certificate of competency. Some virtual.",
@@ -109,7 +109,7 @@ CREDENTIALS = [
                "https://grow.google/ai-essentials/", ("ai",),
                "Beginner cert via Coursera.",
                deadline_note="enroll anytime (self-paced)",
-               funding="Delivered via Coursera — Coursera Financial Aid can waive the fee."),
+               funding="Delivered via Coursera. Coursera Financial Aid can waive the fee."),
     Credential("AWS Certified AI Practitioner", "AWS", "cert", "exam-fee", True,
                "https://aws.amazon.com/certification/certified-ai-practitioner/", ("ai", "compute"),
                "Industry-recognized professional certification (proctored exam).",
@@ -131,15 +131,15 @@ CREDENTIALS = [
     Credential("Anthropic Fellows Program", "Anthropic", "fellowship", "competitive", True,
                "https://www.anthropic.com/research/fellows-program", ("ai", "policy"),
                "Competitive research fellowship; stipend. Highly selective.",
-               deadline_note="cohort-based; applications open periodically — check page",
+               deadline_note="cohort-based; applications open periodically; check page",
                # Program-specific page that states open/closed status + any date.
                apply_url="https://alignment.anthropic.com/2025/anthropic-fellows-program/",
-               funding="Funded — provides a stipend / covers costs (it pays you)."),
+               funding="Funded. Provides a stipend / covers costs (it pays you)."),
     Credential("OpenAI Residency", "OpenAI", "fellowship", "competitive", True,
                "https://openai.com/residency/", ("ai", "ml"),
                "Paid pathway into AI research/engineering at OpenAI.",
                deadline_note="cohort-based; check page for the current cycle",
-               funding="Funded — a paid (salaried) position."),
+               funding="Funded. A paid (salaried) position."),
 ]
 
 
@@ -181,9 +181,9 @@ def apply_fetched_info(found: dict[str, dict],
         if iso:
             note = f"auto-detected deadline ({iso})"
         elif status == "open":
-            note = "✅ applications OPEN — apply now (no date posted)"
+            note = "✅ applications OPEN. Apply now (no date posted)"
         elif status == "closed":
-            note = "applications closed — watch for the next cycle"
+            note = "applications closed. Watch for the next cycle"
         out.append(replace(c, deadline=iso or c.deadline,
                            app_status=status or c.app_status, deadline_note=note))
     return out
@@ -242,13 +242,13 @@ def render_deadlines_md(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
 
     out = ["# Application Deadlines & Windows",
            f"_Generated {today_iso}. Concrete dates shown only when verified; "
-           "everything else lists its honest status — confirm at the link._", ""]
+           "everything else lists its honest status; confirm at the link._", ""]
 
     out.append(f"## ⏰ Closing soon (within {within_days} days) ({len(soon)})")
     if soon:
         for c, d in soon:
             urgency = "‼️" if d <= 14 else "⏰"
-            out.append(f"- {urgency} **{c.deadline}** ({d} days) — {c.name} · {c.provider}  ")
+            out.append(f"- {urgency} **{c.deadline}** ({d} days) · {c.name} · {c.provider}  ")
             out.append(f"  {c.note} [{c.url}]({c.url})")
     else:
         out.append("_None with a verified date in range._")
@@ -256,18 +256,18 @@ def render_deadlines_md(today_iso: str, within_days: int = DEADLINE_ALERT_DAYS,
     if open_now:
         out += ["", f"## ✅ Applications OPEN now (no date posted) ({len(open_now)})"]
         for c in open_now:
-            out.append(f"- **{c.name}** · {c.provider} — apply now  ")
+            out.append(f"- **{c.name}** · {c.provider} · apply now  ")
             out.append(f"  [{c.scrape_url}]({c.scrape_url})")
 
     if later:
         out += ["", f"## 📅 Dated, further out ({len(later)})"]
         for c, d in later:
-            out.append(f"- **{c.deadline}** ({d} days) — {c.name} · {c.provider}  ")
+            out.append(f"- **{c.deadline}** ({d} days) · {c.name} · {c.provider}  ")
             out.append(f"  [{c.url}]({c.url})")
 
     out += ["", f"## 🔄 Rolling / anytime / check page ({len(rolling)})"]
     for c in rolling:
-        out.append(f"- **{c.name}** · {c.provider} — {c.deadline_note or 'check page'}  ")
+        out.append(f"- **{c.name}** · {c.provider} · {c.deadline_note or 'check page'}  ")
         out.append(f"  [{c.url}]({c.url})")
     out.append("")
     return "\n".join(out) + "\n"
@@ -281,7 +281,7 @@ def render_credentials_md(creds: list[Credential] | None = None) -> str:
     """Markdown for the credentials track: grouped by kind, prestige starred."""
     creds = CREDENTIALS if creds is None else creds
     out = ["# Prestige Credentials & Programs",
-           "_Official courses, certificates, and programs from leading AI orgs — "
+           "_Official courses, certificates, and programs from leading AI orgs. "
            "earn proof, not just attendance. Confirm current details at each link._", ""]
     order = ["course", "cert", "workshop", "fellowship", "access"]
     by_kind: dict[str, list[Credential]] = {}
@@ -297,7 +297,7 @@ def render_credentials_md(creds: list[Credential] | None = None) -> str:
             # 'certificate' label only where it literally applies; a fellowship
             # /residency is itself the credential, not a certificate.
             cert = " · certificate" if (c.cert and c.kind != "fellowship") else ""
-            out.append(f"- {star}**{c.name}** — {c.provider} · {c.cost}{cert}  ")
+            out.append(f"- {star}**{c.name}** · {c.provider} · {c.cost}{cert}  ")
             out.append(f"  {c.note} [{c.url}]({c.url})")
             if c.funding:
                 fund_link = f" [funding]({c.funding_url})" if c.funding_url else ""
@@ -321,7 +321,7 @@ def _cred_status_html(c: dict, today_iso: str) -> str:
     if c.get("app_status") == "open":
         return '<span class="badge open">✅ Applications open now</span>'
     if c.get("app_status") == "closed":
-        return '<span class="badge closed">Applications closed — watch for next cycle</span>'
+        return '<span class="badge closed">Applications closed. Watch for next cycle</span>'
     return f'<span class="badge rolling">{_he(c.get("deadline_note") or "check page")}</span>'
 
 
@@ -352,7 +352,7 @@ def render_credentials_html(creds: list[dict], today_iso: str) -> str:
             fund_html = f'<div class="fund">💰 {_he(fund)}</div>' if fund else ""
             rows.append(
                 f'<li><div class="cn">{star}<b>{name_html}</b>'
-                f'<span class="prov"> — {_he(c.get("provider", ""))} · '
+                f'<span class="prov"> · {_he(c.get("provider", ""))} · '
                 f'{_he(c.get("cost", ""))}{cert}</span></div>'
                 f'<div class="note">{_he(c.get("note", ""))}</div>'
                 f'{fund_html}'
@@ -381,7 +381,7 @@ ul.creds li{{border:1px solid #eee;border-radius:8px;padding:.7rem .9rem;margin:
 <p><a href="/">← back to events</a></p>
 <h1>Prestige Credentials, Fellowships &amp; Funding</h1>
 <p class="sub">A hand-curated shortlist of official courses, certificates, workshops, and
-fellowships from leading AI orgs — earn proof, not just attendance. Each shows how to do
+fellowships from leading AI orgs. Earn proof, not just attendance. Each shows how to do
 it free / funded, plus live application status. Confirm details at each link. Generated {_he(today_iso)}.</p>
 {chr(10).join(sections)}
 </body></html>

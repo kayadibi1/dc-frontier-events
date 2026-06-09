@@ -62,7 +62,7 @@ def build_weekly_message(events: list, new_events: list, today_iso: str,
                              domain=domain, unsubscribe_url=unsubscribe_url)
     text = build_digest(events, today_iso)
     msg = EmailMessage()
-    msg["Subject"] = f"DC AI & Frontier Tech — week of {today_iso} ({len(new_up)} new)"
+    msg["Subject"] = f"DC AI & Frontier Tech · week of {today_iso} ({len(new_up)} new)"
     msg["From"] = sender or os.environ.get("SMTP_FROM", "dc-frontier-events@localhost")
     msg["To"] = to or os.environ.get("SMTP_TO", "subscriber@localhost")
     _set_reply_to(msg)

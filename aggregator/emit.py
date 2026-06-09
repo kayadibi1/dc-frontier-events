@@ -209,7 +209,7 @@ _MAP_HEAD = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<title>DC AI & Frontier Tech Events — Map</title>
+<title>DC AI & Frontier Tech Events · Map</title>
 <meta name="description" content="Interactive map of upcoming AI, semiconductor and frontier-tech events across the Washington DC metro.">
 
 <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -337,7 +337,7 @@ def _li(ev: Event) -> str:
     coords = (f' data-lat="{ev.lat}" data-lng="{ev.lng}"'
               if ev.lat is not None and ev.lng is not None else "")
     star = '<span class="star">★</span> ' if ev.is_big_name else ""
-    meta = f"{date} · {_h(src)} · {_h(topics) or '—'}"
+    meta = f"{date} · {_h(src)} · {_h(topics) or '-'}"
     if marker(ev):
         meta += f" · {marker(ev)}"
     if score is not None:

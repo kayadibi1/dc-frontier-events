@@ -204,14 +204,14 @@ padding:8px 10px;margin:10px 0 0;font-size:12px;color:#ffd60a;line-height:1.45}
 _SIGNUP_HTML = """
 <div class="signup">
 <h2>Prefer email? Get the weekly digest</h2>
-<p class="sub">One curated email a week — new &amp; upcoming AI / chip / policy events in DC.
+<p class="sub">One curated email a week: new &amp; upcoming AI / chip / policy events in DC.
 Confirm your address and we send a quick sample right away.</p>
 <form method="post" action="/api/subscribe">
 <input type="email" name="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
 <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 <button type="submit">Subscribe</button>
 </form>
-<p class="spamnote">📬 <b>Check your spam/junk folder</b> for the confirmation email — if it landed there,
+<p class="spamnote">📬 <b>Check your spam/junk folder</b> for the confirmation email. If it landed there,
 mark it <b>Not junk</b> so future digests reach your inbox.</p>
 </div>"""
 
@@ -348,7 +348,7 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
             head = day_iso
         cards = "".join(_card(e, today) for e in evs)
         body_parts.append(f'<section class="daygroup"><div class="dayhead">{_h(head)}</div>{cards}</section>')
-    body = "".join(body_parts) or '<div class="empty">No upcoming events match — try clearing filters.</div>'
+    body = "".join(body_parts) or '<div class="empty">No upcoming events match. Try clearing filters.</div>'
 
     topic_chips = "".join(
         f'<span class="chip topic" data-topic="{_h(t)}" role="button" tabindex="0" '
@@ -379,14 +379,14 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>DC AI &amp; Frontier Tech Events</title>
-<meta name="description" content="A curated, deduplicated, ranked radar of AI, semiconductor and frontier-tech events across the Washington DC metro — think tanks, universities, and the builder community.">
+<meta name="description" content="A curated, deduplicated, ranked radar of AI, semiconductor and frontier-tech events across the Washington DC metro: think tanks, universities, and the builder community.">
 {social}
 {jsonld}
 <style>{_CARD_CSS}</style></head>
 <body>
 <div class="hero"><div class="hero-in">
 <h1>AI events in DC.<br><span class="dim">Tracked. Verified. Ranked.</span></h1>
-<p>AI, semiconductor, and frontier-tech events across the DC metro —
+<p>AI, semiconductor, and frontier-tech events across the DC metro:
 think tanks, universities, and the builder community, deduplicated and ranked.</p>
 <div class="stats">
 <div><b>{len(upcoming)}</b> upcoming</div>
