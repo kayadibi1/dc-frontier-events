@@ -17,3 +17,4 @@ site/
 
 # local keeper backups (binary, not source)
 backups/
+.superpowers/
