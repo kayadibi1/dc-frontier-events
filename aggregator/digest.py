@@ -72,11 +72,12 @@ def build_digest(events: list[Event], today_iso: str, top_n: int = 15) -> str:
 
 
 _HTML_STYLE = (
-    "body{font-family:system-ui,Arial,sans-serif;max-width:680px;margin:auto;color:#222;"
-    "padding:16px}h1{font-size:20px;margin-bottom:2px}h2{font-size:15px;border-bottom:1px "
-    "solid #eee;padding-bottom:4px;margin-top:24px}ul{list-style:none;padding:0}"
-    "li{padding:8px 0;border-bottom:1px solid #f2f2f2}small{color:#666}"
-    ".meta{color:#888;font-size:13px}.star{color:#d62728}"
+    "body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:680px;"
+    "margin:auto;background:#000;color:#f5f5f7;padding:16px}"
+    "h1{font-size:20px;margin-bottom:2px;letter-spacing:-.02em}h2{font-size:15px;border-bottom:1px "
+    "solid #424245;padding-bottom:4px;margin-top:24px}ul{list-style:none;padding:0}"
+    "li{padding:8px 0;border-bottom:1px solid #2c2c2e}small{color:#a1a1a6}a{color:#2997ff}"
+    ".meta{color:#86868b;font-size:13px}.star{color:#ff453a}"
 )
 
 
@@ -118,12 +119,15 @@ def render_html(events: list[Event], today_iso: str, top_n: int = 15) -> str:
 # Distinct from render_html (that is the on-site web digest); this is the body
 # the weekly emailer sends.
 # ---------------------------------------------------------------------------
-_E_BG = "#f4f6fb"      # page background
-_E_CARD = "#ffffff"    # content card
-_E_ACCENT = "#1a4fd0"  # links / section headers
-_E_INK = "#1f2533"     # primary text
-_E_MUTED = "#6b7280"   # secondary text
-_E_PILL = "#eef3ff"    # date pill background
+_E_BG = "#000000"      # page background (Pro dark)
+_E_CARD = "#1d1d1f"    # content card
+_E_ACCENT = "#2997ff"  # links / section headers (Apple dark-mode blue)
+_E_INK = "#f5f5f7"     # primary text
+_E_MUTED = "#a1a1a6"   # secondary text (AA on dark surfaces)
+_E_PILL = "#2c2c2e"    # date pill background
+_E_LINE = "#424245"    # hairlines
+_E_META = ('<meta name="color-scheme" content="dark">'
+           '<meta name="supported-color-schemes" content="dark">')
 
 
 def _date_pill(iso: str) -> tuple[str, str]:
@@ -141,11 +145,11 @@ def _email_row(ev: Event, today_iso: str) -> str:
     if ev.source_url:
         title = (f'<a href="{_h(ev.source_url)}" style="color:{_E_INK};'
                  f'text-decoration:none">{title}</a>')
-    star = '<span style="color:#d62728">★</span> ' if ev.is_big_name else ""
+    star = '<span style="color:#ff453a">★</span> ' if ev.is_big_name else ""
     topics = ", ".join(_real_topics(ev)) or "—"
     meta = f"{_h(_NAME.get(ev.source, ev.source))} &middot; {_h(_loc(ev))} &middot; {_h(topics)}"
     return (
-        f'<tr><td style="padding:10px 0;border-bottom:1px solid #eef0f5">'
+        f'<tr><td style="padding:10px 0;border-bottom:1px solid {_E_LINE}">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
         f'<td width="52" valign="top" align="center" '
         f'style="background:{_E_PILL};border-radius:8px;padding:6px 0">'
@@ -206,17 +210,20 @@ def render_email_html(events: list[Event], today_iso: str,
     return (
         f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f'{_E_META}'
         f'<title>DC AI &amp; Frontier Tech — Weekly</title></head>'
         f'<body style="margin:0;padding:0;background:{_E_BG};">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        f'style="background:{_E_BG};padding:24px 12px"><tr><td align="center">'
+        f'bgcolor="#000000" style="background:{_E_BG};padding:24px 12px"><tr><td align="center">'
         f'<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
-        f'style="max-width:600px;width:100%;background:{_E_CARD};border-radius:14px;'
+        f'style="max-width:600px;width:100%;background:{_E_CARD};border:1px solid {_E_LINE};'
+        f'border-radius:16px;'
         f'overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">'
         # header band
-        f'<tr><td style="background:{_E_ACCENT};padding:22px 26px">'
-        f'<div style="font-size:19px;font-weight:700;color:#fff">DC AI &amp; Frontier Tech</div>'
-        f'<div style="font-size:13px;color:#cfe0ff;margin-top:2px">'
+        f'<tr><td style="background:#000000;padding:22px 26px">'
+        f'<div style="font-size:19px;font-weight:700;color:{_E_INK};'
+        f'letter-spacing:-.02em">DC AI &amp; Frontier Tech</div>'
+        f'<div style="font-size:13px;color:{_E_MUTED};margin-top:2px">'
         f'Weekly radar · AI / semiconductors / policy in the DC metro</div></td></tr>'
         # body
         f'<tr><td style="padding:8px 26px 26px">'
@@ -224,13 +231,13 @@ def render_email_html(events: list[Event], today_iso: str,
         f'<tr><td style="font-size:13px;color:{_E_MUTED};padding:14px 0 0">'
         f'{today_iso} · {len(upcoming)} upcoming · {len(new_up)} new this week</td></tr>'
         f'<tr><td style="padding:14px 0 2px">'
-        f'<a href="{gcal}" style="display:inline-block;background:{_E_ACCENT};color:#fff;'
+        f'<a href="{gcal}" style="display:inline-block;background:{_E_ACCENT};color:#000000;'
         f'font-weight:600;font-size:14px;text-decoration:none;padding:10px 18px;'
-        f'border-radius:8px">📅 Add to Google Calendar</a></td></tr>'
+        f'border-radius:980px">📅 Add to Google Calendar</a></td></tr>'
         f'{inner}'
         f'</table></td></tr>'
         # footer
-        f'<tr><td style="background:#fafbfe;border-top:1px solid #eef0f5;padding:18px 26px;'
+        f'<tr><td style="background:#000000;border-top:1px solid {_E_LINE};padding:18px 26px;'
         f'font-size:12px;color:{_E_MUTED}">'
         f'You are subscribed to the DC AI &amp; Frontier Tech weekly radar.<br>'
         f'Subscribe in any calendar app: <a href="{sub}" style="color:{_E_ACCENT}">{sub}</a><br>'
@@ -247,23 +254,26 @@ def render_email_html(events: list[Event], today_iso: str,
 # ---------------------------------------------------------------------------
 def _email_shell(heading: str, body_html: str, footer_html: str,
                  title: str = "DC AI & Frontier Tech") -> str:
-    """Wrap body_html in the shared card chrome (blue header band + footer)."""
+    """Wrap body_html in the shared card chrome (dark header band + footer)."""
     return (
         f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f'{_E_META}'
         f'<title>{_h(title)}</title></head>'
         f'<body style="margin:0;padding:0;background:{_E_BG};">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        f'style="background:{_E_BG};padding:24px 12px"><tr><td align="center">'
+        f'bgcolor="#000000" style="background:{_E_BG};padding:24px 12px"><tr><td align="center">'
         f'<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
-        f'style="max-width:600px;width:100%;background:{_E_CARD};border-radius:14px;'
+        f'style="max-width:600px;width:100%;background:{_E_CARD};border:1px solid {_E_LINE};'
+        f'border-radius:16px;'
         f'overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">'
-        f'<tr><td style="background:{_E_ACCENT};padding:22px 26px">'
-        f'<div style="font-size:19px;font-weight:700;color:#fff">{_h(heading)}</div>'
-        f'<div style="font-size:13px;color:#cfe0ff;margin-top:2px">'
+        f'<tr><td style="background:#000000;padding:22px 26px">'
+        f'<div style="font-size:19px;font-weight:700;color:{_E_INK};'
+        f'letter-spacing:-.02em">{_h(heading)}</div>'
+        f'<div style="font-size:13px;color:{_E_MUTED};margin-top:2px">'
         f'Weekly radar · AI / semiconductors / policy in the DC metro</div></td></tr>'
         f'<tr><td style="padding:20px 26px 24px">{body_html}</td></tr>'
-        f'<tr><td style="background:#fafbfe;border-top:1px solid #eef0f5;padding:16px 26px;'
+        f'<tr><td style="background:#000000;border-top:1px solid {_E_LINE};padding:16px 26px;'
         f'font-size:12px;color:{_E_MUTED}">{footer_html}</td></tr>'
         f'</table></td></tr></table></body></html>'
     )
@@ -272,9 +282,9 @@ def _email_shell(heading: str, body_html: str, footer_html: str,
 def _gcal_button(domain: str) -> str:
     gcal = ("https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2F"
             + domain + "%2Fevents-upcoming.ics")
-    return (f'<a href="{gcal}" style="display:inline-block;background:{_E_ACCENT};color:#fff;'
+    return (f'<a href="{gcal}" style="display:inline-block;background:{_E_ACCENT};color:#000000;'
             f'font-weight:600;font-size:14px;text-decoration:none;padding:11px 20px;'
-            f'border-radius:8px">📅 Add to Google Calendar</a>')
+            f'border-radius:980px">📅 Add to Google Calendar</a>')
 
 
 def render_verify_email_html(verify_url: str,
@@ -287,8 +297,8 @@ def render_verify_email_html(verify_url: str,
         f'DC AI &amp; frontier-tech radar.</p>'
         f'<p style="margin:20px 0">'
         f'<a href="{_h(verify_url)}" style="display:inline-block;background:{_E_ACCENT};'
-        f'color:#fff;font-weight:600;font-size:15px;text-decoration:none;padding:12px 22px;'
-        f'border-radius:8px">Confirm my subscription</a></p>'
+        f'color:#000000;font-weight:600;font-size:15px;text-decoration:none;padding:12px 22px;'
+        f'border-radius:980px">Confirm my subscription</a></p>'
         f'<p style="font-size:13px;color:{_E_MUTED};line-height:1.5;margin:4px 0">'
         f'This link expires in 48 hours. If the button does not work, copy this URL '
         f'into your browser:<br><span style="color:{_E_ACCENT};word-break:break-all">'

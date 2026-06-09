@@ -147,3 +147,12 @@ def test_digest_loc_shows_approx_marker():
     ev2 = Event(id="d2", title="x", start="2026-06-10", source="brookings", address="Real Venue")
     prov_set(ev2, "location", "scraped")
     assert "📍approx" not in _loc(ev2)
+
+
+def test_email_is_dark_scheme():
+    evs = [Event(id="a", title="AI policy panel", start="2026-06-20", source="cset",
+                 topics=["ai"])]
+    html = render_email_html(evs, "2026-06-09")
+    assert 'name="color-scheme" content="dark"' in html
+    assert 'bgcolor="#000000"' in html      # Outlook-safe dark canvas
+    assert "#1d1d1f" in html                # dark card surface
