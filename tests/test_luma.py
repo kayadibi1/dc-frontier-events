@@ -1,8 +1,9 @@
+import asyncio
 import json
 import os
 
 from aggregator.config import Source
-from aggregator.fetchers.luma import event_from_json
+from aggregator.fetchers.luma import event_from_json, fetch_luma, fetch_luma_discover
 from aggregator.provenance import prov_get
 
 SRC = Source("DC2", "DC Data & AI Events", "luma", 1, True, cal_id="cal-x")
@@ -77,3 +78,48 @@ def test_real_fixture_parses():
     for e in evs:
         assert e.id.startswith("evt-")
         assert "T" in e.start and ("+" in e.start or "-" in e.start[10:])    # tz-aware
+
+
+DISC = Source("luma-dc", "Luma DC (city-wide)", "luma-discover", 1, False,
+              cal_id="discplace-AANPgOymN6bqFn8")
+
+
+def _pages(responses):
+    """get_json fake: pops canned (status, data) per call, records URLs."""
+    calls = []
+
+    async def get_json(url):
+        calls.append(url)
+        return responses.pop(0)
+
+    return get_json, calls
+
+
+def test_fetch_luma_paginates_until_has_more_false():
+    p1 = {"entries": [ENTRY], "has_more": True, "next_cursor": "cur+1="}
+    p2 = {"entries": [ENTRY], "has_more": False, "next_cursor": None}
+    get_json, calls = _pages([(200, p1), (200, p2)])
+    res = asyncio.run(fetch_luma(SRC, get_json=get_json))
+    assert res.ok and len(res.events) == 2
+    assert "calendar_api_id=cal-x" in calls[0] and "period=future" in calls[0]
+    assert "pagination_cursor=cur%2B1%3D" in calls[1]          # cursor URL-quoted
+
+
+def test_fetch_luma_http_error_quarantines():
+    get_json, _ = _pages([(404, {})])
+    res = asyncio.run(fetch_luma(SRC, get_json=get_json))
+    assert not res.ok and res.status == 404 and res.reason == "HTTP 404"
+
+
+def test_fetch_luma_empty_is_clean_empty():
+    get_json, _ = _pages([(200, {"entries": [], "has_more": False})])
+    res = asyncio.run(fetch_luma(SRC, get_json=get_json))
+    assert res.error is None and res.status == 200 and res.events == []
+
+
+def test_fetch_discover_hits_place_endpoint():
+    get_json, calls = _pages([(200, {"entries": [ENTRY], "has_more": False})])
+    res = asyncio.run(fetch_luma_discover(DISC, get_json=get_json))
+    assert res.ok and len(res.events) == 1
+    assert "discover/get-paginated-events" in calls[0]
+    assert "discover_place_api_id=discplace-AANPgOymN6bqFn8" in calls[0]
