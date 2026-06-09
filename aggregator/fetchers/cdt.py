@@ -68,14 +68,25 @@ def parse_cdt_listing(source: Source, html: str) -> list[Event]:
     return events
 
 
+# Cloudflare scores TLS fingerprints per IP: the chrome profile started getting
+# challenged from the box (2026-06) while safari/firefox passed 4/4 -> try
+# profiles in order, first 200 wins.
+_TLS_PROFILES = ("safari", "firefox", "chrome")
+
+
 def _curl_get(url: str) -> tuple[int, str]:
     from curl_cffi import requests as creq
-    r = creq.Session(impersonate="chrome").get(url, timeout=TIMEOUT)
-    return r.status_code, (r.text or "")
+    code, text = 0, ""
+    for prof in _TLS_PROFILES:
+        r = creq.Session(impersonate=prof).get(url, timeout=TIMEOUT)
+        code, text = r.status_code, (r.text or "")
+        if code == 200:
+            break
+    return code, text
 
 
 async def fetch_cdt(source: Source) -> SourceResult:
-    # CDT is behind Cloudflare (plain httpx 403s) -> curl_cffi (Chrome TLS).
+    # CDT is behind Cloudflare (plain httpx 403s) -> curl_cffi with TLS-profile fallback.
     try:
         code, html = await asyncio.to_thread(_curl_get, source.url)
     except Exception as e:  # noqa: BLE001

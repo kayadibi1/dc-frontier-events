@@ -39,9 +39,8 @@ LUMA_SOURCES = [
     # ~11 of ~455 events are in DC. NOT dc_curated, so it is held to the strict
     # DC geo/text filter and only its genuinely-DC events are kept.
     Source("aic-washington", "AI Collective DC", "luma", 1, False, cal_id="cal-E74MDlDKBaeAwXK"),
-    # Global AI calendar (Claude Community, Latent.Space, ...): NOT dc_curated,
-    # so it is held to the strict DC location filter.
-    Source("ai", "Global AI (Luma)", "luma", 1, False, cal_id="cal-nyk2WcWIv2CFmq8"),
+    # REMOVED 2026-06-09: "ai" (Global AI, cal-nyk2WcWIv2CFmq8) — Luma turned it
+    # into a discover calendar (disccal-…), which has no ICS export (404s).
 ]
 
 # Layer 1 — Meetup groups (per-group public iCal export). DC-specific data/AI
