@@ -26,5 +26,13 @@ PY
 
 echo "== Visitor report (humans; crawlers filtered) -> $OUT =="
 LOGS=(/var/log/caddy/events-access.log /var/log/caddy/events-access*.log.gz)
-goaccess "${LOGS[@]}" --log-format=CADDY --ignore-crawlers --anonymize-ip -o "$OUT"
-echo "  wrote $OUT"
+# Exclude our own traffic so counts reflect real outsiders:
+#   73.173.160.170 = maintainer laptop (deploy/verify curls)
+#   37.27.242.32   = this box (ssh-run health curls hit the public domain)
+# GoAccess needs one --exclude-ip per entry (comma-separated is NOT parsed).
+# Add more IPs to this array as needed.
+EXCLUDE_IPS=(73.173.160.170 37.27.242.32)
+EXC=(); for ip in "${EXCLUDE_IPS[@]}"; do EXC+=(--exclude-ip "$ip"); done
+goaccess "${LOGS[@]}" --log-format=CADDY --ignore-crawlers --anonymize-ip \
+  "${EXC[@]}" -o "$OUT"
+echo "  wrote $OUT (excluded: ${EXCLUDE_IPS[*]})"
