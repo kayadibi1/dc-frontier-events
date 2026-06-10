@@ -18,6 +18,7 @@ from xml.sax.saxutils import escape
 from .config import SOURCES
 from .models import Event
 from .provenance import marker
+from .source_prefs import source_query
 
 DOMAIN = "events.emersus.ai"
 _NAME = {s.slug: s.name for s in SOURCES}
@@ -194,6 +195,14 @@ border-radius:12px;font-size:15px;background:#2c2c2e;color:var(--ink)}
 padding:10px 20px;font-size:14px;cursor:pointer}
 .signup button:hover{opacity:.88}
 .signup .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.sourceprefs{width:100%;border-top:1px solid var(--line);margin-top:8px;padding-top:10px}
+.sourceprefs summary{cursor:pointer;color:var(--muted2);font-size:13px;font-weight:600}
+.sourcegroup{margin-top:11px}.sourcegroup b{font-size:11px;color:var(--muted);text-transform:uppercase}
+.sourcegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px;margin-top:7px}
+.sourcegrid label{font-size:12.5px;color:var(--muted2);display:flex;gap:7px;align-items:flex-start}
+.sourcegrid input{margin-top:2px}
+.calrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.calrow .btn{font-size:12.5px;padding:8px 13px}
 .spamnote{background:rgba(255,214,10,.1);border:1px solid rgba(255,214,10,.3);border-radius:12px;
 padding:8px 10px;margin:10px 0 0;font-size:12px;color:#ffd60a;line-height:1.45}
 @media(max-width:560px){.when{flex-basis:50px}.hero h1{font-size:28px}}
@@ -201,7 +210,32 @@ padding:8px 10px;margin:10px 0 0;font-size:12px;color:#ffd60a;line-height:1.45}
 
 # Email signup (double opt-in) -- posts to the subscribe server via Caddy. Plain
 # string (literal braces). Includes the honeypot field the server checks for bots.
-_SIGNUP_HTML = """
+def _source_picker_html() -> str:
+    groups = []
+    for layer, label in ((1, "Community"), (2, "Policy"), (3, "University")):
+        boxes = []
+        for src in SOURCES:
+            if src.layer != layer:
+                continue
+            boxes.append(
+                f'<label><input type="checkbox" name="sources" data-pref-source '
+                f'value="{_h(src.slug)}" checked> <span>{_h(src.name)}</span></label>'
+            )
+        if boxes:
+            groups.append(
+                f'<div class="sourcegroup"><b>{_h(label)}</b>'
+                f'<div class="sourcegrid">{"".join(boxes)}</div></div>'
+            )
+    return "".join(groups)
+
+
+def _signup_html() -> str:
+    cal = f"https://{DOMAIN}/api/calendar.ics"
+    webcal = f"webcal://{DOMAIN}/api/calendar.ics"
+    gcal = "https://calendar.google.com/calendar/r?cid=" + quote_plus(webcal)
+    q = source_query(())
+    cal = f"{cal}?{q}" if q else cal
+    return f"""
 <div class="signup">
 <h2>Prefer email? Get the weekly digest</h2>
 <p class="sub">One curated email a week: new &amp; upcoming AI / chip / policy events in DC.
@@ -209,6 +243,15 @@ Confirm your address and we send a quick sample right away.</p>
 <form method="post" action="/api/subscribe">
 <input type="email" name="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
 <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<details class="sourceprefs">
+<summary id="source-summary">Sources: all selected</summary>
+{_source_picker_html()}
+<div class="calrow">
+<a class="btn ghost" id="pref-gcal" href="{_h(gcal)}" target="_blank" rel="noopener">Add selected to Google</a>
+<a class="btn ghost" id="pref-webcal" href="{_h(webcal)}">Apple / Outlook</a>
+<a class="btn ghost" id="pref-ics" href="{_h(cal)}">.ics</a>
+</div>
+</details>
 <button type="submit">Subscribe</button>
 </form>
 <p class="spamnote">📬 <b>Check your spam/junk folder</b> for the confirmation email. If it landed there,
@@ -224,6 +267,22 @@ _INDEX_JS = """<script>
 var cards=[].slice.call(document.querySelectorAll('.card'));
 var q=document.getElementById('q');
 var topics=new Set(), layers=new Set(['1','2','3']), flts=new Set();
+var prefBoxes=[].slice.call(document.querySelectorAll('[data-pref-source]'));
+function updateSourceCalendarLinks(){
+  if(!prefBoxes.length) return;
+  var selected=prefBoxes.filter(function(b){return b.checked;}).map(function(b){return b.value;});
+  var useAll=!selected.length || selected.length===prefBoxes.length;
+  var query=useAll?'':'?sources='+encodeURIComponent(selected.join(','));
+  var https='https://events.emersus.ai/api/calendar.ics'+query;
+  var webcal='webcal://events.emersus.ai/api/calendar.ics'+query;
+  var g=document.getElementById('pref-gcal'), w=document.getElementById('pref-webcal');
+  var i=document.getElementById('pref-ics'), s=document.getElementById('source-summary');
+  if(g) g.href='https://calendar.google.com/calendar/r?cid='+encodeURIComponent(webcal);
+  if(w) w.href=webcal;
+  if(i) i.href=https;
+  if(s) s.textContent=useAll?'Sources: all selected':'Sources: '+selected.length+' selected';
+}
+prefBoxes.forEach(function(b){b.addEventListener('change',updateSourceCalendarLinks);});
 function apply(){
   var term=q.value.toLowerCase().trim();
   var shown=0;
@@ -262,6 +321,7 @@ q.addEventListener('input',apply);
     if(e.key==='Enter'||e.key===' '){e.preventDefault();ch.click();}
   });
 });
+updateSourceCalendarLinks();
 apply();
 </script>"""
 
@@ -415,7 +475,7 @@ think tanks, universities, and the builder community, deduplicated and ranked.</
 </div></div>
 
 <main class="wrap">
-{_SIGNUP_HTML}
+{_signup_html()}
 <div class="controls">
 <input id="q" type="text" placeholder="Search events, speakers, venues…" autocomplete="off">
 <div class="filters" role="group" aria-label="Filter events">

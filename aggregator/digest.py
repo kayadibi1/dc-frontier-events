@@ -6,6 +6,7 @@ the GOAL's weekly emailer. Pure function, testable.
 from __future__ import annotations
 
 from datetime import date
+from urllib.parse import quote, urlsplit, urlunsplit
 from xml.sax.saxutils import escape
 
 from .config import SOURCES
@@ -28,6 +29,16 @@ def _loc(ev: Event) -> str:
 
 def _real_topics(ev: Event) -> list[str]:
     return [t for t in ev.topics if not t.startswith("big:")]
+
+
+def _calendar_links(domain: str, calendar_url: str | None = None) -> tuple[str, str]:
+    sub = calendar_url or f"https://{domain}/events-upcoming.ics"
+    parts = urlsplit(sub)
+    if parts.scheme in ("http", "https") and parts.netloc:
+        webcal = urlunsplit(("webcal", parts.netloc, parts.path, parts.query, ""))
+    else:
+        webcal = f"webcal://{domain}/events-upcoming.ics"
+    return sub, "https://calendar.google.com/calendar/r?cid=" + quote(webcal, safe="")
 
 
 _KIND_TAG = {"handson": "🔧 hands-on", "policy": "🏛️ policy",
@@ -183,7 +194,9 @@ def _email_section(title: str, evs: list[Event], empty: str, today_iso: str) -> 
 def render_email_html(events: list[Event], today_iso: str,
                       new_events: list[Event] | None = None,
                       domain: str = "events.emersus.ai", top_n: int = 15,
-                      unsubscribe_url: str = "#") -> str:
+                      unsubscribe_url: str = "#",
+                      calendar_url: str | None = None,
+                      preferences_url: str = "#") -> str:
     """Polished, email-client-safe weekly digest. `new_events` (events first seen
     in the last week, from Store.new_since) are highlighted in their own section
     above the ranked upcoming list. Inline styles only. `unsubscribe_url` is
@@ -195,9 +208,9 @@ def render_email_html(events: list[Event], today_iso: str,
     new_up = sorted([e for e in new_events if (e.start or "")[:10] >= today_iso],
                     key=lambda e: e.start or "")
 
-    gcal = ("https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2F"
-            + domain + "%2Fevents-upcoming.ics")
-    sub = f"https://{domain}/events-upcoming.ics"
+    sub, gcal = _calendar_links(domain, calendar_url)
+    pref = (f'<br><a href="{_h(preferences_url)}" style="color:{_E_MUTED}">'
+            f'Manage source preferences</a>' if preferences_url != "#" else "")
 
     inner = (
         _email_section(f"🆕 New this week ({len(new_up)})", new_up,
@@ -236,7 +249,7 @@ def render_email_html(events: list[Event], today_iso: str,
         # background on <a> but honors the attribute (black-on-black otherwise).
         f'<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
         f'<td bgcolor="{_E_ACCENT}" style="background:{_E_ACCENT};border-radius:980px">'
-        f'<a href="{gcal}" style="display:inline-block;color:#000000;'
+        f'<a href="{_h(gcal)}" style="display:inline-block;color:#000000;'
         f'font-weight:600;font-size:14px;text-decoration:none;padding:10px 18px">'
         f'📅 Add to Google Calendar</a></td></tr></table></td></tr>'
         f'{inner}'
@@ -245,8 +258,8 @@ def render_email_html(events: list[Event], today_iso: str,
         f'<tr><td style="background:#000000;border-top:1px solid {_E_LINE};padding:18px 26px;'
         f'font-size:12px;color:{_E_MUTED}">'
         f'You are subscribed to the DC AI &amp; Frontier Tech weekly radar.<br>'
-        f'Subscribe in any calendar app: <a href="{sub}" style="color:{_E_ACCENT}">{sub}</a><br>'
-        f'<a href="{_h(unsubscribe_url)}" style="color:{_E_MUTED}">Unsubscribe</a></td></tr>'
+        f'Subscribe in any calendar app: <a href="{_h(sub)}" style="color:{_E_ACCENT}">{_h(sub)}</a><br>'
+        f'<a href="{_h(unsubscribe_url)}" style="color:{_E_MUTED}">Unsubscribe</a>{pref}</td></tr>'
         f'</table></td></tr></table></body></html>'
     )
 
@@ -284,12 +297,11 @@ def _email_shell(heading: str, body_html: str, footer_html: str,
     )
 
 
-def _gcal_button(domain: str) -> str:
-    gcal = ("https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2F"
-            + domain + "%2Fevents-upcoming.ics")
+def _gcal_button(domain: str, calendar_url: str | None = None) -> str:
+    _, gcal = _calendar_links(domain, calendar_url)
     return (f'<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
             f'<td bgcolor="{_E_ACCENT}" style="background:{_E_ACCENT};border-radius:980px">'
-            f'<a href="{gcal}" style="display:inline-block;color:#000000;'
+            f'<a href="{_h(gcal)}" style="display:inline-block;color:#000000;'
             f'font-weight:600;font-size:14px;text-decoration:none;padding:11px 20px">'
             f'📅 Add to Google Calendar</a></td></tr></table>')
 
@@ -320,13 +332,17 @@ def render_verify_email_html(verify_url: str,
 def render_welcome_email_html(events: list[Event], today_iso: str,
                               unsubscribe_url: str = "#",
                               domain: str = "events.emersus.ai",
-                              taste_n: int = 3) -> str:
+                              taste_n: int = 3,
+                              calendar_url: str | None = None,
+                              preferences_url: str = "#") -> str:
     """Welcome email sent right after verification. Hero is the Add-to-Google-
     Calendar button (that gives the FULL live list); below it a Top-`taste_n`
     sampler of upcoming events as a teaser, explicitly pointing to Monday's full
     digest so the weekly send is never redundant."""
     taste = top_upcoming(events, today_iso, n=taste_n)
-    sub = f"https://{domain}/events-upcoming.ics"
+    sub, _ = _calendar_links(domain, calendar_url)
+    pref = (f'<br><a href="{_h(preferences_url)}" style="color:{_E_MUTED}">'
+            f'Manage source preferences</a>' if preferences_url != "#" else "")
     if taste:
         rows = "".join(_email_row(e, today_iso) for e in taste)
         taste_block = (
@@ -349,11 +365,11 @@ def render_welcome_email_html(events: list[Event], today_iso: str,
         f'<p style="font-size:14px;color:{_E_MUTED};line-height:1.5;margin:0 0 16px">'
         f'Add the calendar below for the full live list of events. It always stays '
         f'current. The email is just the highlights.</p>'
-        f'<p style="margin:0 0 18px">{_gcal_button(domain)}</p>'
+        f'<p style="margin:0 0 18px">{_gcal_button(domain, calendar_url)}</p>'
         f'{taste_block}'
     )
     footer = (
         f'You are subscribed to the DC AI &amp; Frontier Tech weekly radar.<br>'
-        f'Subscribe in any calendar app: <a href="{sub}" style="color:{_E_ACCENT}">{sub}</a><br>'
-        f'<a href="{_h(unsubscribe_url)}" style="color:{_E_MUTED}">Unsubscribe</a>')
+        f'Subscribe in any calendar app: <a href="{_h(sub)}" style="color:{_E_ACCENT}">{_h(sub)}</a><br>'
+        f'<a href="{_h(unsubscribe_url)}" style="color:{_E_MUTED}">Unsubscribe</a>{pref}')
     return _email_shell("Welcome aboard", body, footer)

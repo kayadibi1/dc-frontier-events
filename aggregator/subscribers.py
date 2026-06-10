@@ -24,6 +24,8 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from .source_prefs import decode_sources, encode_sources
+
 # Deliberately permissive but enough to reject garbage / header-injection.
 _EMAIL = re.compile(r"^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$")
 PENDING_TTL_HOURS = 48
@@ -34,6 +36,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
   status TEXT NOT NULL,                 -- pending | verified | unsubscribed
   verify_token TEXT,
   unsub_token TEXT,
+  source_prefs TEXT,
   created_at TEXT,
   verified_at TEXT,
   unsub_at TEXT
@@ -59,6 +62,7 @@ class SubscribeResult:
     action: str            # "send_verify" | "already_verified" | "invalid"
     email: str = ""
     token: str = ""        # verify token (only when action == send_verify)
+    sources: tuple[str, ...] = ()
 
 
 @dataclass
@@ -66,6 +70,7 @@ class VerifyResult:
     status: str            # "verified" | "already" | "invalid"
     email: str = ""
     unsub_token: str = ""  # for the welcome email's unsubscribe link
+    sources: tuple[str, ...] = ()
 
 
 class SubscriberStore:
@@ -81,10 +86,16 @@ class SubscriberStore:
         self.conn.execute("PRAGMA journal_mode=WAL")
         self._lock = threading.Lock()
         self.conn.executescript(_DDL)
+        self._migrate()
         self.conn.commit()
 
+    def _migrate(self) -> None:
+        have = {r[1] for r in self.conn.execute("PRAGMA table_info(subscribers)")}
+        if "source_prefs" not in have:
+            self.conn.execute("ALTER TABLE subscribers ADD COLUMN source_prefs TEXT")
+
     # -- writes ---------------------------------------------------------------
-    def subscribe(self, email: str) -> SubscribeResult:
+    def subscribe(self, email: str, sources=None) -> SubscribeResult:
         """Begin (or restart) double-opt-in. Returns what the caller should do.
         Normalizes case/space. A new or still-pending email gets a fresh verify
         token to email; an already-verified email is a no-op (enumeration-safe at
@@ -92,6 +103,7 @@ class SubscriberStore:
         email = (email or "").strip().lower()
         if not valid_email(email):
             return SubscribeResult("invalid")
+        prefs = encode_sources(sources)
         with self._lock:
             row = self.conn.execute(
                 "SELECT status FROM subscribers WHERE email=?", (email,)).fetchone()
@@ -100,14 +112,17 @@ class SubscriberStore:
             token = _token()
             if row is None:
                 self.conn.execute(
-                    "INSERT INTO subscribers (email,status,verify_token,unsub_token,created_at) "
-                    "VALUES (?,?,?,?,?)", (email, "pending", token, _token(), _now()))
+                    "INSERT INTO subscribers "
+                    "(email,status,verify_token,unsub_token,source_prefs,created_at) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (email, "pending", token, _token(), prefs, _now()))
             else:  # pending or unsubscribed -> restart pending with a fresh token
                 self.conn.execute(
-                    "UPDATE subscribers SET status='pending', verify_token=?, created_at=? "
-                    "WHERE email=?", (token, _now(), email))
+                    "UPDATE subscribers SET status='pending', verify_token=?, "
+                    "source_prefs=?, created_at=? WHERE email=?",
+                    (token, prefs, _now(), email))
             self.conn.commit()
-        return SubscribeResult("send_verify", email, token)
+        return SubscribeResult("send_verify", email, token, decode_sources(prefs))
 
     def verify(self, token: str, now_iso: str | None = None) -> VerifyResult:
         """Confirm a pending subscriber via their verify token. Idempotent:
@@ -117,12 +132,13 @@ class SubscriberStore:
             return VerifyResult("invalid")
         with self._lock:
             row = self.conn.execute(
-                "SELECT email,status,created_at,unsub_token FROM subscribers "
+                "SELECT email,status,created_at,unsub_token,source_prefs FROM subscribers "
                 "WHERE verify_token=?", (token,)).fetchone()
             if row is None:
                 return VerifyResult("invalid")
             if row["status"] == "verified":
-                return VerifyResult("already", row["email"], row["unsub_token"])
+                return VerifyResult("already", row["email"], row["unsub_token"],
+                                    decode_sources(row["source_prefs"]))
             # pending -> check expiry
             now = datetime.fromisoformat(now_iso) if now_iso else datetime.now(timezone.utc)
             try:
@@ -135,7 +151,8 @@ class SubscriberStore:
                 "UPDATE subscribers SET status='verified', verified_at=? WHERE email=?",
                 (_now(), row["email"]))
             self.conn.commit()
-            return VerifyResult("verified", row["email"], row["unsub_token"])
+            return VerifyResult("verified", row["email"], row["unsub_token"],
+                                decode_sources(row["source_prefs"]))
 
     def unsubscribe(self, token: str) -> bool:
         """Mark a subscriber unsubscribed by their (stable) unsub token. Idempotent;
@@ -153,12 +170,42 @@ class SubscriberStore:
             self.conn.commit()
             return True
 
+    def update_preferences(self, token: str, sources=None) -> bool:
+        """Update a verified subscriber's source preferences by their stable token."""
+        if not token:
+            return False
+        prefs = encode_sources(sources)
+        with self._lock:
+            cur = self.conn.execute(
+                "UPDATE subscribers SET source_prefs=? "
+                "WHERE unsub_token=? AND status='verified'", (prefs, token))
+            self.conn.commit()
+            return cur.rowcount > 0
+
     # -- reads ----------------------------------------------------------------
     def verified(self) -> list[tuple[str, str]]:
         """(email, unsub_token) for every verified subscriber -- the send list."""
         cur = self.conn.execute(
             "SELECT email,unsub_token FROM subscribers WHERE status='verified' ORDER BY email")
         return [(r["email"], r["unsub_token"]) for r in cur.fetchall()]
+
+    def verified_with_prefs(self) -> list[tuple[str, str, tuple[str, ...]]]:
+        """(email, unsub_token, source prefs) for verified subscribers."""
+        cur = self.conn.execute(
+            "SELECT email,unsub_token,source_prefs FROM subscribers "
+            "WHERE status='verified' ORDER BY email")
+        return [(r["email"], r["unsub_token"], decode_sources(r["source_prefs"]))
+                for r in cur.fetchall()]
+
+    def preferences_for_token(self, token: str) -> tuple[str, tuple[str, ...]] | None:
+        if not token:
+            return None
+        row = self.conn.execute(
+            "SELECT email,source_prefs FROM subscribers "
+            "WHERE unsub_token=? AND status='verified'", (token,)).fetchone()
+        if row is None:
+            return None
+        return row["email"], decode_sources(row["source_prefs"])
 
     def status_of(self, email: str) -> str | None:
         row = self.conn.execute(

@@ -44,6 +44,10 @@ def test_index_has_signup_form_and_attribution():
     html = render_index([_ev()], "2026-06-02")
     assert 'action="/api/subscribe"' in html      # email double-opt-in form
     assert 'name="website"' in html               # honeypot field preserved
+    assert 'name="sources"' in html               # source-origin preferences
+    assert 'data-pref-source' in html
+    assert '/api/calendar.ics' in html             # source-filtered calendar endpoint
+    assert 'id="pref-gcal"' in html
     assert "weekly digest" in html.lower()
     assert "Sidar Aslanoglu" in html              # curator attribution
 

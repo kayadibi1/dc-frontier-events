@@ -27,10 +27,14 @@ import os
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlsplit
 
+from .config import SOURCES
+from .emit import filter_upcoming, render_ics
+from .source_prefs import filter_events_by_sources, normalize_sources, source_label, source_query
 from .subscribers import SubscriberStore
 
 MAX_BODY = 8192            # bytes; signup posts are tiny
@@ -42,7 +46,7 @@ HONEYPOT_FIELD = "website"  # hidden in the form; humans leave it empty
 @dataclass
 class Response:
     status: int
-    body: str
+    body: str | bytes
     content_type: str = "text/html; charset=utf-8"
     location: str | None = None
 
@@ -77,6 +81,7 @@ class Deps:
     # Owner alert when a subscriber is newly CONFIRMED. Default no-op so tests /
     # other callers that don't care can omit it.
     send_admin_notify: callable = lambda email: None   # (email) -> None
+    events_db: str = "data/events.db"
 
 
 _PAGE_CSS = (
@@ -86,6 +91,10 @@ _PAGE_CSS = (
     "h1{font-size:20px;margin:0 0 8px;letter-spacing:-.02em}"
     "p{font-size:15px;line-height:1.55;color:#a1a1a6}"
     "a{color:#2997ff}.muted{color:#86868b;font-size:13px}"
+    ".sources{margin:16px 0;display:grid;gap:12px}.sourcegroup{border-top:1px solid #424245;"
+    "padding-top:10px}.sourcegroup b{font-size:12px;text-transform:uppercase;color:#86868b}"
+    ".sourcegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px;margin-top:8px}"
+    "label.src{font-size:13px;color:#d2d2d7;display:flex;gap:7px;align-items:flex-start}"
 )
 
 
@@ -102,15 +111,18 @@ def _page(title: str, heading: str, message_html: str, status: int = 200) -> Res
 def route(method: str, path: str, query: dict, form: dict, client_ip: str,
           deps: Deps, now: float) -> Response:
     """Pure request handler: inputs in, Response out, side effects only via deps."""
+    if path == "/api/calendar.ics" and method == "GET":
+        return _calendar_response(query, deps, now)
+
     if path == "/api/subscribe" and method == "POST":
         if not deps.rate.allow(client_ip, now):
             return _page("Slow down", "Too many requests",
                          '<p>Please try again in a little while.</p>', status=429)
         # Honeypot: a bot fills the hidden field -> pretend success, do nothing.
-        if (form.get(HONEYPOT_FIELD) or "").strip():
+        if _field(form, HONEYPOT_FIELD).strip():
             return _check_inbox_page()
-        email = (form.get("email") or "").strip()
-        result = deps.store.subscribe(email)
+        email = _field(form, "email").strip()
+        result = deps.store.subscribe(email, _request_sources(form))
         if result.action == "invalid":
             return _page("Check the address", "Hmm, that address looks off",
                          '<p>That doesn&rsquo;t look like a valid email. '
@@ -121,7 +133,7 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
         return _check_inbox_page()
 
     if path == "/api/verify":
-        token = (query.get("token") or form.get("token") or "").strip()
+        token = (_field(query, "token") or _field(form, "token")).strip()
         if method == "GET":
             # A bare GET only renders a form; the verify happens on POST, so a mail
             # scanner / link prefetcher that follows the link can't confirm a human.
@@ -148,7 +160,7 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
                          status=400)
 
     if path == "/api/unsubscribe":
-        token = (query.get("token") or form.get("token") or "").strip()
+        token = (_field(query, "token") or _field(form, "token")).strip()
         if method == "GET":
             # Bare GET only shows a form; removal is POST (so scanners / prefetchers
             # can't unsubscribe a human by following the link).
@@ -164,7 +176,59 @@ def route(method: str, path: str, query: dict, form: dict, client_ip: str,
                          '<p>You will no longer receive the weekly digest. '
                          'Changed your mind? <a href="/">Re-subscribe anytime</a>.</p>')
 
+    if path == "/api/preferences":
+        token = (_field(query, "token") or _field(form, "token")).strip()
+        current = deps.store.preferences_for_token(token)
+        if current is None:
+            return _page("Link problem", "This link didn&rsquo;t work",
+                         '<p>The preferences link is invalid or expired.</p>', status=400)
+        email, sources = current
+        if method == "GET":
+            return _preferences_page(token, email, sources)
+        if method == "POST":
+            deps.store.update_preferences(token, _request_sources(form))
+            _, updated = deps.store.preferences_for_token(token) or (email, ())
+            return _preferences_page(token, email, updated,
+                                     '<p>Your source preferences are saved.</p>')
+
     return _page("Not found", "Not found", '<p><a href="/">Go home</a></p>', status=404)
+
+
+def _request_sources(data: dict) -> tuple[str, ...]:
+    values = data.get("sources", data.get("source", ""))
+    return normalize_sources(values)
+
+
+def _field(data: dict, key: str, default: str = "") -> str:
+    value = data.get(key, default)
+    if isinstance(value, list):
+        value = value[0] if value else default
+    return value if isinstance(value, str) else default
+
+
+def _calendar_response(query: dict, deps: Deps, now: float) -> Response:
+    token = _field(query, "token").strip()
+    if token:
+        pref = deps.store.preferences_for_token(token)
+        if pref is None:
+            return Response(404, b"Not found", "text/plain; charset=utf-8")
+        _, sources = pref
+    else:
+        sources = _request_sources(query)
+
+    from .storage import open_store
+
+    today = datetime.fromtimestamp(now, timezone.utc).date().isoformat()
+    store = open_store(deps.events_db)
+    try:
+        events = store.active_events()
+    finally:
+        store.close()
+    selected = filter_events_by_sources(events, sources)
+    upcoming = filter_upcoming(selected, today)
+    cal_name = f"DC AI & Frontier Tech - {source_label(sources)}"
+    return Response(200, render_ics(upcoming, today, cal_name=cal_name),
+                    "text/calendar; charset=utf-8")
 
 
 def _confirm_form_page(action: str, token: str, title: str, heading: str,
@@ -181,6 +245,56 @@ def _confirm_form_page(action: str, token: str, title: str, heading: str,
         f'cursor:pointer">{escape(button_label)}</button></form>'
     )
     return _page(title, heading, body)
+
+
+def _source_inputs(selected: tuple[str, ...], prefix: str = "src") -> str:
+    selected_set = set(selected)
+    all_selected = not selected_set
+    groups = []
+    for layer, label in ((1, "Community"), (2, "Policy"), (3, "University")):
+        boxes = []
+        for src in SOURCES:
+            if src.layer != layer:
+                continue
+            checked = " checked" if all_selected or src.slug in selected_set else ""
+            boxes.append(
+                f'<label class="src"><input type="checkbox" name="sources" '
+                f'value="{escape(src.slug, quote=True)}"{checked}>'
+                f'<span>{escape(src.name)}</span></label>'
+            )
+        if boxes:
+            groups.append(
+                f'<div class="sourcegroup"><b>{label}</b>'
+                f'<div class="sourcegrid">{"".join(boxes)}</div></div>'
+            )
+    return f'<div class="sources" id="{prefix}-sources">{"".join(groups)}</div>'
+
+
+def _calendar_url(token: str | None = None, sources=()) -> str:
+    base = f"{_base_url()}/api/calendar.ics"
+    if token:
+        return f"{base}?token={quote(token)}"
+    q = source_query(sources)
+    return f"{base}?{q}" if q else base
+
+
+def _preferences_page(token: str, email: str, sources: tuple[str, ...],
+                      notice_html: str = "") -> Response:
+    safe_token = escape(token, quote=True)
+    calendar = _calendar_url(token=token)
+    body = (
+        f'{notice_html}'
+        f'<p class="muted">{escape(email)} &middot; {escape(source_label(sources))}</p>'
+        f'<form method="post" action="/api/preferences" style="margin-top:12px">'
+        f'<input type="hidden" name="token" value="{safe_token}">'
+        f'{_source_inputs(sources, "pref")}'
+        f'<button type="submit" style="background:#2997ff;color:#000;border:0;'
+        f'border-radius:980px;padding:11px 20px;font-size:15px;font-weight:600;'
+        f'cursor:pointer">Save preferences</button></form>'
+        f'<p class="muted">Calendar URL: <a href="{escape(calendar, quote=True)}">'
+        f'{escape(calendar)}</a></p>'
+    )
+    return _page("Preferences", "Source preferences", body)
 
 
 def _check_inbox_page() -> Response:
@@ -223,10 +337,18 @@ def make_production_deps(db_path: str, events_db: str, out_dir: str) -> Deps:
             events = es.active_events()
         finally:
             es.close()
+        pref = store.preferences_for_token(unsub_token)
+        sources = pref[1] if pref else ()
+        events = filter_events_by_sources(events, sources)
         unsub = f"{base}/api/unsubscribe?token={quote(unsub_token)}"
-        html = render_welcome_email_html(events, today, unsubscribe_url=unsub)
+        calendar_url = _calendar_url(token=unsub_token)
+        prefs_url = f"{base}/api/preferences?token={quote(unsub_token)}"
+        html = render_welcome_email_html(events, today, unsubscribe_url=unsub,
+                                         calendar_url=calendar_url,
+                                         preferences_url=prefs_url)
         text = ("You're in: the DC AI & Frontier Tech weekly radar.\n\n"
-                f"Add the live calendar (always current): {base}/events-upcoming.ics\n"
+                f"Add your live calendar (always current): {calendar_url}\n"
+                f"Manage source preferences: {prefs_url}\n"
                 "Your full weekly digest lands every Monday morning.\n\n"
                 f"Unsubscribe anytime: {unsub}")
         send_transactional(email, "You're in: DC AI & Frontier Tech radar", html,
@@ -249,7 +371,8 @@ def make_production_deps(db_path: str, events_db: str, out_dir: str) -> Deps:
                            text=f"{email} confirmed. {n} verified subscriber(s).")
 
     return Deps(store=store, send_verify=send_verify, send_welcome=send_welcome,
-                rate=RateLimiter(), send_admin_notify=send_admin_notify)
+                rate=RateLimiter(), send_admin_notify=send_admin_notify,
+                events_db=events_db)
 
 
 class SubscribeHandler(BaseHTTPRequestHandler):
@@ -265,10 +388,10 @@ class SubscribeHandler(BaseHTTPRequestHandler):
 
     def _dispatch(self, method: str, form: dict) -> None:
         u = urlsplit(self.path)
-        query = {k: v[0] for k, v in parse_qs(u.query).items()}
+        query = {k: (v if len(v) > 1 else v[0]) for k, v in parse_qs(u.query).items()}
         resp = route(method, u.path, query, form, self._client_ip(),
                      self.deps, time.time())
-        body = resp.body.encode("utf-8")
+        body = resp.body if isinstance(resp.body, bytes) else resp.body.encode("utf-8")
         self.send_response(resp.status)
         if resp.location:
             self.send_header("Location", resp.location)
@@ -291,7 +414,7 @@ class SubscribeHandler(BaseHTTPRequestHandler):
             length = 0
         length = max(0, min(length, MAX_BODY))
         raw = self.rfile.read(length).decode("utf-8", "replace") if length else ""
-        form = {k: v[0] for k, v in parse_qs(raw).items()}
+        form = {k: (v if len(v) > 1 else v[0]) for k, v in parse_qs(raw).items()}
         self._dispatch("POST", form)
 
     def log_message(self, *args) -> None:

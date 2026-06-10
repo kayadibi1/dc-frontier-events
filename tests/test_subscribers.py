@@ -133,3 +133,16 @@ def test_verified_list_is_the_send_list(tmp_path):
     assert [e for e, _ in verified] == ["a@b.co"]   # only verified included
     assert all(tok for _, tok in verified)          # each has an unsub token
     s.close()
+
+
+def test_source_preferences_round_trip_and_update(tmp_path):
+    s = SubscriberStore(str(tmp_path / "subs.db"))
+    r = s.subscribe("a@b.co", ["csis", "nope", "DC2"])
+    assert r.sources == ("DC2", "csis")
+    v = s.verify(r.token)
+    assert v.sources == ("DC2", "csis")
+    assert s.verified_with_prefs() == [("a@b.co", v.unsub_token, ("DC2", "csis"))]
+    assert s.preferences_for_token(v.unsub_token) == ("a@b.co", ("DC2", "csis"))
+    assert s.update_preferences(v.unsub_token, ["cset"]) is True
+    assert s.preferences_for_token(v.unsub_token) == ("a@b.co", ("cset",))
+    s.close()

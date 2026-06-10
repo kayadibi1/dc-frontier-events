@@ -86,3 +86,34 @@ def test_send_weekly_targets_verified_subscribers(tmp_path, monkeypatch):
     assert parsed["To"] == "alice@example.com"
     html = parsed.get_body(preferencelist=("html",)).get_content()
     assert "api/unsubscribe?token=" in html   # personal unsubscribe link
+
+
+def test_send_weekly_filters_each_subscriber_by_source_preferences(tmp_path, monkeypatch):
+    from aggregator.subscribers import SubscriberStore
+    for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_TO"):
+        monkeypatch.delenv(k, raising=False)
+    db = str(tmp_path / "e.db")
+    s = Store(db)
+    s.upsert_many([
+        Event(id="c", title="CSET AI policy", start="2026-06-10",
+              source="cset", topics=["ai"]),
+        Event(id="d", title="Community build night", start="2026-06-10",
+              source="DC2", topics=["ai"]),
+    ])
+    s.close()
+    subs_db = str(tmp_path / "subs.db")
+    subs = SubscriberStore(subs_db)
+    sub = subs.subscribe("alice@example.com", ["cset"])
+    subs.verify(sub.token)
+    subs.close()
+
+    sent, total = send_weekly(out_dir=str(tmp_path / "out"), db_path=db,
+                              today="2026-06-01", subscribers_db=subs_db)
+    assert (sent, total) == (0, 1)
+    eml = (tmp_path / "out" / "email" / "digest-2026-06-01.eml")
+    parsed = email.message_from_bytes(eml.read_bytes(), policy=policy.default)
+    html = parsed.get_body(preferencelist=("html",)).get_content()
+    assert "CSET AI policy" in html
+    assert "Community build night" not in html
+    assert "api/calendar.ics?token=" in html
+    assert "api/preferences?token=" in html

@@ -1,4 +1,6 @@
 from aggregator.subscribe_server import Deps, RateLimiter, route
+from aggregator.models import Event
+from aggregator.storage import Store
 from aggregator.subscribers import SubscriberStore
 
 
@@ -41,6 +43,16 @@ def test_subscribe_sends_verify_and_shows_inbox_page(tmp_path):
     assert r.status == 200
     assert "check your inbox" in r.body.lower()
     assert len(sent["verify"]) == 1 and sent["verify"][0][0] == "a@b.co"
+    deps.store.close()
+
+
+def test_subscribe_records_source_preferences(tmp_path):
+    deps, sent = _deps(tmp_path)
+    form = {"email": "a@b.co", "sources": ["csis", "DC2", "bogus"]}
+    route("POST", "/api/subscribe", {}, form, "1.1.1.1", deps, 1000.0)
+    token = sent["verify"][0][1]
+    result = deps.store.verify(token)
+    assert result.sources == ("DC2", "csis")
     deps.store.close()
 
 
@@ -150,6 +162,49 @@ def test_unsubscribe_get_is_a_form_with_no_side_effects(tmp_path):
     r = route("GET", "/api/unsubscribe", {"token": v.unsub_token}, {}, "1.1.1.1", deps, 1000.0)
     assert r.status == 200 and "<form" in r.body.lower()
     assert deps.store.status_of("a@b.co") == "verified"       # GET did NOT unsubscribe
+    deps.store.close()
+
+
+def test_calendar_endpoint_filters_by_sources_query(tmp_path):
+    events_db = str(tmp_path / "events.db")
+    store = Store(events_db)
+    evs = [
+        Event(id="c", title="CSET AI policy", start="2026-06-20", source="cset"),
+        Event(id="d", title="Community build night", start="2026-06-20", source="DC2"),
+    ]
+    store.upsert_many(evs)
+    store.mark_archived({e.id for e in evs})
+    store.close()
+    deps, sent = _deps(tmp_path)
+    deps.events_db = events_db
+    r = route("GET", "/api/calendar.ics", {"sources": "cset"}, {}, "1.1.1.1",
+              deps, 1781058692.0)
+    body = r.body.decode("utf-8")
+    assert r.status == 200 and r.content_type.startswith("text/calendar")
+    assert "CSET AI policy" in body
+    assert "Community build night" not in body
+    deps.store.close()
+
+
+def test_calendar_endpoint_filters_by_subscriber_token(tmp_path):
+    events_db = str(tmp_path / "events.db")
+    store = Store(events_db)
+    evs = [
+        Event(id="c", title="CSET AI policy", start="2026-06-20", source="cset"),
+        Event(id="d", title="Community build night", start="2026-06-20", source="DC2"),
+    ]
+    store.upsert_many(evs)
+    store.mark_archived({e.id for e in evs})
+    store.close()
+    deps, sent = _deps(tmp_path)
+    deps.events_db = events_db
+    sub = deps.store.subscribe("a@b.co", ["DC2"])
+    verified = deps.store.verify(sub.token)
+    r = route("GET", "/api/calendar.ics", {"token": verified.unsub_token}, {},
+              "1.1.1.1", deps, 1781058692.0)
+    body = r.body.decode("utf-8")
+    assert "Community build night" in body
+    assert "CSET AI policy" not in body
     deps.store.close()
 
 

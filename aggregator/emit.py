@@ -76,8 +76,8 @@ def _star(ev: Event) -> str:
     return "★ " if ev.is_big_name else ""
 
 
-def write_ics(events: list[Event], path: str, today_iso: str | None = None,
-              cal_name: str = DEFAULT_CAL_NAME) -> int:
+def build_ics(events: list[Event], today_iso: str | None = None,
+              cal_name: str = DEFAULT_CAL_NAME) -> tuple[bytes, int]:
     cal = Calendar()
     cal.add("prodid", PRODID)
     cal.add("version", "2.0")
@@ -133,9 +133,21 @@ def write_ics(events: list[Event], path: str, today_iso: str | None = None,
             ie.add_component(alarm)
         cal.add_component(ie)
         n += 1
+    return cal.to_ical(), n
+
+
+def render_ics(events: list[Event], today_iso: str | None = None,
+               cal_name: str = DEFAULT_CAL_NAME) -> bytes:
+    data, _ = build_ics(events, today_iso, cal_name)
+    return data
+
+
+def write_ics(events: list[Event], path: str, today_iso: str | None = None,
+              cal_name: str = DEFAULT_CAL_NAME) -> int:
+    data, n = build_ics(events, today_iso, cal_name)
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "wb") as f:
-        f.write(cal.to_ical())
+        f.write(data)
     return n
 
 

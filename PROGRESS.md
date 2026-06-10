@@ -533,3 +533,27 @@ or are fragile (more scraped think-tank/university sources) — pursue when thos
 - CSET events lack per-event time + speakers (listing cards only) — BACKLOG #2 (detail-page enrich).
 - Postgres backend not bundled yet (SQLite only) — BACKLOG #9.
 - Feeds include past events (archive) with no upcoming-only view yet — BACKLOG #3.
+## Source-configurable feeds + DC policy/NGO expansion (2026-06-10)
+Shipped a user-facing source-preference path for both calendar subscriptions and weekly digest
+emails, plus expanded the Layer-2 policy/NGO source surface.
+
+- **Source-configurable calendars/digests:** subscribers can now choose origin sources during
+  signup, manage those choices later, and get both a filtered weekly digest and a filtered live
+  calendar URL. Blank prefs remain backwards-compatible "all sources" for existing subscribers.
+- **Personal calendar endpoint:** `/api/calendar.ics?sources=...` serves source-filtered public
+  calendars; `/api/calendar.ics?token=...` serves a subscriber's private saved preference set.
+  The email footer and welcome email point at the personalized calendar.
+- **Preferences endpoint:** `/api/preferences?token=...` lets a verified subscriber update source
+  choices using the existing stable unsubscribe token, without changing unsubscribe semantics.
+- **Homepage signup UI:** the email signup box now includes grouped source checkboxes and live
+  source-filtered Google / Apple-Outlook / `.ics` links before signup.
+- **Shared filtering helper:** `source_prefs.py` normalizes allowed source slugs and filters by
+  the event origin; deduped cross-posts still match when a selected source appears in
+  `raw.also_sources`.
+- **Policy/NGO source expansion:** added adapters/config for Hudson, AEI, BPC, New America,
+  Heritage, Carnegie, RAND, Wilson, SCSP, Stimson, FAS, and Mercatus, with conservative
+  detail-page parsing and DC/topic gates. Production currently quarantines AEI and Mercatus on
+  Cloudflare 403 from the Hetzner IP; they remain wired and honest-empty rather than emitting bad
+  data.
+- **Verification:** full suite passes locally at 443 tests; live deploy path remains the
+  Hetzner/Caddy static build plus the localhost subscribe API.

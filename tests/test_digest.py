@@ -69,6 +69,18 @@ def test_render_email_html_has_sections_button_and_new_block():
     assert "<style>" not in html
 
 
+def test_render_email_html_accepts_personal_calendar_and_preferences_links():
+    ev = Event(id="a", title="AI panel", start="2026-06-20", source="cset",
+               topics=["ai"])
+    cal = "https://events.emersus.ai/api/calendar.ics?token=abc123"
+    prefs = "https://events.emersus.ai/api/preferences?token=abc123"
+    html = render_email_html([ev], "2026-06-09", calendar_url=cal,
+                             preferences_url=prefs)
+    assert "api%2Fcalendar.ics%3Ftoken%3Dabc123" in html
+    assert "https://events.emersus.ai/api/calendar.ics?token=abc123" in html
+    assert "Manage source preferences" in html
+
+
 def test_render_email_html_excludes_past_new_events():
     past = Event(id="p1", title="Old talk", start="2026-01-01", source="DC2")
     html = render_email_html([past], "2026-05-31", new_events=[past])

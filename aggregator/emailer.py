@@ -22,6 +22,7 @@ from urllib.parse import quote
 
 from .digest import build_digest, render_email_html
 from .notify import deliver
+from .source_prefs import filter_events_by_sources
 from .storage import open_store
 from .subscribers import SubscriberStore
 
@@ -54,12 +55,16 @@ def _set_list_unsubscribe(msg: EmailMessage, url: str | None) -> None:
 def build_weekly_message(events: list, new_events: list, today_iso: str,
                          domain: str, sender: str | None = None,
                          to: str | None = None,
-                         unsubscribe_url: str = "#") -> EmailMessage:
+                         unsubscribe_url: str = "#",
+                         calendar_url: str | None = None,
+                         preferences_url: str = "#") -> EmailMessage:
     """Assemble the weekly digest as a multipart email (polished HTML + a
     plain-text markdown alternative). Pure: no IO, fully unit-testable."""
     new_up = [e for e in new_events if (e.start or "")[:10] >= today_iso]
     html = render_email_html(events, today_iso, new_events=new_events,
-                             domain=domain, unsubscribe_url=unsubscribe_url)
+                             domain=domain, unsubscribe_url=unsubscribe_url,
+                             calendar_url=calendar_url,
+                             preferences_url=preferences_url)
     text = build_digest(events, today_iso)
     msg = EmailMessage()
     msg["Subject"] = f"DC AI & Frontier Tech · week of {today_iso} ({len(new_up)} new)"
@@ -111,21 +116,29 @@ def send_weekly(out_dir: str = "out", db_path: str = "data/events.db",
 
     subs = SubscriberStore(subscribers_db)
     try:
-        recipients = subs.verified()   # [(email, unsub_token), ...]
+        recipients = subs.verified_with_prefs()   # [(email, unsub_token, prefs), ...]
     finally:
         subs.close()
 
     # No subscribers yet -> keep the owner's solo digest working via SMTP_TO.
     if not recipients:
         owner = os.environ.get("SMTP_TO")
-        recipients = [(owner, "")] if owner else []
+        recipients = [(owner, "", ())] if owner else []
 
     sent = 0
-    for email, unsub_token in recipients:
+    for email, unsub_token, sources in recipients:
         unsub = (f"{base}/api/unsubscribe?token={quote(unsub_token)}"
                  if unsub_token else "#")
-        msg = build_weekly_message(events, new_events, today_iso, domain,
-                                   to=email, unsubscribe_url=unsub)
+        prefs_url = (f"{base}/api/preferences?token={quote(unsub_token)}"
+                     if unsub_token else "#")
+        calendar_url = (f"{base}/api/calendar.ics?token={quote(unsub_token)}"
+                        if unsub_token else None)
+        selected_events = filter_events_by_sources(events, sources)
+        selected_new = filter_events_by_sources(new_events, sources)
+        msg = build_weekly_message(selected_events, selected_new, today_iso, domain,
+                                   to=email, unsubscribe_url=unsub,
+                                   calendar_url=calendar_url,
+                                   preferences_url=prefs_url)
         mode, _ = deliver(msg, out_dir, today_iso,
                           slug=f"digest-{today_iso}")
         if mode == "sent":
