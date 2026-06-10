@@ -11,9 +11,8 @@ def _ev(**kw):
 def test_renders_upcoming_events_and_subscribe_ctas():
     html = render_index([_ev()], "2026-06-02")
     assert "AI Policy Forum" in html
-    assert "Add to Google Calendar" in html
-    assert "events-upcoming.ics" in html
-    assert "webcal://events.emersus.ai/events-upcoming.ics" in html   # Apple/Outlook subscribe
+    assert "Subscribe to the calendar" in html                        # hero CTA -> email gate
+    assert 'href="#subscribe"' in html                                # jumps to the signup form
     assert "map.html" in html and "status.html" in html
     assert "spamnote" in html                                         # deliverability nudge
 
@@ -46,10 +45,20 @@ def test_index_has_signup_form_and_attribution():
     assert 'name="website"' in html               # honeypot field preserved
     assert 'name="sources"' in html               # source-origin preferences
     assert 'data-pref-source' in html
-    assert '/api/calendar.ics' in html             # source-filtered calendar endpoint
-    assert 'id="pref-gcal"' in html
-    assert "weekly digest" in html.lower()
     assert "Sidar Aslanoglu" in html              # curator attribution
+
+
+def test_index_gates_calendar_behind_email_signup():
+    # The calendar is delivered via email signup so subscribers are countable;
+    # the homepage must NOT expose an ungated feed-subscribe link (webcal:// or a
+    # gcal cid of the public .ics) that would create uncounted subscribers.
+    html = render_index([_ev()], "2026-06-02")
+    assert "webcal://" not in html
+    assert "calendar.google.com/calendar/r?cid=" not in html  # no ungated feed cid
+    assert 'id="pref-gcal"' not in html and 'id="pref-webcal"' not in html
+    # the subscribe form remains the single gateway, and the hero points to it
+    assert 'href="#subscribe"' in html
+    assert 'id="subscribe"' in html
 
 
 def test_index_has_home_screen_icon_links():

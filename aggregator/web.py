@@ -18,7 +18,6 @@ from xml.sax.saxutils import escape
 from .config import SOURCES
 from .models import Event
 from .provenance import marker
-from .source_prefs import source_query
 
 DOMAIN = "events.emersus.ai"
 _NAME = {s.slug: s.name for s in SOURCES}
@@ -230,27 +229,18 @@ def _source_picker_html() -> str:
 
 
 def _signup_html() -> str:
-    cal = f"https://{DOMAIN}/api/calendar.ics"
-    webcal = f"webcal://{DOMAIN}/api/calendar.ics"
-    gcal = "https://calendar.google.com/calendar/r?cid=" + quote_plus(webcal)
-    q = source_query(())
-    cal = f"{cal}?{q}" if q else cal
     return f"""
-<div class="signup">
-<h2>Prefer email? Get the weekly digest</h2>
-<p class="sub">One curated email a week: new &amp; upcoming AI / chip / policy events in DC.
-Confirm your address and we send a quick sample right away.</p>
+<div class="signup" id="subscribe">
+<h2>Get the calendar</h2>
+<p class="sub">Confirm your email and we send the calendar link (Google, Apple, Outlook) plus a
+quick sample, then one curated email a week: new &amp; upcoming AI / chip / policy events in DC.
+Pick which sources you want below.</p>
 <form method="post" action="/api/subscribe">
 <input type="email" name="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
 <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 <details class="sourceprefs">
 <summary id="source-summary">Sources: all selected</summary>
 {_source_picker_html()}
-<div class="calrow">
-<a class="btn ghost" id="pref-gcal" href="{_h(gcal)}" target="_blank" rel="noopener">Add selected to Google</a>
-<a class="btn ghost" id="pref-webcal" href="{_h(webcal)}">Apple / Outlook</a>
-<a class="btn ghost" id="pref-ics" href="{_h(cal)}">.ics</a>
-</div>
 </details>
 <button type="submit">Subscribe</button>
 </form>
@@ -272,14 +262,7 @@ function updateSourceCalendarLinks(){
   if(!prefBoxes.length) return;
   var selected=prefBoxes.filter(function(b){return b.checked;}).map(function(b){return b.value;});
   var useAll=!selected.length || selected.length===prefBoxes.length;
-  var query=useAll?'':'?sources='+encodeURIComponent(selected.join(','));
-  var https='https://events.emersus.ai/api/calendar.ics'+query;
-  var webcal='webcal://events.emersus.ai/api/calendar.ics'+query;
-  var g=document.getElementById('pref-gcal'), w=document.getElementById('pref-webcal');
-  var i=document.getElementById('pref-ics'), s=document.getElementById('source-summary');
-  if(g) g.href='https://calendar.google.com/calendar/r?cid='+encodeURIComponent(webcal);
-  if(w) w.href=webcal;
-  if(i) i.href=https;
+  var s=document.getElementById('source-summary');
   if(s) s.textContent=useAll?'Sources: all selected':'Sources: '+selected.length+' selected';
 }
 prefBoxes.forEach(function(b){b.addEventListener('change',updateSourceCalendarLinks);});
@@ -425,11 +408,6 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
     healthy = summary.get("sources_healthy", n_src)
     total_src = summary.get("sources_total", len(SOURCES))
 
-    sub = f"https://{DOMAIN}/events-upcoming.ics"
-    webcal = f"webcal://{DOMAIN}/events-upcoming.ics"
-    gcal_all = ("https://calendar.google.com/calendar/r?cid="
-                + quote_plus(f"webcal://{DOMAIN}/events-upcoming.ics"))
-
     desc = ("A curated, deduplicated, ranked radar of AI, semiconductor and "
             "frontier-tech events across the Washington DC metro.")
     social = (
@@ -474,9 +452,7 @@ think tanks, universities, and the builder community, deduplicated and ranked.</
 <div><b>{healthy}/{total_src}</b> healthy</div>
 </div>
 <div class="cta">
-<a class="btn" href="{gcal_all}" target="_blank" rel="noopener">📅 Add to Google Calendar</a>
-<a class="btn ghost" href="{webcal}">🍎 Apple / Outlook</a>
-<a class="btn ghost" href="events-upcoming.ics">⬇ .ics</a>
+<a class="btn" href="#subscribe">📅 Subscribe to the calendar</a>
 <a class="btn ghost" href="map.html">🗺 Map view</a>
 <a class="btn ghost" href="feed-upcoming.xml">📡 RSS</a>
 <a class="btn ghost" href="status.html">📊 Status</a>
