@@ -30,7 +30,7 @@ from .geocode import DEFAULT_CACHE, geocode_events, nominatim_query, scrub_far_g
 from .validate import validate_pre_filter, validate_post_geocode
 from .fetchers import gather_all
 from .filter import apply_filters
-from .health import load_health, render_status_html, update_health, write_health
+from .health import healthy_count, load_health, render_status_html, update_health, write_health
 from .web import render_index
 from .notify import build_message, deliver
 from .rank import score_event, top_upcoming
@@ -56,14 +56,15 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     raw_events = []
     quarantined = []
     for res in results:
-        if not res.ok:
+        per_source[res.source.slug] = len(res.events)
+        if not res.healthy:
             per_source[res.source.slug] = 0
             quarantined.append((res.source.slug, res.reason))
             print(f"[fetch] QUARANTINE {res.source.slug}: {res.reason}")
             continue
-        per_source[res.source.slug] = len(res.events)
-        layers_live.add(res.source.layer)
-        raw_events.extend(res.events)
+        if res.events:
+            layers_live.add(res.source.layer)
+            raw_events.extend(res.events)
         print(f"[fetch] {res.source.slug} (layer {res.source.layer}): {len(res.events)} events")
 
     # Per-source health + regression detection (enterprise observability): persist
@@ -76,7 +77,7 @@ def run(out_dir: str = "out", db_path: str = "data/events.db",
     write_health(health, health_path)
     if regressions:
         print(f"[health] REGRESSIONS (healthy -> broken since last run): {', '.join(regressions)}")
-    healthy = sum(1 for h in health.values() if h["status"] == "ok")
+    healthy = healthy_count(health)
 
     total_raw = len(raw_events)
     if enrich:

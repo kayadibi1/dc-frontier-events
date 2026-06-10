@@ -16,9 +16,14 @@ class SourceResult:
     error: str | None = None
 
     @property
+    def healthy(self) -> bool:
+        """Fetched without an adapter/network error, even if no events exist."""
+        return self.error is None
+
+    @property
     def ok(self) -> bool:
-        """Fetched without error AND produced at least one event."""
-        return self.error is None and len(self.events) > 0
+        """Produced at least one event. Empty-but-successful fetches are healthy."""
+        return self.healthy and len(self.events) > 0
 
     @property
     def reason(self) -> str:
