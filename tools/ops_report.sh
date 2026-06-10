@@ -24,15 +24,7 @@ for st in ("verified", "pending"):
 print("  total    ", c.execute("SELECT COUNT(*) FROM subscribers").fetchone()[0])
 PY
 
-echo "== Visitor report (humans; crawlers filtered) -> $OUT =="
-LOGS=(/var/log/caddy/events-access.log /var/log/caddy/events-access*.log.gz)
-# Exclude our own traffic so counts reflect real outsiders:
-#   73.173.160.170 = maintainer laptop (deploy/verify curls)
-#   37.27.242.32   = this box (ssh-run health curls hit the public domain)
-# GoAccess needs one --exclude-ip per entry (comma-separated is NOT parsed).
-# Add more IPs to this array as needed.
-EXCLUDE_IPS=(73.173.160.170 37.27.242.32)
-EXC=(); for ip in "${EXCLUDE_IPS[@]}"; do EXC+=(--exclude-ip "$ip"); done
-goaccess "${LOGS[@]}" --log-format=CADDY --ignore-crawlers --anonymize-ip \
-  "${EXC[@]}" -o "$OUT"
-echo "  wrote $OUT (excluded: ${EXCLUDE_IPS[*]})"
+echo "== Visitor dashboard -> $OUT =="
+# A simple, glanceable Pro-dark dashboard (ops_dashboard.py) -- the key numbers
+# only, not GoAccess's analyst panels. Bot/own-traffic filtering lives in there.
+python3 "$APP/tools/ops_dashboard.py"
