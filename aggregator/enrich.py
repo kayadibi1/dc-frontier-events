@@ -59,7 +59,10 @@ _DESC_SELECTORS = ('meta[property="og:description"]',
 _MIN_DESC_CHARS = 40
 # Layer-2 sources behind a WAF that 403s plain httpx -- fetch via curl_cffi
 # (Chrome TLS impersonation), like their listing fetchers.
-_WAF_SOURCES = {"cset", "atlanticcouncil", "nist", "itif", "nasem", "cdt"}
+_WAF_SOURCES = {
+    "cset", "atlanticcouncil", "nist", "itif", "nasem", "cdt",
+    "hudson", "bpc", "heritage", "scsp", "stimson", "mercatus",
+}
 
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")

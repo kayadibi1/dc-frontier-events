@@ -88,6 +88,38 @@ CSET_SOURCES = [
     # only via a real DC venue/text). curl_cffi. Listing cards: a[href*='/event/'].
     Source("nasem", "National Academies", "nasem", 2, False,
            url="https://www.nationalacademies.org/events"),
+    # Additional DC policy / NGO sources (2026-06 source expansion). These are
+    # detail-page adapters: listings discover candidates, detail pages provide
+    # date/time/location/attendance-mode. Broad global/multi-office orgs stay
+    # NOT dc_curated so only real DC-metro or explicitly DC/virtual items survive.
+    Source("hudson", "Hudson Institute", "hudson", 2, True,
+           url="https://www.hudson.org/events"),
+    Source("aei", "American Enterprise Institute", "aei", 2, True,
+           url="https://www.aei.org/events/"),
+    Source("bpc", "Bipartisan Policy Center", "bpc", 2, True,
+           url="https://bipartisanpolicy.org/events/"),
+    # New America is DC-headquartered but its event program is national (e.g.
+    # non-DC in-person venues), so do not trust curation alone for location.
+    Source("newamerica", "New America", "newamerica", 2, False,
+           url="https://www.newamerica.org/events/"),
+    Source("heritage", "Heritage Foundation", "heritage", 2, True,
+           url="https://www.heritage.org/events"),
+    Source("carnegie", "Carnegie Endowment", "carnegie", 2, False,
+           url="https://carnegieendowment.org/events"),
+    Source("rand", "RAND", "rand", 2, False,
+           url="https://www.rand.org/events.html"),
+    Source("wilson", "Wilson Center", "wilson", 2, True,
+           url="https://www.wilsoncenter.org/events"),
+    # SCSP is Arlington-based but runs AI+ events in other cities too; require a
+    # real DC-metro/virtual signal instead of pinning all events to HQ.
+    Source("scsp", "Special Competitive Studies Project", "scsp", 2, False,
+           url="https://www.scsp.ai/events/"),
+    Source("stimson", "Stimson Center", "stimson", 2, True,
+           url="https://www.stimson.org/all-events/"),
+    Source("fas", "Federation of American Scientists", "fas", 2, True,
+           url="https://fas.org/events/"),
+    Source("mercatus", "Mercatus Center", "mercatus", 2, True,
+           url="https://www.mercatus.org/events"),
     # U.S. Congress committee hearings (congress.gov API) -- the highest-signal DC
     # policy source, year-round. All on Capitol Hill -> dc_curated. Needs
     # CONGRESS_API_KEY in the env; skipped (quarantined) without it.
@@ -266,6 +298,17 @@ SOURCE_HQ = {
     "cset": "CSET, Georgetown University, Washington, DC",
     "itif": "ITIF, 700 K St NW, Suite 600, Washington, DC 20001",
     "cdt": "Center for Democracy & Technology, 1401 K St NW, Suite 200, Washington, DC 20005",
+    "hudson": "Hudson Institute, 1201 Pennsylvania Avenue NW, Suite 400, Washington, DC 20004",
+    "aei": "American Enterprise Institute, 1789 Massachusetts Avenue NW, Washington, DC 20036",
+    "bpc": "Bipartisan Policy Center, 1225 Eye Street NW, Suite 1000, Washington, DC 20005",
+    "newamerica": "New America, 740 15th Street NW, Suite 900, Washington, DC 20005",
+    "heritage": "The Heritage Foundation, 214 Massachusetts Ave NE, Washington, DC 20002",
+    "carnegie": "Carnegie Endowment for International Peace, 1779 Massachusetts Avenue NW, Washington, DC 20036",
+    "wilson": "Wilson Center, 1300 Pennsylvania Ave NW, Washington, DC 20004",
+    "scsp": "Special Competitive Studies Project, 1550 Crystal Drive, Suite 500, Arlington, VA 22202",
+    "stimson": "Stimson Center, 1211 Connecticut Ave NW, 8th Floor, Washington, DC 20036",
+    "fas": "Federation of American Scientists, 1150 18th Street NW, Suite 1000, Washington, DC 20036",
+    "mercatus": "Mercatus Center, 3434 Washington Blvd, 4th Floor, Arlington, VA 22201",
 }
 
 # DC-policy-ecosystem org names (the watchlist's institutional tier). These are

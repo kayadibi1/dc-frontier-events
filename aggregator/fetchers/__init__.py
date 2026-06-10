@@ -25,6 +25,20 @@ from .jsrender import fetch_jsrender
 from .luma import fetch_luma, fetch_luma_discover
 from .nasem import fetch_nasem
 from .nist import fetch_nist
+from .policy_ngos import (
+    fetch_aei,
+    fetch_bpc,
+    fetch_carnegie,
+    fetch_fas,
+    fetch_heritage,
+    fetch_hudson,
+    fetch_mercatus,
+    fetch_newamerica,
+    fetch_rand,
+    fetch_scsp,
+    fetch_stimson,
+    fetch_wilson,
+)
 from .umdcs import fetch_umdcs
 from .watchlist import fetch_watchlist
 from ..render import close_render
@@ -42,6 +56,18 @@ ADAPTERS = {
     "itif": fetch_itif,
     "cdt": fetch_cdt,
     "nasem": fetch_nasem,
+    "hudson": fetch_hudson,
+    "aei": fetch_aei,
+    "bpc": fetch_bpc,
+    "newamerica": fetch_newamerica,
+    "heritage": fetch_heritage,
+    "carnegie": fetch_carnegie,
+    "rand": fetch_rand,
+    "wilson": fetch_wilson,
+    "scsp": fetch_scsp,
+    "stimson": fetch_stimson,
+    "fas": fetch_fas,
+    "mercatus": fetch_mercatus,
     "umdcs": fetch_umdcs,
     "congress": fetch_congress,
     "jsrender": fetch_jsrender,
