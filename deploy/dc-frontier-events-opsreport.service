@@ -1,0 +1,9 @@
+[Unit]
+Description=DC AI Radar ops report (subscriber counts + GoAccess visitor report)
+After=network.target
+
+[Service]
+Type=oneshot
+# Runs as root: needs to read the caddy access log (mode 600 caddy) and
+# subscribers.db. Writes /opt/dc-frontier-events/ops/visitors.html.
+ExecStart=/usr/bin/bash /opt/dc-frontier-events/tools/ops_report.sh
