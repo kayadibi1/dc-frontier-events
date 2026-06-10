@@ -60,6 +60,7 @@ ICON_FILES = (
     "apple-touch-icon-precomposed.png",
     "icon-192.png",
     "icon-512.png",
+    "og-image.png",   # 1200x630 social/Twitter card image (PNG; X can't render SVG)
 )
 
 # PWA / Android home-screen manifest. theme/background are the Pro-dark canvas so

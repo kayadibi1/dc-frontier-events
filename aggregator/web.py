@@ -437,10 +437,15 @@ def render_index(events: list[Event], today_iso: str, summary: dict | None = Non
         f'<meta property="og:description" content="{_h(desc)}">'
         f'<meta property="og:type" content="website">'
         f'<meta property="og:url" content="https://{DOMAIN}/">'
-        f'<meta property="og:image" content="https://{DOMAIN}/favicon.svg">'
-        f'<meta name="twitter:card" content="summary">'
+        # PNG, not SVG: Twitter/X (and most scrapers) refuse SVG card images.
+        f'<meta property="og:image" content="https://{DOMAIN}/og-image.png">'
+        f'<meta property="og:image:width" content="1200">'
+        f'<meta property="og:image:height" content="630">'
+        f'<meta property="og:image:alt" content="DC AI &amp; Frontier Tech Events">'
+        f'<meta name="twitter:card" content="summary_large_image">'
         f'<meta name="twitter:title" content="DC AI &amp; Frontier Tech Events">'
-        f'<meta name="twitter:description" content="{_h(desc)}">')
+        f'<meta name="twitter:description" content="{_h(desc)}">'
+        f'<meta name="twitter:image" content="https://{DOMAIN}/og-image.png">')
     jsonld = _jsonld(upcoming)
 
     return f"""<!DOCTYPE html>

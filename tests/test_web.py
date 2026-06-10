@@ -67,6 +67,16 @@ def test_index_has_social_meta_and_jsonld():
     assert '"ItemList"' in html and '"Event"' in html
 
 
+def test_index_uses_large_image_card_with_png():
+    # Twitter/X cannot render SVG card images, so the social image must be a PNG
+    # and the card a summary_large_image with an explicit twitter:image.
+    html = render_index([_ev()], "2026-06-02")
+    assert 'name="twitter:card" content="summary_large_image"' in html
+    assert 'property="og:image" content="https://events.emersus.ai/og-image.png"' in html
+    assert 'name="twitter:image" content="https://events.emersus.ai/og-image.png"' in html
+    assert '.svg' not in html.split('og:image')[1][:80]  # og:image is not the SVG
+
+
 def test_jsonld_neutralizes_script_breakout():
     html = render_index([_ev(title="x</script><script>alert(1)//")], "2026-06-02")
     # the </script> in a title must be escaped so it can't close the JSON-LD block
