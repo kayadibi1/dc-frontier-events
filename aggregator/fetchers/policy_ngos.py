@@ -651,7 +651,7 @@ async def fetch_hudson(source: Source) -> SourceResult:
 async def fetch_aei(source: Source) -> SourceResult:
     return await _fetch_from_listing(
         source, "https://www.aei.org/events/", "aei.org/events/",
-        "AEI", waf=False, title_selector="h1,h2,h3,h4")
+        "AEI", waf=True, title_selector="h1,h2,h3,h4")
 
 
 async def fetch_heritage(source: Source) -> SourceResult:
