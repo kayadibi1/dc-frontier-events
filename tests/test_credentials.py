@@ -108,6 +108,12 @@ def test_render_credentials_html_basic():
     assert "badge" in html                          # status badge present
 
 
+def test_render_credentials_html_has_home_screen_icon_links():
+    html = render_credentials_html(credentials_dicts(), TODAY)
+    assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in html
+    assert 'rel="manifest" href="/site.webmanifest"' in html
+
+
 def test_render_credentials_html_open_status_badge():
     creds = [{"name": "Fellows", "provider": "Anthropic", "kind": "fellowship",
               "cost": "competitive", "cert": True, "url": "https://x",

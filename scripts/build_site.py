@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 import urllib.request
 from datetime import datetime, timezone
@@ -34,26 +35,65 @@ def _site_dir() -> str:
     return os.environ.get("SITE_DIR", "site")
 
 
-# Brand favicon: a radar-sweep glyph in the accent blue. Self-contained SVG so the
-# whole site has an icon (the pages reference it via <link rel="icon">), which also
-# stops browsers from probing for a (missing) /favicon.ico.
+# Brand favicon: a radar-sweep glyph in the Pro-dark accent blue (#2997ff). Self-
+# contained SVG so the whole site has a crisp tab icon (pages reference it via
+# <link rel="icon">). The raster home-screen icons (apple-touch-icon, the Android
+# manifest 192/512 PNGs, favicon.ico) are rendered from THIS same glyph by
+# scripts/gen_icons.py and shipped from scripts/assets/ -- see ICON_FILES below.
 FAVICON_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
-    '<rect width="64" height="64" rx="14" fill="#1a4fd0"/>'
+    '<rect width="64" height="64" rx="14" fill="#2997ff"/>'
     '<g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round">'
     '<path d="M19 45 A26 26 0 0 1 45 19"/><path d="M23 45 A18 18 0 0 1 41 27"/></g>'
     '<circle cx="19" cy="45" r="5" fill="#fff"/></svg>'
 )
 
 
+# Pre-rendered raster icons (from scripts/gen_icons.py), copied verbatim so the
+# box build needs no image toolchain. apple-touch-icon(+precomposed) cover iOS;
+# the 192/512 PNGs are the Android home-screen icons referenced by the manifest;
+# favicon.ico is the legacy/`/favicon.ico` fallback browsers probe for by default.
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+ICON_FILES = (
+    "favicon.ico",
+    "apple-touch-icon.png",
+    "apple-touch-icon-precomposed.png",
+    "icon-192.png",
+    "icon-512.png",
+)
+
+# PWA / Android home-screen manifest. theme/background are the Pro-dark canvas so
+# the install splash matches the site; the 512 doubles as a maskable adaptive icon
+# (the glyph sits well inside the safe zone, the accent bleeds to every edge).
+SITE_WEBMANIFEST = json.dumps({
+    "name": "DC AI & Frontier Tech Events",
+    "short_name": "DC AI Radar",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "icons": [
+        {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png",
+         "purpose": "any"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png",
+         "purpose": "any maskable"},
+    ],
+}, indent=2)
+
+
 def write_site_extras(site_dir: str, today_iso: str) -> None:
-    """Add the favicon, crawler files (robots/sitemap), and the credentials
-    subpage to a freshly-built site dir. The landing index.html and all feeds
-    are written by the pipeline run; the credentials page is rendered from the
-    credentials.json it wrote (skipped if absent)."""
+    """Add the favicon set (SVG + iOS/Android rasters + manifest), crawler files
+    (robots/sitemap), and the credentials subpage to a freshly-built site dir. The
+    landing index.html and all feeds are written by the pipeline run; the
+    credentials page is rendered from the credentials.json it wrote (skipped if
+    absent)."""
     os.makedirs(site_dir, exist_ok=True)
     with open(os.path.join(site_dir, "favicon.svg"), "w", encoding="utf-8") as f:
         f.write(FAVICON_SVG)
+    for name in ICON_FILES:
+        shutil.copyfile(os.path.join(ASSETS_DIR, name), os.path.join(site_dir, name))
+    with open(os.path.join(site_dir, "site.webmanifest"), "w", encoding="utf-8") as f:
+        f.write(SITE_WEBMANIFEST)
     with open(os.path.join(site_dir, "robots.txt"), "w", encoding="utf-8") as f:
         f.write(ROBOTS_TXT)
     with open(os.path.join(site_dir, "sitemap.xml"), "w", encoding="utf-8") as f:

@@ -184,3 +184,9 @@ def test_email_buttons_survive_css_stripping():
 def test_web_digest_has_canonical():
     html = render_html([], "2026-06-09")
     assert '<link rel="canonical" href="https://events.emersus.ai/digest.html">' in html
+
+
+def test_web_digest_has_home_screen_icon_links():
+    html = render_html([], "2026-06-09")
+    assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in html
+    assert 'rel="manifest" href="/site.webmanifest"' in html

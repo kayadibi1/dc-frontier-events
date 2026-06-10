@@ -195,3 +195,9 @@ def test_map_is_pro_dark():
 def test_map_has_canonical():
     from aggregator import emit
     assert '<link rel="canonical" href="https://events.emersus.ai/map.html">' in emit._MAP_HEAD
+
+
+def test_map_has_home_screen_icon_links():
+    from aggregator import emit
+    assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in emit._MAP_HEAD
+    assert 'rel="manifest" href="/site.webmanifest"' in emit._MAP_HEAD

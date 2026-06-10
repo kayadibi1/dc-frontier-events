@@ -113,6 +113,10 @@ def render_html(events: list[Event], today_iso: str, top_n: int = 15) -> str:
     return (
         f"<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         f"<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\">"
+        f"<link rel=\"icon\" href=\"/favicon.ico\" sizes=\"any\">"
+        f"<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">"
+        f"<link rel=\"manifest\" href=\"/site.webmanifest\">"
+        f"<meta name=\"theme-color\" content=\"#000000\">"
         f"<link rel=\"canonical\" href=\"https://events.emersus.ai/digest.html\">"
         f"<title>DC AI &amp; Frontier Tech · Weekly Digest</title><style>{_HTML_STYLE}</style></head>"
         f"<body><h1>DC AI &amp; Frontier Tech · Weekly Digest</h1>"
