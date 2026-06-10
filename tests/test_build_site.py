@@ -35,7 +35,7 @@ def test_write_site_extras_writes_full_icon_set(tmp_path):
     write_site_extras(d, "2026-05-30")
     for name in ("favicon.ico", "apple-touch-icon.png",
                  "apple-touch-icon-precomposed.png", "icon-192.png",
-                 "icon-512.png", "site.webmanifest"):
+                 "icon-512.png", "manifest.json"):
         p = os.path.join(d, name)
         assert os.path.exists(p), f"missing {name}"
         assert os.path.getsize(p) > 0, f"empty {name}"
@@ -48,7 +48,7 @@ def test_write_site_extras_writes_full_icon_set(tmp_path):
 def test_webmanifest_references_android_icons(tmp_path):
     d = str(tmp_path / "site")
     write_site_extras(d, "2026-05-30")
-    with open(os.path.join(d, "site.webmanifest"), encoding="utf-8") as f:
+    with open(os.path.join(d, "manifest.json"), encoding="utf-8") as f:
         manifest = json.load(f)
     srcs = {icon["src"] for icon in manifest["icons"]}
     assert "/icon-192.png" in srcs and "/icon-512.png" in srcs

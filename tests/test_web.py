@@ -55,7 +55,7 @@ def test_index_has_signup_form_and_attribution():
 def test_index_has_home_screen_icon_links():
     html = render_index([_ev()], "2026-06-02")
     assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in html  # iOS
-    assert 'rel="manifest" href="/site.webmanifest"' in html              # Android
+    assert 'rel="manifest" href="/manifest.json"' in html              # Android
     assert 'href="/favicon.ico"' in html                                  # legacy
 
 

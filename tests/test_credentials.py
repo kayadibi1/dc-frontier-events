@@ -111,7 +111,7 @@ def test_render_credentials_html_basic():
 def test_render_credentials_html_has_home_screen_icon_links():
     html = render_credentials_html(credentials_dicts(), TODAY)
     assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in html
-    assert 'rel="manifest" href="/site.webmanifest"' in html
+    assert 'rel="manifest" href="/manifest.json"' in html
 
 
 def test_render_credentials_html_open_status_badge():

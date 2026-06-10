@@ -200,4 +200,4 @@ def test_map_has_canonical():
 def test_map_has_home_screen_icon_links():
     from aggregator import emit
     assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in emit._MAP_HEAD
-    assert 'rel="manifest" href="/site.webmanifest"' in emit._MAP_HEAD
+    assert 'rel="manifest" href="/manifest.json"' in emit._MAP_HEAD

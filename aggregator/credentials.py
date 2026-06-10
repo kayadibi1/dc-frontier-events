@@ -365,7 +365,7 @@ def render_credentials_html(creds: list[dict], today_iso: str) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
+<link rel="manifest" href="/manifest.json">
 <title>Prestige Credentials, Fellowships &amp; Funding</title>
 <style>
 body{{font-family:system-ui,Arial,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;line-height:1.5;color:#222}}

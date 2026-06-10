@@ -92,7 +92,10 @@ def write_site_extras(site_dir: str, today_iso: str) -> None:
         f.write(FAVICON_SVG)
     for name in ICON_FILES:
         shutil.copyfile(os.path.join(ASSETS_DIR, name), os.path.join(site_dir, name))
-    with open(os.path.join(site_dir, "site.webmanifest"), "w", encoding="utf-8") as f:
+    # Named .json (not .webmanifest) so Caddy serves it as application/json -- a
+    # spec-valid manifest MIME; Caddy/Go has no MIME mapping for .webmanifest and
+    # would serve an empty Content-Type that browsers may reject.
+    with open(os.path.join(site_dir, "manifest.json"), "w", encoding="utf-8") as f:
         f.write(SITE_WEBMANIFEST)
     with open(os.path.join(site_dir, "robots.txt"), "w", encoding="utf-8") as f:
         f.write(ROBOTS_TXT)

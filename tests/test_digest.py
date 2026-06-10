@@ -189,4 +189,4 @@ def test_web_digest_has_canonical():
 def test_web_digest_has_home_screen_icon_links():
     html = render_html([], "2026-06-09")
     assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in html
-    assert 'rel="manifest" href="/site.webmanifest"' in html
+    assert 'rel="manifest" href="/manifest.json"' in html
