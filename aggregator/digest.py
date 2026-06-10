@@ -21,6 +21,14 @@ def _h(s: str) -> str:
     return escape(s or "", {'"': "&quot;"})
 
 
+def _safe_url(u: str | None) -> str:
+    """Only http(s) URLs may become links, blocking javascript:/data: and other
+    script-bearing schemes from scraped source_urls (same guard as web.py/emit.py)."""
+    u = (u or "").strip()
+    lo = u.lower()
+    return u if lo.startswith("http://") or lo.startswith("https://") else ""
+
+
 def _loc(ev: Event) -> str:
     base = ev.address if ev.address else ("virtual" if ev.raw.get("virtual") else "TBD")
     m = marker(ev)
@@ -48,7 +56,8 @@ _KIND_TAG = {"handson": "🔧 hands-on", "policy": "🏛️ policy",
 def _line(ev: Event, today_iso: str) -> str:
     topics = ", ".join(_real_topics(ev)) or "-"
     src = _NAME.get(ev.source, ev.source)
-    link = f" · [details]({ev.source_url})" if ev.source_url else ""
+    url = _safe_url(ev.source_url)
+    link = f" · [details]({url})" if url else ""
     star = "⭐ " if ev.is_big_name else ""
     kind = _KIND_TAG.get(event_kind(ev), "")
     return (f"**{(ev.start or '')[:10]}** · {star}{ev.title}  \n"
@@ -95,7 +104,8 @@ _HTML_STYLE = (
 def _html_item(ev: Event, today_iso: str) -> str:
     topics = ", ".join(_real_topics(ev)) or "-"
     star = '<span class="star">★</span> ' if ev.is_big_name else ""
-    link = f' · <a href="{_h(ev.source_url)}">details</a>' if ev.source_url else ""
+    url = _safe_url(ev.source_url)
+    link = f' · <a href="{_h(url)}">details</a>' if url else ""
     return (f"<li><b>{(ev.start or '')[:10]}</b> · {star}{_h(ev.title)}<br>"
             f"<small>{_h(_NAME.get(ev.source, ev.source))} · {_h(_loc(ev))} · "
             f"{_h(topics)} · score {score_event(ev, today_iso)}{link}</small></li>")
@@ -158,8 +168,9 @@ def _date_pill(iso: str) -> tuple[str, str]:
 def _email_row(ev: Event, today_iso: str) -> str:
     mon, day = _date_pill(ev.start or "")
     title = _h(ev.title)
-    if ev.source_url:
-        title = (f'<a href="{_h(ev.source_url)}" style="color:{_E_INK};'
+    url = _safe_url(ev.source_url)
+    if url:
+        title = (f'<a href="{_h(url)}" style="color:{_E_INK};'
                  f'text-decoration:none">{title}</a>')
     star = '<span style="color:#ff453a">★</span> ' if ev.is_big_name else ""
     topics = ", ".join(_real_topics(ev)) or "-"

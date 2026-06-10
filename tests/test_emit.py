@@ -201,3 +201,20 @@ def test_map_has_home_screen_icon_links():
     from aggregator import emit
     assert 'rel="apple-touch-icon" href="/apple-touch-icon.png"' in emit._MAP_HEAD
     assert 'rel="manifest" href="/manifest.json"' in emit._MAP_HEAD
+
+
+def test_rss_drops_javascript_source_url(tmp_path):
+    # untrusted source_url must not survive as a javascript: link in the feed.
+    evil = Event(id="e", title="E", start="2026-06-20T00:00:00+00:00", source="DC2",
+                 source_url="javascript:alert(1)", topics=["ai"])
+    p = tmp_path / "feed.xml"
+    write_rss([evil], str(p))
+    assert "javascript:" not in p.read_text(encoding="utf-8")
+
+
+def test_ics_url_drops_javascript_source_url(tmp_path):
+    evil = Event(id="e", title="E", start="2026-06-20T00:00:00+00:00", source="DC2",
+                 source_url="javascript:alert(1)", topics=["ai"])
+    p = tmp_path / "events.ics"
+    write_ics([evil], str(p))
+    assert b"javascript:" not in p.read_bytes()

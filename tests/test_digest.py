@@ -181,6 +181,30 @@ def test_email_buttons_survive_css_stripping():
     assert 'bgcolor="#2997ff"' in v
 
 
+def test_web_digest_blocks_javascript_source_url():
+    # Scraped source_url is untrusted; a javascript: scheme must never become a
+    # live href in the public digest.html (stored XSS).
+    evil = Event(id="x", title="Evil", start="2026-06-20", source="DC2",
+                 topics=["ai"], source_url="javascript:alert(document.domain)")
+    html = render_html([evil], "2026-06-09")
+    assert "javascript:" not in html
+    good = Event(id="y", title="Good", start="2026-06-20", source="DC2",
+                 topics=["ai"], source_url="https://example.com/e")
+    assert 'href="https://example.com/e"' in render_html([good], "2026-06-09")
+
+
+def test_digest_email_blocks_javascript_source_url():
+    evil = Event(id="x", title="Evil", start="2026-06-20", source="DC2",
+                 topics=["ai"], source_url="javascript:alert(1)")
+    assert "javascript:" not in render_email_html([evil], "2026-06-09")
+
+
+def test_digest_markdown_blocks_javascript_source_url():
+    evil = Event(id="x", title="Evil", start="2026-06-20", source="DC2",
+                 topics=["ai"], source_url="javascript:alert(1)")
+    assert "javascript:" not in build_digest([evil], "2026-06-09")
+
+
 def test_web_digest_has_canonical():
     html = render_html([], "2026-06-09")
     assert '<link rel="canonical" href="https://events.emersus.ai/digest.html">' in html

@@ -26,7 +26,7 @@ from __future__ import annotations
 import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -38,9 +38,17 @@ from .source_prefs import filter_events_by_sources, normalize_sources, source_la
 from .subscribers import SubscriberStore
 
 MAX_BODY = 8192            # bytes; signup posts are tiny
-RATE_MAX = 10             # max requests
+RATE_MAX = 10             # max signup POSTs per window, per IP
+# Generous limiter for the read/token endpoints (calendar.ics, verify, unsubscribe,
+# preferences): high enough to never throttle real calendar polling (Google/Apple
+# re-fetch a feed every few HOURS, humans click a link rarely) but enough to stop a
+# single IP from flooding the DB-reading calendar endpoint.
+RATE_MAX_READ = 120       # per window, per IP
 RATE_WINDOW_S = 3600      # per hour, per IP
 HONEYPOT_FIELD = "website"  # hidden in the form; humans leave it empty
+# Endpoints sharing the generous read limiter (subscribe keeps its own strict one).
+READ_PATHS = frozenset({"/api/calendar.ics", "/api/verify",
+                        "/api/unsubscribe", "/api/preferences"})
 
 
 @dataclass
@@ -77,7 +85,10 @@ class Deps:
     store: SubscriberStore
     send_verify: callable      # (email, token) -> None
     send_welcome: callable     # (email, unsub_token) -> None
-    rate: RateLimiter
+    rate: RateLimiter          # strict, signup-only
+    # Generous limiter for the read/token endpoints (see READ_PATHS / RATE_MAX_READ).
+    rate_read: RateLimiter = field(
+        default_factory=lambda: RateLimiter(RATE_MAX_READ, RATE_WINDOW_S))
     # Owner alert when a subscriber is newly CONFIRMED. Default no-op so tests /
     # other callers that don't care can omit it.
     send_admin_notify: callable = lambda email: None   # (email) -> None
@@ -111,6 +122,10 @@ def _page(title: str, heading: str, message_html: str, status: int = 200) -> Res
 def route(method: str, path: str, query: dict, form: dict, client_ip: str,
           deps: Deps, now: float) -> Response:
     """Pure request handler: inputs in, Response out, side effects only via deps."""
+    if path in READ_PATHS and not deps.rate_read.allow(client_ip, now):
+        return _page("Slow down", "Too many requests",
+                     '<p>Please try again in a little while.</p>', status=429)
+
     if path == "/api/calendar.ics" and method == "GET":
         return _calendar_response(query, deps, now)
 

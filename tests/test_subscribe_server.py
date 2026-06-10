@@ -18,6 +18,31 @@ def _deps(tmp_path):
     return deps, sent
 
 
+def test_read_endpoints_are_rate_limited(tmp_path):
+    # calendar.ics / verify / unsubscribe / preferences share a generous read
+    # limiter (separate from the strict subscribe one) so a single IP cannot flood
+    # the DB-reading calendar endpoint while normal polling stays well under it.
+    deps, _ = _deps(tmp_path)
+    deps.rate_read = RateLimiter(max_hits=2, window_s=3600)
+    deps.events_db = str(tmp_path / "events.db")
+    assert route("GET", "/api/calendar.ics", {}, {}, "9.9.9.9", deps, 1.0).status == 200
+    assert route("GET", "/api/calendar.ics", {}, {}, "9.9.9.9", deps, 1.0).status == 200
+    assert route("GET", "/api/calendar.ics", {}, {}, "9.9.9.9", deps, 1.0).status == 429
+    # a different IP is unaffected
+    assert route("GET", "/api/calendar.ics", {}, {}, "8.8.8.8", deps, 1.0).status == 200
+    deps.store.close()
+
+
+def test_subscribe_uses_its_own_strict_limiter_not_the_read_one(tmp_path):
+    # POST /api/subscribe must keep using the strict `rate`, untouched by rate_read.
+    deps, _ = _deps(tmp_path)
+    deps.rate_read = RateLimiter(max_hits=1, window_s=3600)
+    for _ in range(3):
+        r = route("POST", "/api/subscribe", {}, {"email": "a@b.co"}, "1.1.1.1", deps, 1.0)
+        assert r.status == 200          # not 429 from the read limiter
+    deps.store.close()
+
+
 def test_verify_notifies_admin_once(tmp_path):
     deps, sent = _deps(tmp_path)
     token = deps.store.subscribe("a@b.co").token

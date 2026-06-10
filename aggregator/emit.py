@@ -117,9 +117,10 @@ def build_ics(events: list[Event], today_iso: str | None = None,
                  else {2: "purple", 3: "green"}.get(_LAYER.get(ev.source, 1), "blue"))
         ie.add("color", color)
         desc = ev.description
-        if ev.source_url:
-            ie.add("url", ev.source_url)
-            desc = f"{desc}\n\nSource: {ev.source_url}".strip()
+        surl = _safe_url(ev.source_url)
+        if surl:
+            ie.add("url", surl)
+            desc = f"{desc}\n\nSource: {surl}".strip()
         prov_notes = notes(ev)
         if prov_notes:
             desc = f"{desc}\n\nNotes: {'; '.join(prov_notes)}".strip()
@@ -174,7 +175,7 @@ def write_rss(events: list[Event], path: str,
         items.append(
             "<item>"
             f"<title>{escape(_star(ev) + ev.title)}</title>"
-            f"<link>{escape(ev.source_url or '')}</link>"
+            f"<link>{escape(_safe_url(ev.source_url))}</link>"
             f'<guid isPermaLink="false">{escape(ev.id)}</guid>'
             f"<pubDate>{_rfc822(ev.start)}</pubDate>"
             f"<description>{escape(big + body)}</description>"
